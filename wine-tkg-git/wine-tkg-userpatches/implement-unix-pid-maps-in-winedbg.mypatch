@@ -4,21 +4,12 @@ Date: Wed, 20 Apr 2022 00:16:19 +0200
 Subject: [PATCH] implement unix pid maps in winedbg
 
 ---
- .gitignore                  |   1 +
  programs/winedbg/dbg.y      |   3 +-
  programs/winedbg/debug.l    |   1 +
  programs/winedbg/debugger.h |   1 +
  programs/winedbg/info.c     | 167 ++++++++++++++++++++++++++++++++++++
- 5 files changed, 172 insertions(+), 1 deletion(-)
- create mode 100644 .gitignore
+ 4 files changed, 171 insertions(+), 1 deletion(-)
 
-diff --git a/.gitignore b/.gitignore
-new file mode 100644
-index 00000000000..fd5106ff27b
---- /dev/null
-+++ b/.gitignore
-@@ -0,0 +1 @@
-+.DS_STORE
 diff --git a/programs/winedbg/dbg.y b/programs/winedbg/dbg.y
 index ad21e3b81c5..b1199c18f03 100644
 --- a/programs/winedbg/dbg.y
