@@ -1,8 +1,7 @@
 name: Wine Arch Linux CI
 
 on:
-  schedule:
-    - cron:  '45 8,20 * * *'
+  push:
   workflow_dispatch:
 
 jobs:
