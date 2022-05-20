@@ -43,11 +43,11 @@ index 20bc3f977d1..c2187a19397 100644
 +    InitializeObjectAttributes( &staging_event_attr, &staging_event_string, OBJ_OPENIF, NULL, NULL );
 +    if (NtCreateEvent( &staging_event, EVENT_ALL_ACCESS, &staging_event_attr, NotificationEvent, FALSE ) == STATUS_SUCCESS)
 +    {
-+        FIXME_(winediag)("Wine TkG %s is a testing version containing experimental patches.\n", wine_get_version());
-+        FIXME_(winediag)("Please don't report bugs about it on winehq.org and use https://github.com/Frogging-Family/wine-tkg-git/issues instead.\n");
++        FIXME_(winediag)("Wine XIV %s is a testing version containing experimental patches.\n", wine_get_version());
++        FIXME_(winediag)("Please don't report bugs about it on winehq.org and use https://github.com/goatcorp/wine-xiv-git/issues instead.\n");
 +    }
 +    else
-+        WARN_(winediag)("Wine TkG %s is a testing version containing experimental patches.\n", wine_get_version());
++        WARN_(winediag)("Wine XIV %s is a testing version containing experimental patches.\n", wine_get_version());
 +
      if (process_detaching) NtTerminateThread( GetCurrentThread(), 0 );
  
