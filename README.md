@@ -1,11 +1,12 @@
-# Wine to rule them all !
+# Wine to rule Eorzea !
 
-Nightly builds | [Arch Linux](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-ubuntu.yml) |
+Nightly builds | [Arch Linux](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-ubuntu.yml) |
 -------------|--------|--------|-------|
 
 ## PLEASE DO NOT REPORT BUGS ENCOUNTERED WITH THIS AT WINEHQ OR VALVESOFTWARE, REPORT HERE INSTEAD !
 
 Wine-tkg is a build-system aiming at easier custom wine builds creation. You can now easily get the "plain wine + pba + steam fix" build you've been dreaming about!
+Wine-xiv is based on wine-tkg and builds wine with several patches to improve the experience of FFXIV on Linux machines.
 
 It can also make custom Proton builds with its wrapping script: https://github.com/Frogging-Family/wine-tkg-git/tree/master/proton-tkg
 
