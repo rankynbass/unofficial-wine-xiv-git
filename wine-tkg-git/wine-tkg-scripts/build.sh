@@ -7,13 +7,13 @@ _prebuild_common() {
 
 	# Use custom compiler paths if defined
 	if [ -n "${CUSTOM_MINGW_PATH}" ] && [ -z "${CUSTOM_GCC_PATH}" ]; then
-	  PATH="${PATH}:${CUSTOM_MINGW_PATH}/bin:${CUSTOM_MINGW_PATH}/lib:${CUSTOM_MINGW_PATH}/include"
+	  PATH=${PATH}:$( find "$CUSTOM_MINGW_PATH/" -maxdepth 1 -printf "%p:" || ( warning "Custom compiler path seems wrong.." && exit 1 ) )
 	  echo -e "CUSTOM_MINGW_PATH = ${CUSTOM_MINGW_PATH##*/}" >> "$_where"/last_build_config.log #" Coloring confusion
 	elif [ -n "${CUSTOM_GCC_PATH}" ] && [ -z "${CUSTOM_MINGW_PATH}" ]; then
-	  PATH="${CUSTOM_GCC_PATH}/bin:${CUSTOM_GCC_PATH}/lib:${CUSTOM_GCC_PATH}/include:${PATH}"
+	  PATH=$( find "$CUSTOM_GCC_PATH/" -maxdepth 1 -printf "%p:" || ( warning "Custom compiler path seems wrong.." && exit 1 ) )${PATH}
 	  echo -e "CUSTOM_GCC_PATH = ${CUSTOM_GCC_PATH##*/}" >> "$_where"/last_build_config.log #" Coloring confusion
 	elif [ -n "${CUSTOM_MINGW_PATH}" ] && [ -n "${CUSTOM_GCC_PATH}" ]; then
-	  PATH="${CUSTOM_GCC_PATH}/bin:${CUSTOM_GCC_PATH}/lib:${CUSTOM_GCC_PATH}/include:${CUSTOM_MINGW_PATH}/bin:${CUSTOM_MINGW_PATH}/lib:${CUSTOM_MINGW_PATH}/include:${PATH}"
+	  PATH=$( find "$CUSTOM_GCC_PATH/" -maxdepth 1 -printf "%p:" || ( warning "Custom compiler path seems wrong.." && exit 1 ) )$( find "$CUSTOM_MINGW_PATH/" -maxdepth 1 -printf "%p:" || ( warning "Custom compiler path seems wrong.." && exit 1 ) )${PATH}
 	  echo -e "CUSTOM_MINGW_PATH = ${CUSTOM_MINGW_PATH##*/}" >> "$_where"/last_build_config.log #" Coloring confusion
 	  echo -e "CUSTOM_GCC_PATH = ${CUSTOM_GCC_PATH##*/}" >> "$_where"/last_build_config.log #"
 	fi
@@ -82,7 +82,7 @@ _build() {
 	if [ "$_NOLIB64" != "true" ]; then
 	  # build wine 64-bit
 	  # (according to the wine wiki, this 64-bit/32-bit building order is mandatory)
-	  if [[ ! ${_makepkg_options[*]} =~ "ccache" ]] && [ -e /usr/bin/ccache ]; then
+	  if [ -e /usr/bin/ccache ]; then
 	    export CC="ccache gcc" && echo "CC = ${CC}" >> "$_where"/last_build_config.log
 	    export CXX="ccache g++" && echo "CXX = ${CXX}" >> "$_where"/last_build_config.log
 	  fi
@@ -131,7 +131,7 @@ _build() {
 	    _debuntu_32
 	  fi
 	  # /nomakepkg
-	  if [[ ! ${_makepkg_options[*]} =~ "ccache" ]] && [ -e /usr/bin/ccache ]; then
+	  if [ -e /usr/bin/ccache ]; then
 	    export CC="ccache gcc"
 	    export CXX="ccache g++"
 	  fi

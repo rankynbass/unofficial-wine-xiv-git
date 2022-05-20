@@ -55,6 +55,7 @@ _exit_cleanup() {
     echo "_proton_pkgdest='${pkgdir}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_proton_branch_exp='${_proton_branch_exp}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_steamvr_support='${_steamvr_support}'" >> "$_proton_tkg_path"/proton_tkg_token
+    echo "_use_fastsync='${_use_fastsync}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_NUKR='${_NUKR}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_winesrcdir='${_winesrcdir}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_standard_dlopen='${_standard_dlopen}'" >> "$_proton_tkg_path"/proton_tkg_token
@@ -455,7 +456,7 @@ _prepare() {
 	  cd "${srcdir}"/"${_winesrcdir}"
 	  # change back to the wine upstream commit that this version of wine-staging is based in
 	  msg2 'Changing wine HEAD to the wine-staging base commit...'
-	  git checkout "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)"
+	  git -c advice.detachedHead=false checkout "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)"
 	fi
 
   # Community patches
@@ -812,20 +813,6 @@ _prepare() {
 	  fi
 	fi
 
-	# use CLOCK_MONOTONIC instead of CLOCK_MONOTONIC_RAW in ntdll/server - lowers overhead
-	if [ "$_use_staging" != "true" ]; then
-	  if [ "$_clock_monotonic" = "true" ]; then
-	    if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0c249e6125fc9dc6ee86b4ef6ae0d9fa2fc6291b HEAD ); then
-	      _patchname='use_clock_monotonic.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
-	    else
-	      _patchname='use_clock_monotonic-de679af.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
-	    fi
-	    if git merge-base --is-ancestor 13e11d3fcbcf8790e031c4bc52f5f550b1377b3b HEAD && ! git merge-base --is-ancestor cd215bb49bc240cdce5415c80264f8daa557636a HEAD; then
-	      _patchname='use_clock_monotonic-2.patch' && _patchmsg="Applied clock_monotonic addon patch for 13e11d3" && nonuser_patcher
-	    fi
-	  fi
-	fi
-
 	# Fixes (partially) systray on plasma 5 - https://bugs.winehq.org/show_bug.cgi?id=38409
 	if [ "$_plasma_systray_fix" = "true" ] && ( cd "${srcdir}"/"${_winesrcdir}" && ! git merge-base --is-ancestor 8d6c33c3bfca4f4ed7b7653fd0b82dfbc12bd3cb HEAD ); then
 	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0c249e6125fc9dc6ee86b4ef6ae0d9fa2fc6291b HEAD ); then
@@ -865,6 +852,9 @@ _prepare() {
 	# Disable winex11-WM_WINDOWPOSCHANGING and winex11-_NET_ACTIVE_WINDOW patchsets on proton-tkg staging
 	#if ( cd "${srcdir}"/"${_winesrcdir}" && ! git merge-base --is-ancestor 0c249e6125fc9dc6ee86b4ef6ae0d9fa2fc6291b HEAD ); then
 	  if [ "$_EXTERNAL_INSTALL" = "proton" ] && [ "$_use_staging" = "true" ] || [ "$_proton_fs_hack" = "true" ]; then
+	    if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 9c37968a298935a8c33aecdc0acdcb42170c7c6a HEAD ); then
+	      _staging_args+=(-W user32-alttab-focus)
+	    fi
 	    _staging_args+=(-W winex11-WM_WINDOWPOSCHANGING -W winex11-_NET_ACTIVE_WINDOW)
 	    if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 76f8eb15f17ff9ae52f6c2b61824978762d421ef HEAD ) && [ -e "${srcdir}/${_stgsrcdir}/patches/imm32-com-initialization/definition" ] && ! grep -Fxq 'Disabled: true' "${srcdir}/${_stgsrcdir}/patches/imm32-com-initialization/definition"; then
 	      _staging_args+=(-W imm32-com-initialization)
@@ -1121,25 +1111,23 @@ _prepare() {
 	fi
 
 	# use CLOCK_MONOTONIC instead of CLOCK_MONOTONIC_RAW in ntdll/server - lowers overhead
-	if [ "$_use_staging" = "true" ]; then
-	  if [ "$_clock_monotonic" = "true" ]; then
-	    if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor a1a2d654886fe71af49f9f64210e21d743976ffe HEAD ); then
-	      _patchname='use_clock_monotonic-staging.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
-	    elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0c249e6125fc9dc6ee86b4ef6ae0d9fa2fc6291b HEAD ); then
-	      _patchname='use_clock_monotonic.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
-	    else
-	      _patchname='use_clock_monotonic-de679af.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
-	    fi
-	    if git merge-base --is-ancestor 13e11d3fcbcf8790e031c4bc52f5f550b1377b3b HEAD && ! git merge-base --is-ancestor cd215bb49bc240cdce5415c80264f8daa557636a HEAD; then
-	      _patchname='use_clock_monotonic-2.patch' && _patchmsg="Applied clock_monotonic addon patch for 13e11d3" && nonuser_patcher
-	    fi
+	if [ "$_clock_monotonic" = "true" ]; then
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0c249e6125fc9dc6ee86b4ef6ae0d9fa2fc6291b HEAD ); then
+	    _patchname='use_clock_monotonic.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
+	  else
+	    _patchname='use_clock_monotonic-de679af.patch' && _patchmsg="Applied clock_monotonic patch" && nonuser_patcher
+	  fi
+	  if git merge-base --is-ancestor 13e11d3fcbcf8790e031c4bc52f5f550b1377b3b HEAD && ! git merge-base --is-ancestor cd215bb49bc240cdce5415c80264f8daa557636a HEAD; then
+	    _patchname='use_clock_monotonic-2.patch' && _patchmsg="Applied clock_monotonic addon patch for 13e11d3" && nonuser_patcher
 	  fi
 	fi
 
 	# esync
 	if [ "$_use_esync" = "true" ]; then
-	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 9e945c8d1cf2287cfc5a9a2bf077e72c635fc7a4 HEAD ); then
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor f076e5f85490a44fd34057df9af1c3ae3e7d5d3b HEAD ); then
 	    _patchname='esync-unix-mainline.patch' && _patchmsg="Using Esync (unix, mainline) patchset" && nonuser_patcher
+	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 9e945c8d1cf2287cfc5a9a2bf077e72c635fc7a4 HEAD ); then
+	    _patchname='esync-unix-mainline-f076e5f.patch' && _patchmsg="Using Esync (unix, mainline) patchset" && nonuser_patcher
 	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 5b56bad50b85acb05244894990053f8b0de2e458 HEAD ); then
 	    _patchname='esync-unix-mainline-9e945c8.patch' && _patchmsg="Using Esync (unix, mainline) patchset" && nonuser_patcher
 	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 751a3325a6ac93d11f08088c40b45a9ae05b52de HEAD ); then
@@ -1737,10 +1725,12 @@ EOM
 	    _patchname='FS_bypass_compositor.patch' && _patchmsg="Applied Fullscreen compositor bypass patch" && nonuser_patcher
 	  fi
 	  if [ "$_use_staging" = "true" ]; then
-	    if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor a831aa1875e6a3cc6eb3d64a127c45ebb9c1ce60 HEAD ); then
+	    if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 78ecbc4b2d548e4cb57af622d40d0149366a7354 HEAD ); then
 	      _patchname='valve_proton_fullscreen_hack-staging.patch' && _patchmsg="Applied Proton fullscreen hack patch (staging)" && nonuser_patcher
 	    else
-	      if git merge-base --is-ancestor 8a8b5179d0c59d7c4171ad5447ef55689cba86b3 HEAD; then
+	      if git merge-base --is-ancestor a831aa1875e6a3cc6eb3d64a127c45ebb9c1ce60 HEAD; then
+	        _lastcommit="78ecbc4"
+	      elif git merge-base --is-ancestor 8a8b5179d0c59d7c4171ad5447ef55689cba86b3 HEAD; then
 	        _lastcommit="a831aa1"
 	      elif git merge-base --is-ancestor 656edbb508d51cbe3155d856ee3f2c27a6cd4cba HEAD; then
 	        _lastcommit="8a8b517"
@@ -1871,9 +1861,11 @@ EOM
 	fi
 
 	# Standalone child window support for vk - Fixes World of Final Fantasy and others - https://bugs.winehq.org/show_bug.cgi?id=45277 - legacy patchset for older trees applied at an earlier stage in the script
-	if ( [ "$_childwindow_fix" = "true" ] && [ "$_proton_fs_hack" != "true" ] ); then
-	  if git merge-base --is-ancestor ef8e4b7e3e32e2beb317411c5bd6e5cedf71cfb7 HEAD; then
+	if ( [ "$_childwindow_fix" = "true" ] && [ "$_proton_fs_hack" != "true" ] && [ "$_use_staging" = "true" ] ); then
+	  if git merge-base --is-ancestor a25519ecc673c6c62d9fe606eeac249e4ac55140 HEAD; then
 	    _patchname='childwindow-proton.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor ef8e4b7e3e32e2beb317411c5bd6e5cedf71cfb7 HEAD; then
+	    _patchname='childwindow-proton-a25519e.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
 	  elif git merge-base --is-ancestor 83501c7eaabcff25373910b33b4e5c779b56f398 HEAD; then
 	    _patchname='childwindow-proton-ef8e4b7.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
 	  elif git merge-base --is-ancestor 262831bc63dca2d63171aa98d19e8f2566907dbc HEAD; then
@@ -2114,7 +2106,7 @@ EOM
 	fi
 
 	if [ "$_EXTERNAL_INSTALL" = "proton" ] && [ "$_unfrog" != "true" ] && ! git merge-base --is-ancestor 74dc0c5df9c3094352caedda8ebe14ed2dfd615e HEAD || ([ "$_protonify" = "true" ] && git merge-base --is-ancestor 74dc0c5df9c3094352caedda8ebe14ed2dfd615e HEAD); then
-	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor dfd5f109fb4ebad859bf3ce3960b3b2b2ad1341d HEAD ); then
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8dd04c77cb3f1f24833f002499bf6299da38dcd6 HEAD ); then
 	    if [ "$_use_staging" = "true" ]; then
 	      if ! git merge-base --is-ancestor dedd5ccc88547529ffb1101045602aed59fa0170 HEAD; then
 	        _patchname='proton-tkg-staging-rpc.patch' && _patchmsg="Using Steam-specific Proton-tkg patches (staging) 1/3" && nonuser_patcher
@@ -2208,7 +2200,11 @@ EOM
 	      fi
 	    fi
 	  else
-	    if git merge-base --is-ancestor 22fa68bbd9c1f7e616f5c8845a33ba78346ef0a4 HEAD; then
+	    if git merge-base --is-ancestor dfd5f109fb4ebad859bf3ce3960b3b2b2ad1341d HEAD; then
+	      _lastcommit="8dd04c7"
+	      _rpc="1"
+	      _stmbits="1"
+	    elif git merge-base --is-ancestor 22fa68bbd9c1f7e616f5c8845a33ba78346ef0a4 HEAD; then
 	      _lastcommit="dfd5f10"
 	      _rpc="1"
 	      _stmbits="1"
@@ -2731,8 +2727,10 @@ EOM
 
 	# Proton CPU topology override - depends on protonify and fsync
 	if ( [ "$_staging_esync" = "true" ] || [ "$_use_esync" = "true" ] ) && [ "$_use_fsync" = "true" ] && [ "$_protonify" = "true" ] && ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 6f158754435f403864052e595ab627dadac2666f HEAD ); then
-	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor b3ca48f39ce822c197193ffc419771f1869f3c83 HEAD ); then
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 05676e83e975816b3c0d87b4b18b5cd15a372489 HEAD ); then
 	    _patchname='proton-cpu-topology-overrides.patch' && _patchmsg="Enable Proton's CPU topology override support" && nonuser_patcher
+	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor b3ca48f39ce822c197193ffc419771f1869f3c83 HEAD ); then
+	    _patchname='proton-cpu-topology-overrides-05676e8.patch' && _patchmsg="Enable Proton's CPU topology override support" && nonuser_patcher
 	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 588d91aecf2bf8ac7e9ae1de44ddc01caae52109 HEAD ); then
 	    _patchname='proton-cpu-topology-overrides-b3ca48f.patch' && _patchmsg="Enable Proton's CPU topology override support" && nonuser_patcher
 	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor be8bd6f498dadbafe068c1fbb02adcbadf0b1b56 HEAD ); then
@@ -2752,10 +2750,50 @@ EOM
 	  fi
 	fi
 
+	# winesync / fastsync
+	if [ "$_use_fastsync" = "true" ]; then
+	  if [ "$_use_staging" = "true" ]; then
+	    if [ "$_staging_esync" = "true" ] && [ "$_use_fsync" = "true" ]; then
+	      if [ "$_protonify" = "true" ]; then
+	        if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor e534d6546a5be9f1cd53a0ea3ac79db7d977bed7 HEAD ); then
+	          _patchname='fastsync-staging-protonify.patch' && _patchmsg="Using fastsync (Esync/Fsync compatible) patchset" && nonuser_patcher
+	        elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 36b45c6d1c124dd16b3475ba743fcbbc99d6862d HEAD ); then
+	          _patchname='fastsync-staging-protonify-e534d65.patch' && _patchmsg="Using fastsync (Esync/Fsync compatible) patchset" && nonuser_patcher
+	        fi
+	      else
+	        if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor e534d6546a5be9f1cd53a0ea3ac79db7d977bed7 HEAD ); then
+	          _patchname='fastsync-staging.patch' && _patchmsg="Using fastsync (Esync/Fsync compatible) patchset" && nonuser_patcher
+	        elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 36b45c6d1c124dd16b3475ba743fcbbc99d6862d HEAD ); then
+	          _patchname='fastsync-staging-e534d65.patch' && _patchmsg="Using fastsync (Esync/Fsync compatible) patchset" && nonuser_patcher
+	        fi
+	      fi
+	    else
+	      warning "! _use_fastsync is enabled, but it depends on _use_fsync. Please enable it in your .cfg to use fastsync !"
+	      _use_fastsync="false"
+	    fi
+	  else
+	    if [ "$_use_esync" = "false" ] && [ "$_use_fsync" = "false" ]; then
+	      if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor f076e5f85490a44fd34057df9af1c3ae3e7d5d3b HEAD); then
+	        _patchname='fastsync-mainline.patch' && _patchmsg="Using fastsync (mainline) patchset" && nonuser_patcher
+	      elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 36b45c6d1c124dd16b3475ba743fcbbc99d6862d HEAD ); then
+	        _patchname='fastsync-mainline-f076e5f.patch' && _patchmsg="Using fastsync (mainline) patchset" && nonuser_patcher
+	      fi
+	    else
+	      warning "! _use_fastsync is enabled, but _use_esync/_use_fsync disables it. Please disable them in your .cfg to use fastsync !"
+	      _use_fastsync="false"
+	    fi
+	  fi
+	  if [ "$_use_fastsync" = "true" ] && [ "$_clock_monotonic" = "true" ]; then
+	    _patchname='fastsync-clock_monotonic-fixup.patch' && _patchmsg="Applied fastsync fix due clock_monotonic" && nonuser_patcher
+	  fi
+	fi
+
 	# SDL Joystick support - from Proton
 	if [ "$_sdl_joy_support" = "true" ] && [ "$_use_staging" = "true" ]; then
-	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor e4105a71d1449355563e1bf23349826d416d53f1 HEAD ); then # Proton 7.0
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 9aa1d0a1a79647a8b575f6a68473392e16a5efcb HEAD ); then # Proton 7.0
 	    _patchname='proton-sdl-joy.patch' && _patchmsg="Enable SDL Joystick support (from Proton)" && nonuser_patcher
+	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor e4105a71d1449355563e1bf23349826d416d53f1 HEAD ); then # Proton 7.0
+	    _patchname='proton-sdl-joy-9aa1d0a.patch' && _patchmsg="Enable SDL Joystick support (from Proton)" && nonuser_patcher
 	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 656edbb508d51cbe3155d856ee3f2c27a6cd4cba HEAD ); then # Proton 7.0
 	    _patchname='proton-sdl-joy-e4105a7.patch' && _patchmsg="Enable SDL Joystick support (from Proton)" && nonuser_patcher
 	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 43f0c8096b2d81052a30d8542372adc46dab8292 HEAD ); then

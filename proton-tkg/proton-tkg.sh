@@ -959,7 +959,7 @@ else
       fi
     fi
 
-    if [ "$_use_dxvk" = "git" ]; then
+    if [ "$_use_dxvk" = "git" ] && [ "$_proton_nvapi_disable" != "true" ]; then
       build_dxvk_nvapi
       mkdir -p "$_nowhere"/proton_dist_tmp/lib64/wine/nvapi
       mkdir -p "$_nowhere"/proton_dist_tmp/lib/wine/nvapi
@@ -1118,6 +1118,13 @@ else
     fi
     if [ -n "$_proton_shadercache_path" ]; then
       sed -i "s|.*PROTON_BYPASS_SHADERCACHE_PATH.*|     \"PROTON_BYPASS_SHADERCACHE_PATH\": \"${_proton_shadercache_path}\",|g" "proton_tkg_$_protontkg_version/user_settings.py"
+    fi
+
+    # Disable esync/fsync by default when fastsync is enabled
+    if [ "$_use_fastsync" = "true" ]; then
+      sed -i 's/.*PROTON_NO_ESYNC.*/     "PROTON_NO_ESYNC": "1",/g' "proton_tkg_$_protontkg_version/user_settings.py"
+      sed -i 's/.*PROTON_NO_FSYNC.*/     "PROTON_NO_FSYNC": "1",/g' "proton_tkg_$_protontkg_version/user_settings.py"
+      sed -i 's/.*PROTON_NO_FUTEX2.*/     "PROTON_NO_FUTEX2": "1",/g' "proton_tkg_$_protontkg_version/user_settings.py"
     fi
 
     # Use the corresponding DXVK/D9VK combo options
