@@ -73,6 +73,12 @@ _prebuild_common() {
 	  if [ "$_NOMINGW" = "true" ]; then
 	    _configure_args+=(--without-mingw)
 	  fi
+
+	  # Wayland driver
+	  if [ "$_wayland_driver" = "true" ]; then
+	    _configure_args64+=(--with-wayland --with-vulkan)
+	    _configure_args32+=(--with-wayland --with-vulkan)
+	  fi
 	fi
 
 	echo -e "\nconfigure arguments: ${_configure_args[@]}\n" >> "$_where"/last_build_config.log
@@ -251,11 +257,9 @@ _package_nomakepkg() {
 	cp -v "$_where"/wine-tkg-scripts/wine-tkg-interactive "$_prefix"/bin/wine-tkg-interactive
 
 	# strip
-	if [ "$_pkg_strip" = "true" ]; then
-	  for _f in "$_prefix"/{bin,lib,lib32,lib64}/{wine/*,*}; do
-	    if [[ "$_f" = *.so ]] || [[ "$_f" = *.dll ]]; then
-	      strip --strip-unneeded "$_f"
-	    fi
+	if [ "$_pkg_strip" = "true" ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then
+	  for _f in $( find "$_prefix" -type f '(' -iname '*.dll' -or -iname '*.so' -or -iname '*.sys' -or -iname '*.drv' -or -iname '*.exe' ')' ); do
+	    strip --strip-unneeded "$_f" && msg2 "$_f stripped"
 	  done
 	fi
 
@@ -380,6 +384,13 @@ _package_makepkg() {
 	cp "$_where"/wine-tkg-scripts/wine-tkg "${pkgdir}$_prefix"/bin/wine-tkg
 	cp "$_where"/wine-tkg-scripts/wine64-tkg "${pkgdir}$_prefix"/bin/wine64-tkg
 	cp "$_where"/wine-tkg-scripts/wine-tkg-interactive "${pkgdir}$_prefix"/bin/wine-tkg-interactive
+
+	# strip
+	if [ "$_pkg_strip" = "true" ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then
+	  for _f in $( find "${pkgdir}$_prefix" -type f '(' -iname '*.dll' -or -iname '*.so' -or -iname '*.sys' -or -iname '*.drv' -or -iname '*.exe' ')' ); do
+	    strip --strip-unneeded "$_f" && msg2 "$_f stripped"
+	  done
+	fi
 
 	cp "$_where"/last_build_config.log "${pkgdir}$_prefix"/share/wine/wine-tkg-config.txt
 
