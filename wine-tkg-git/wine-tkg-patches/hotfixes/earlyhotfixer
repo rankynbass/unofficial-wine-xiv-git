@@ -1,18 +1,21 @@
 #!/bin/bash
 
-if [[ "$_custom_wine_source" = *"ValveSoftware"* ]] || [[ "$_custom_wine_source" = *"GloriousEggroll"* ]]; then
+if [[ "$_custom_wine_source" = *"ValveSoftware"* ]]; then
   _unfrog="true"
 fi
 
 if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
 
-    if [ "$_use_staging" = "true" ] && grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/mfplat-streaming-support/definition"; then
+    if [ "$_use_staging" = "true" ] && ( cd "${srcdir}"/"${_stgsrcdir}" && ! git merge-base --is-ancestor 05ea40b9366e4ee28a2baa461853b778230cbad1 HEAD ) && [[ "$_custom_wine_source" != *"ValveSoftware"* ]] && grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/mfplat-streaming-support/definition"; then
       warning "! Staging has disabled mfplat support on this revision, so video playback will not work in games using mfplat unless a hotfix is available (last staging commit with it was bcfed21ea1925e06c1f0db0e86cb2380300b8aa9) !"
     fi
 
     # Wayland driver check
     if [[ ${_community_patches[*]} =~ "wine_wayland_driver.mypatch" ]]; then
       _wayland_driver="true"
+      warning "Disabling the fshack and vk childwindow patchsets since the wayland driver is enabled"
+      _proton_fs_hack="false"
+      _childwindow_fix="false"
     fi
 
     # Valve Proton specifics
@@ -25,6 +28,11 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
 
       if [ "$_steamclient_noswap" = "true" ]; then
         cp "$_where"/wine-tkg-patches/hotfixes/valve/0001-proton-steamclient-swap-revert.mypatch "$_where"/
+      fi
+
+      if [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]]; then
+        _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
+        _GE_FSR="true"
       fi
 
       if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]]; then
@@ -44,6 +52,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       _community_patches=$(echo $_community_patches | sed "s/amdags.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/atiadlxx-proton.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/ntdll_Map_top-down_if_dll_characteristics_include_DYNAMIC_BASE.mypatch//g" | tr -s " ")
+      _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack-alternative.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/wine_wayland_driver.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/unhide-prefix-update-window.mypatch//g" | tr -s " ")
@@ -60,12 +69,13 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
     fi
 
     # Disable the amd_fsr_fshack patch if _proton_fs_hack is disabled.
-    if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]] && [ "$_unfrog" != "true" ]; then
+    if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]] || [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]] && [ "$_unfrog" != "true" ]; then
       if [ "$_use_staging" = "true" ] && [ "$_proton_fs_hack" = "true" ]; then
         _steamvr_support="true"
       elif [ "$_proton_fs_hack" != "true" ] || [ "$_use_staging" != "true" ]; then
         warning "Disabling the amd_fsr_fshack community patch because its _proton_fs_hack dependency is disabled"
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
+        _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack-alternative.mypatch//g" | tr -s " ")
       fi
     fi
 
@@ -129,6 +139,12 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       _staging_args+=(-W mfplat-streaming-support)
     fi
     # /community patches
+
+    # Fix broken staging commit 86091d3b
+    if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 86091d3b1f5068693e1720ae1c301d2916dc975f HEAD && ! git merge-base --is-ancestor f2648a9a40cc7516ee4a469cca16778268053056 HEAD ); then
+      warning "Disable broken xactengine3_7-callbacks patchset on staging 86091d3b+"
+      _staging_args+=(-W xactengine3_7-callbacks)
+    fi
 
     # Fix broken staging commit fbe1ba5.
     if ( cd "${srcdir}"/"${_stgsrcdir}" && [ "$(git rev-parse HEAD)" = "fbe1ba5578fb7380e2b09a5aebf5aa488744a823" ] ); then

@@ -339,7 +339,7 @@ diff --git a/dlls/d3d11/texture.c b/dlls/d3d11/texture.c
 index 061bbb09795..dd21c6d7f08 100644
 --- a/dlls/d3d11/texture.c
 +++ b/dlls/d3d11/texture.c
-@@ -518,13 +518,20 @@ HRESULT d3d_texture1d_create(struct d3d_device *device, const D3D11_TEXTURE1D_DE
+@@ -518,14 +518,21 @@ HRESULT d3d_texture1d_create(struct d3d_device *device, const D3D11_TEXTURE1D_DE
  
  /* ID3D11Texture2D methods */
  
@@ -347,6 +347,7 @@ index 061bbb09795..dd21c6d7f08 100644
 +static inline struct d3d_texture2d *impl_from_IWineD3D11Texture2D(IWineD3D11Texture2D *iface)
  {
 -    struct d3d_texture2d *texture = impl_from_ID3D11Texture2D(iface);
+-    HRESULT hr;
 +    return CONTAINING_RECORD(iface, struct d3d_texture2d, ID3D11Texture2D_iface);
 +}
 +
@@ -354,6 +355,7 @@ index 061bbb09795..dd21c6d7f08 100644
 +        REFIID riid, void **object)
 +{
 +    struct d3d_texture2d *texture = impl_from_IWineD3D11Texture2D(iface);
++    HRESULT hr;
  
      TRACE("iface %p, riid %s, object %p.\n", iface, debugstr_guid(riid), object);
  
@@ -409,7 +411,7 @@ index 061bbb09795..dd21c6d7f08 100644
  {
 -    struct d3d_texture2d *texture = impl_from_ID3D11Texture2D(iface);
 +    struct d3d_texture2d *texture = impl_from_IWineD3D11Texture2D(iface);
-     IDXGISurface *dxgi_surface;
+     IDXGIResource *dxgi_resource;
      HRESULT hr;
  
 @@ -624,10 +631,10 @@ static HRESULT STDMETHODCALLTYPE d3d11_texture2d_GetPrivateData(ID3D11Texture2D
@@ -422,7 +424,7 @@ index 061bbb09795..dd21c6d7f08 100644
  {
 -    struct d3d_texture2d *texture = impl_from_ID3D11Texture2D(iface);
 +    struct d3d_texture2d *texture = impl_from_IWineD3D11Texture2D(iface);
-     IDXGISurface *dxgi_surface;
+     IDXGIResource *dxgi_resource;
      HRESULT hr;
  
 @@ -644,10 +651,10 @@ static HRESULT STDMETHODCALLTYPE d3d11_texture2d_SetPrivateData(ID3D11Texture2D
@@ -435,7 +437,7 @@ index 061bbb09795..dd21c6d7f08 100644
  {
 -    struct d3d_texture2d *texture = impl_from_ID3D11Texture2D(iface);
 +    struct d3d_texture2d *texture = impl_from_IWineD3D11Texture2D(iface);
-     IDXGISurface *dxgi_surface;
+     IDXGIResource *dxgi_resource;
      HRESULT hr;
  
 @@ -664,7 +671,7 @@ static HRESULT STDMETHODCALLTYPE d3d11_texture2d_SetPrivateDataInterface(ID3D11T
@@ -516,19 +518,19 @@ index 9822bce6bdd..d9b646f7de1 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
 @@ -770,6 +770,7 @@ SOURCES = \
- 	wine/itss.idl \
- 	wine/orpc.idl \
- 	wine/svcctl.idl \
+ 	wine/winbase16.h \
+ 	wine/windef16.h \
+ 	wine/wine_common_ver.rc \
 +	wine/wined3d-interop.idl \
+ 	wine/wined3d.h \
  	wine/winedxgi.idl \
- 	winerror.h \
- 	winevt.h \
+ 	wine/wingdi16.h \
 diff --git a/include/wine/wined3d-interop.idl b/include/wine/wined3d-interop.idl
 new file mode 100644
 index 00000000000..884baf958c2
 --- /dev/null
 +++ b/include/wine/wined3d-interop.idl
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,35 @@
 +/*
 + * Copyright 2018 Józef Kucia for CodeWeavers
 + *
@@ -546,6 +548,10 @@ index 00000000000..884baf958c2
 + * License along with this library; if not, write to the Free Software
 + * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 + */
++
++#if 0
++#pragma makedep header install
++#endif
 +
 +typedef void (__cdecl *gl_texture_callback)(unsigned int gl_texture, const void *data, unsigned int data_size);
 +

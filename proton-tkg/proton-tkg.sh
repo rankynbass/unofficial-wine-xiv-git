@@ -155,13 +155,6 @@ function new_lib_path_check {
   echo "_x86_64_windows_path=$_x86_64_windows_path" >>"$_logdir"/proton-tkg.log 2>&1
 }
 
-function clone_proton {
-  git clone https://github.com/ValveSoftware/Proton || true # It'll complain the path already exists on subsequent builds
-  cd Proton
-  git reset --hard origin/HEAD
-  git clean -xdf
-}
-
 function build_vrclient {
   cd "$_nowhere"
   source "$_nowhere/proton_tkg_token"
@@ -628,7 +621,8 @@ function proton_tkg_uninstaller {
     i=1
     for build in ${_strip_builds[@]}; do
       if [ "$_to_uninstall" = "$i" ]; then
-        rm -rf "proton_tkg_$build" && _available_builds=( `ls -d proton_tkg_* | sort -V` ) && _newest_build="${_available_builds[-1]//proton_tkg_/}" && sed -i "s/\"Proton-tkg $build\"/\"Proton-tkg ${_newest_build[@]}\"/" "$_config_file"
+        rm -rf "proton_tkg_$build" && _available_builds=( `ls -d proton_tkg_* | sort -V` ) && _newest_build="${_available_builds[-1]//proton_tkg_/}"
+        sed -i "s/\"Proton-tkg $build\"/\"Proton-tkg ${_newest_build[@]}\"/;s/\"TKG-proton-$build\"/\"TKG-proton-${_newest_build[@]}\"/" "$_config_file"
         echo "###########################################################################################################################"
         echo ""
         echo "Proton-tkg $build was uninstalled and games previously depending on it will now use Proton-tkg ${_newest_build[@]} instead."
@@ -780,6 +774,15 @@ else
   # Wine-tkg-git has injected versioning and settings in the token for us, so get the values back
   source "$_nowhere/proton_tkg_token"
 
+  # Prompt to re-use existing gst
+  if [ -d "${_resources_path}"/gst ] && [ -z $_reuse_built_gst ]; then
+    echo "    Existing proton gstreamer dir found. Do you want to use it instead of rebuilding?"
+    read -rp $'\n> Y/n : ' _reuse_gst;
+    if ( [ "$_reuse_gst" != "n" ] && [ "$_reuse_gst" != "N" ] ); then
+      _reuse_built_gst="true"
+    fi
+  fi
+
   # We might not want experimental branches since they are a moving target and not useful to us, so fallback to regular by default unless _proton_branch_exp="true" is passed
   if [[ "$_proton_branch" = experimental* ]] && [ "$_proton_branch_exp" != "true" ]; then
     echo -e "#### Replacing experimental branch by regular ####"
@@ -838,16 +841,25 @@ else
 
     if [ "$_NUKR" != "debug" ]; then
       if [ -d Proton ] && [ ! -f Proton/proton ]; then
-        rm -rf "$_resources_path"/Proton/*
+        ( cd Proton && find . -name . -o -prune -exec rm -rf -- {} + ) # We need to clean everything including dotfiles
       fi
       # Clone Proton tree as we need to build some tools from it
-      clone_proton
-      if ! git pull --ff-only; then
-        cd ..
-        rm -rf "$_resources_path"/Proton/*
+      git clone https://github.com/ValveSoftware/Proton || true # It'll complain the path already exists on subsequent builds
+      cd Proton
+      git reset --hard origin/HEAD
+      git clean -xdf
+      if ( ! git pull --ff-only ) || ( [ -n "$_bleeding_tag" ] ); then
         echo -e "######\nProton tree was force-pushed upstream.. Recloning clean to avoid issues..\n######"
-        clone_proton
+        find . -name . -o -prune -exec rm -rf -- {} + # We need to clean everything including dotfiles
+        cd ..
+        git clone https://github.com/ValveSoftware/Proton || true # It'll complain the path already exists on subsequent builds
+        cd Proton
+      else
         git pull origin
+      fi
+      if [ -n "$_bleeding_tag" ]; then
+        _bleeding_commit=$(git rev-list -n 1 "${_bleeding_tag}")
+        _proton_branch="$_bleeding_commit"
       fi
       git checkout "$_proton_branch"
 
@@ -867,12 +879,17 @@ else
 
     # Build GST/mediaconverter
     if [ "$_build_mediaconv" = "true" ] || [ "$_build_gstreamer" = "true" ]; then
-      build_mediaconverter
+      if [ "$_reuse_built_gst" = "true" ] && [ -d "${_resources_path}"/gst ]; then
+        cp -r "${_resources_path}"/gst "$_nowhere"/gst
+      else
+        build_mediaconverter
+        rm -rf "${_resources_path}"/gst && cp -r "$_nowhere"/gst "${_resources_path}"/gst
+      fi
     fi
 
     # Grab share template and inject version
     _versionpre=`date '+%s'`
-    echo "$_versionpre" "proton-tkg-$_protontkg_true_version" > "$_nowhere/proton_dist_tmp/version" && cp -r "$_nowhere/proton_template/share"/* "$_nowhere/proton_dist_tmp/share"/
+    echo "$_versionpre" "TKG-proton-$_protontkg_true_version" > "$_nowhere/proton_dist_tmp/version" && cp -r "$_nowhere/proton_template/share"/* "$_nowhere/proton_dist_tmp/share"/
 
     # Create the dxvk dirs
     mkdir -p "$_nowhere/proton_dist_tmp/lib64/wine/dxvk"
@@ -1000,7 +1017,21 @@ else
     mv "$_nowhere"/proton_dist_tmp "$_nowhere"/"proton_tkg_$_protontkg_version"/files && cd "$_nowhere"
 
     # Grab conf template and inject version
-    echo "$_versionpre" "proton-tkg-$_protontkg_true_version" > "proton_tkg_$_protontkg_version/version" && cp "proton_template/conf"/* "proton_tkg_$_protontkg_version"/ && sed -i -e "s|TKGVERSION|$_protontkg_version|" "proton_tkg_$_protontkg_version/compatibilitytool.vdf"
+    echo "$_versionpre" "TKG-proton-$_protontkg_true_version" > "proton_tkg_$_protontkg_version/version" && cp "proton_template/conf"/* "proton_tkg_$_protontkg_version"/ && sed -i -e "s|TKGVERSION|$_protontkg_version|" "proton_tkg_$_protontkg_version/compatibilitytool.vdf"
+
+    # Inject toolmanifest
+    if [ "$_built_with_runtime" = "true" ]; then
+      if [ -e "$_nowhere"/Proton/toolmanifest_runtime.vdf ] && [ "$_nosteamruntime" = "sniper" ]; then
+        rm -f "proton_tkg_$_protontkg_version"/toolmanifest.vdf && cp "$_nowhere"/Proton/toolmanifest_runtime.vdf "proton_tkg_$_protontkg_version"/toolmanifest.vdf
+        sed -i -e "s/1391110/1628350/g" "proton_tkg_$_protontkg_version"/toolmanifest.vdf
+      elif [ -e "$_nowhere"/Proton/toolmanifest_runtime.vdf ] && [ "$_nosteamruntime" != "true" ]; then
+        rm -f "proton_tkg_$_protontkg_version"/toolmanifest.vdf && cp "$_nowhere"/Proton/toolmanifest_runtime.vdf "proton_tkg_$_protontkg_version"/toolmanifest.vdf
+      elif [ -e "$_nowhere"/Proton/toolmanifest_noruntime.vdf ] && [ "$_nosteamruntime" = "true" ]; then
+        rm -f "proton_tkg_$_protontkg_version"/toolmanifest.vdf && cp "$_nowhere"/Proton/toolmanifest_noruntime.vdf "proton_tkg_$_protontkg_version"/toolmanifest.vdf
+      fi
+    elif [ -e "$_nowhere"/Proton/toolmanifest_noruntime.vdf ]; then
+      rm -f "proton_tkg_$_protontkg_version"/toolmanifest.vdf && cp "$_nowhere"/Proton/toolmanifest_noruntime.vdf "proton_tkg_$_protontkg_version"/toolmanifest.vdf
+    fi
 
     # steampipe fixups
     cp "$_nowhere"/proton_template/steampipe_fixups.py "$_nowhere"/"proton_tkg_$_protontkg_version"/
@@ -1228,11 +1259,17 @@ else
           fi
         fi
       else
+        # Get rid of the token
+        rm -f proton_tkg_token
+        mkdir -p "$_nowhere"/built && mv "proton_tkg_$_protontkg_version" "$_nowhere/built/" && echo "" &&
         echo "####################################################################################################"
         echo ""
-        echo " Your Proton-tkg build is now available in $_nowhere/proton_tkg_$_protontkg_version"
+        echo " Your Proton-tkg build is now available in $_nowhere/built/proton_tkg_$_protontkg_version"
         echo ""
         echo "####################################################################################################"
+        if [ -e "$_nowhere"/tarplz ];then
+          ( cd "$_nowhere"/built && tar -cvf "proton_tkg_$_protontkg_version".tar "proton_tkg_$_protontkg_version" && rm -rf "proton_tkg_$_protontkg_version" )
+        fi
       fi
     else
       # Apparently this can happen.. So let's clean it up if needed.

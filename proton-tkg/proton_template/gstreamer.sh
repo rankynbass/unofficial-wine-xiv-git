@@ -4,9 +4,9 @@
   #_nowhere="$PWD"
   source "$_nowhere/proton_tkg_token" || source "$_nowhere/src/proton_tkg_token"
 
-  cd "$_nowhere"/Proton
+  cd "$_nowhere"/external-resources
 
-  git clone https://gitlab.freedesktop.org/gstreamer/gstreamer.git || true # It'll complain the path already exists on subsequent builds
+  git clone https://github.com/GStreamer/gstreamer.git || true # It'll complain the path already exists on subsequent builds
   cd gstreamer
   git reset --hard HEAD
   git clean -xdf
@@ -31,6 +31,9 @@
     rm -rf "$_nowhere"/Proton/build/faudio*
   fi
 
+  rm -rf "$_nowhere"/Proton/{gstreamer,FFmpeg,FAudio}
+  ln -s "$_nowhere"/external-resources/{gstreamer,FFmpeg,FAudio} "$_nowhere"/Proton/
+
   rm -rf "$_nowhere"/Proton/build/gst*
 
   ##### 64
@@ -40,6 +43,39 @@
     export PKG_CONFIG_PATH="$_proton_tkg_path/gst/lib64/pkgconfig:/usr/lib64/pkgconfig"
   else
     export PKG_CONFIG_PATH="$_proton_tkg_path/gst/lib64/pkgconfig"
+  fi
+
+  if [ "$_build_ffmpeg" = "true" ]; then
+	mkdir -p "$_nowhere"/Proton/build/FFmpeg64 && cd "$_nowhere"/Proton/build/FFmpeg64
+
+	"$_nowhere"/Proton/FFmpeg/configure \
+		--prefix="$_nowhere/gst" \
+		--libdir="$_nowhere/gst/lib64" \
+		--enable-shared \
+		--disable-static \
+		--disable-everything \
+		--disable-programs \
+		--disable-doc \
+		--enable-decoder=mpeg4 \
+		--enable-decoder=msmpeg4v1 \
+		--enable-decoder=msmpeg4v2 \
+		--enable-decoder=msmpeg4v3 \
+		--enable-decoder=vc1 \
+		--enable-decoder=wmav1 \
+		--enable-decoder=wmav2 \
+		--enable-decoder=wmapro \
+		--enable-decoder=wmalossless \
+		--enable-decoder=xma1 \
+		--enable-decoder=xma2 \
+		--enable-decoder=wmv3image \
+		--enable-decoder=wmv3 \
+		--enable-decoder=wmv2 \
+		--enable-decoder=wmv1 \
+		--enable-decoder=h264 \
+		--enable-decoder=aac \
+		--enable-demuxer=xwma
+
+	make && make install
   fi
 
   cd "$_nowhere"/Proton/gstreamer
@@ -219,6 +255,40 @@
     fi
     export CC="gcc -m32"
     export CXX="g++ -m32"
+
+    if [ "$_build_ffmpeg" = "true" ]; then
+		mkdir -p "$_nowhere"/Proton/build/FFmpeg32 && cd "$_nowhere"/Proton/build/FFmpeg32
+
+		"$_nowhere"/Proton/FFmpeg/configure \
+			--cc="$CC" \
+			--prefix="$_nowhere/gst" \
+			--libdir="$_nowhere/gst/lib" \
+			--enable-shared \
+			--disable-static \
+			--disable-everything \
+			--disable-programs \
+			--disable-doc \
+			--enable-decoder=mpeg4 \
+			--enable-decoder=msmpeg4v1 \
+			--enable-decoder=msmpeg4v2 \
+			--enable-decoder=msmpeg4v3 \
+			--enable-decoder=vc1 \
+			--enable-decoder=wmav1 \
+			--enable-decoder=wmav2 \
+			--enable-decoder=wmapro \
+			--enable-decoder=wmalossless \
+			--enable-decoder=xma1 \
+			--enable-decoder=xma2 \
+			--enable-decoder=wmv3image \
+			--enable-decoder=wmv3 \
+			--enable-decoder=wmv2 \
+			--enable-decoder=wmv1 \
+			--enable-decoder=h264 \
+			--enable-decoder=aac \
+			--enable-demuxer=xwma
+
+		make && make install
+    fi
 
     cd "$_nowhere"/Proton/gstreamer
     mkdir -p "$_nowhere"/Proton/build/gst32

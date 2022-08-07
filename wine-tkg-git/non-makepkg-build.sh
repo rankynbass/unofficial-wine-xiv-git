@@ -18,7 +18,7 @@
 
 ## You're on your own to resolve additional dependencies you might want to build with, such as Faudio.
 
-pkgname=wine-tkg-git
+pkgname=wine-tkg
 
 _build_in_tmpfs="true"
 
@@ -160,12 +160,12 @@ _nomakepkgsrcinit() {
       git -c advice.detachedHead=false checkout "${_plain_version}"
       if [ "$_LOCAL_PRESET" = "valve-exp-bleeding" ]; then
         if [ -z "$_bleeding_tag" ]; then
-          _bleeding_tag=$(git tag -l --sort=-creatordate | grep "bleeding" | head -n 1)
+          _bleeding_tag=$(git tag -l --sort=-v:refname | grep "bleeding" | head -n 1)
         fi
         echo -e "Bleeding edge tag: ${_bleeding_tag}" >> "$_where"/prepare.log
         _bleeding_commit=$(git rev-list -n 1 "${_bleeding_tag}")
         echo -e "Bleeding edge commit: ${_bleeding_commit}" >> "$_where"/prepare.log
-        git -c advice.detachedHead=false checkout "${_bleeding_commit}"
+        git -c advice.detachedHead=false checkout "${_bleeding_tag}"
       fi
     fi
 

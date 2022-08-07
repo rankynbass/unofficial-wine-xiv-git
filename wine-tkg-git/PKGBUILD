@@ -1,6 +1,6 @@
 # Created by: Tk-Glitch <ti3nou at gmail dot com>
 
-pkgname=wine-tkg-git
+pkgname=wine-tkg
 pkgver=0
 
 # workaround for pkgrel overwritten on regen
@@ -47,22 +47,22 @@ pkgdesc='This "Wine to rule them all" package is the result of some random pkgbu
 url='https://github.com/Tk-Glitch/PKGBUILDS/tree/master/wine-tkg-git'
 arch=('x86_64')
 
-# Don't strip if _pkg_strip is disabled
-if [ "$_pkg_strip" != "true" ]; then
- _makepkg_options+=('!strip')
-fi
+_makepkg_options+=('!strip')
+_makepkg_options+=('!ccache')
 
 # Only pass the staticlibs option to system-wide installs
 if [ "$_EXTERNAL_INSTALL" != "true" ]; then
   _makepkg_options+=(staticlibs)
 fi
 
-if msg2; then # Arch chroot workaround for even more looping fun
-  # Use ccache if available
-  if pacman -Qq ccache &> /dev/null; then
-    msg2 'ccache was found and will be used'
-  else
-    msg2 'ccache was not found and will not be used'
+if [ "$_NOCCACHE" != "true" ]; then
+  if msg2; then # Arch chroot workaround for even more looping fun
+    # Use ccache if available
+    if pacman -Qq ccache &> /dev/null; then
+      msg2 'ccache was found and will be used'
+    else
+      msg2 'ccache was not found and will not be used'
+    fi
   fi
 fi
 
@@ -173,7 +173,11 @@ optdepends=(
 # Wine source
 if [ -n "$_custom_wine_source" ]; then
   _winesrcdir=$( sed 's|/|-|g' <<< $(sed 's|.*://.[^/]*/||g' <<< ${_custom_wine_source//./}))
-  _winesrctarget="$_custom_wine_source"
+  if [[ "$_custom_wine_source" = https* ]]; then
+    _winesrctarget="git+$_custom_wine_source"
+  else
+    _winesrctarget="$_custom_wine_source"
+  fi
 else
   if [ "$_plain_mirrorsrc" = "true" ]; then
     _winesrcdir="wine-mirror-git"
@@ -190,11 +194,8 @@ if [ ! -e "$_where"/BIG_UGLY_FROGMINER ]; then
 fi
 
 # Handle unbranched bleeding version
-if [ "$_LOCAL_PRESET" = "valve-exp-bleeding" ]; then
-  _winesrctarget="git+$_winesrctarget"
-  if [ -n "$_bleeding_tag" ]; then
-    _plain_commit="${_bleeding_tag}"
-  fi
+if [[ "$_LOCAL_PRESET" = valve* ]] && [ -n "$_bleeding_tag" ]; then
+  _plain_commit="${_bleeding_tag}"
 fi
 
 source=("$_winesrcdir"::"${_winesrctarget}${_plain_commit}"
@@ -266,7 +267,7 @@ pkgver() {
 	fi
 
 	# retrieve current wine version - if staging is enabled, staging version will be used instead
-	_describe_wine
+	_ismakepkg="true" _describe_wine
 }
 
 prepare() {
@@ -275,7 +276,8 @@ prepare() {
 	  (
 	  cd "${srcdir}/${_winesrcdir}"
 	  if [ -z "$_bleeding_tag" ]; then
-	    _bleeding_tag=$(git tag -l --sort=-creatordate | grep "bleeding" | head -n 1)
+	    _bleeding_tag=$(git tag -l --sort=-v:refname | grep "bleeding" | head -n 1)
+	    echo "_bleeding_tag='$_bleeding_tag'" >> "$_where"/temp
 	  fi
 	  _bleeding_commit=$(git rev-list -n 1 "${_bleeding_tag}")
 	  _plain_commit="${_bleeding_commit}"

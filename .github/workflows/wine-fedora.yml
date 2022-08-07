@@ -2,7 +2,6 @@ name: Wine Fedora CI
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
@@ -16,6 +15,7 @@ jobs:
           sudo dnf -y -q update
           cd wine-tkg-git 
           sed -i 's/distro=""/distro="fedora"/' customization.cfg
+          touch tarplz
           yes|./non-makepkg-build.sh
       - name: Archive the artifacts
         uses: actions/upload-artifact@v2

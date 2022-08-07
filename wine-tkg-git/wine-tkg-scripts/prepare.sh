@@ -29,6 +29,9 @@ _exit_cleanup() {
     else
       echo "_proton_branch=${_proton_branch}" >> "$_proton_tkg_path"/proton_tkg_token
     fi
+    if [[ $pkgver = *bleeding.edge* ]]; then
+      echo "_bleeding_tag='${_bleeding_tag//-wine/}'" >> "$_proton_tkg_path"/proton_tkg_token
+    fi
     if [ -n "$_proton_dxvk_configfile" ]; then
       echo "_proton_dxvk_configfile=${_proton_dxvk_configfile}" >> "$_proton_tkg_path"/proton_tkg_token
     fi
@@ -68,7 +71,11 @@ _exit_cleanup() {
     echo "_build_mediaconv='${_build_mediaconv}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_build_gstreamer='${_build_gstreamer}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_lib32_gstreamer='${_lib32_gstreamer}'" >> "$_proton_tkg_path"/proton_tkg_token
-    echo "_build_faudio='${_build_faudio}'" >> "$_proton_tkg_path"/proton_tkg_token
+    echo "_build_ffmpeg='${_build_ffmpeg}'" >> "$_proton_tkg_path"/proton_tkg_token
+    if [[ "$_LOCAL_PRESET" = valve* ]]; then
+      echo "_build_faudio='${_build_faudio}'" >> "$_proton_tkg_path"/proton_tkg_token # FAudio is builtin on current usptream wine
+    fi
+    echo "_reuse_built_gst='${_reuse_built_gst}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_unfrog='${_unfrog}'" >> "$_proton_tkg_path"/proton_tkg_token
   fi
 
@@ -95,6 +102,7 @@ _exit_cleanup() {
   rm -rf "$_where"/*.conf
   rm -rf "$_where"/*.orig
   rm -rf "$_where"/*.rej
+  rm -rf "$_where"/temp
 
   if [ -n "$_buildtime64" ]; then
     msg2 "Compilation time for 64-bit wine: \n$_buildtime64\n"
@@ -175,7 +183,9 @@ msg2 ''
   fi
 
   # Load external configuration file if present. Available variable values will overwrite customization.cfg ones.
-  if [ -e "$_EXT_CONFIG_PATH" ]; then
+  if [ -e "$_where/wine-tkg-userpatches/user.cfg" ]; then
+    source "$_where/wine-tkg-userpatches/user.cfg" && msg2 "User.cfg config loaded"
+  elif [ -e "$_EXT_CONFIG_PATH" ]; then
     source "$_EXT_CONFIG_PATH" && msg2 "External configuration file $_EXT_CONFIG_PATH will be used to override customization.cfg values." && msg2 ""
   fi
 
@@ -213,7 +223,9 @@ msg2 ''
       msg2 '###################################TkG##########was##########here'
       read -rp "When you are ready, press enter to continue."
 
-      if [ -e "$_EXT_CONFIG_PATH" ]; then
+      if [ -e "$_where/wine-tkg-userpatches/user.cfg" ]; then
+        source "$_where/wine-tkg-userpatches/user.cfg" && msg2 "User.cfg config loaded"
+      elif [ -e "$_EXT_CONFIG_PATH" ]; then
         source "$_EXT_CONFIG_PATH" && msg2 "External config loaded" # load external configuration from file again, in case of changes.
       else
         # load default configuration from file again, in case of change
@@ -228,11 +240,30 @@ msg2 ''
     fi
   fi
 
+  # makepkg: grab temp profile data in flight - Else the makepkg loop clears and forgets
+  if [ -e "$_where"/temp ]; then
+    source "$_where"/temp
+  fi
+
   # Check for proton-tkg token to prevent broken state as we need to enforce some defaults
   if [ -e "$_proton_tkg_path"/proton_tkg_token ] && [ -n "$_proton_tkg_path" ]; then
-    if [ "$_LOCAL_PRESET" != "valve" ] && [[ "$_LOCAL_PRESET" != valve-exp* ]]; then
+    if [[ "$_LOCAL_PRESET" != valve* ]] && [ "$_LOCAL_PRESET" != "none" ]; then
       _LOCAL_PRESET=""
-	fi
+    fi
+    if [ -z "$_LOCAL_PRESET" ]; then
+      msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base:"
+      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton\n    choice[1-4?]: '`" CONDITION;
+      if [ "$CONDITION" = "2" ]; then
+        _LOCAL_PRESET="valve-exp"
+      elif [ "$CONDITION" = "3" ]; then
+        _LOCAL_PRESET="valve"
+      elif [ "$CONDITION" = "4" ]; then
+        _LOCAL_PRESET=""
+      else
+        _LOCAL_PRESET="valve-exp-bleeding"
+      fi
+      echo "_LOCAL_PRESET='$_LOCAL_PRESET'" > "$_where"/temp
+    fi
     _EXTERNAL_INSTALL="proton"
     _EXTERNAL_NOVER="false"
     _nomakepkg_nover="true"
@@ -261,15 +292,67 @@ msg2 ''
     error "This special option doesn't use pacman and requires you to run 'proton-tkg.sh' script from proton-tkg dir."
     _exit_cleanup
     exit
+  else
+    if [ ! -e "$_where"/BIG_UGLY_FROGMINER ] && [ -z "$_LOCAL_PRESET" ]; then
+      msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base (or hit enter for default) :"
+      warning "(mainline and staging options will make clean & untouched wine and wine-staging builds)"
+
+      i=0
+      for _profiles in "$_where/wine-tkg-profiles"/wine-tkg-*.cfg; do
+        _GOTCHA=( "${_profiles//*\/wine-tkg-/}" )
+        msg2 "  $i - ${_GOTCHA//.cfg/}" && ((i+=1))
+      done
+      msg2 "  $i - other & legacy"
+
+      _separator="$i"
+      ((i+=1))
+
+      read -rp "  choice [0-$(($i-1))]: " _SELECT_PRESET;
+
+      if [ "$_SELECT_PRESET" = "$_separator" ]; then
+        i=0
+        for _profiles in "$_where/wine-tkg-profiles"/legacy/wine-tkg-*.cfg; do
+          _GOTCHA=( "${_profiles//*\/wine-tkg-/}" )
+          msg2 "  $i - ${_GOTCHA//.cfg/}" && ((i+=1))
+        done
+        read -rp "  choice [0-$(($i-1))]: " _SELECT_PRESET;
+        _profiles=( `ls "$_where/wine-tkg-profiles"/legacy/wine-tkg-*.cfg` )
+      else
+        _profiles=( `ls "$_where/wine-tkg-profiles"/wine-tkg-*.cfg` )
+      fi
+      _strip_profiles=( "${_profiles[@]//*\/wine-tkg-/}" )
+
+      _LOCAL_PRESET="${_strip_profiles[$_SELECT_PRESET]//.cfg/}"
+
+      # Clear the default preset
+      if [ "$_LOCAL_PRESET" = "default-tkg" ]; then
+        _LOCAL_PRESET="none"
+      fi
+
+      echo "_LOCAL_PRESET='$_LOCAL_PRESET'" > "$_where"/temp
+    fi
   fi
 
   # Load preset configuration files if present and selected. All values will overwrite customization.cfg ones.
-  if [ -n "$_LOCAL_PRESET" ] && [ -e "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg ]; then
+  if [ -n "$_LOCAL_PRESET" ] && ( [ -e "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg ] || [ -e "$_where"/wine-tkg-profiles/legacy/wine-tkg-"$_LOCAL_PRESET".cfg ] ); then
     if [ "$_LOCAL_PRESET" = "valve" ] || [[ "$_LOCAL_PRESET" = valve-exp* ]]; then
-      source "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg && msg2 "Preset configuration $_LOCAL_PRESET will be used to override customization.cfg values." && msg2 ""
+      if [ -e "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg ]; then
+        source "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg
+      elif [ -e "$_where"/wine-tkg-profiles/legacy/wine-tkg-"$_LOCAL_PRESET".cfg ]; then
+        source "$_where"/wine-tkg-profiles/legacy/wine-tkg-"$_LOCAL_PRESET".cfg
+      fi
+      msg2 "Preset configuration $_LOCAL_PRESET will be used to override customization.cfg values." && msg2 ""
     else
-      source "$_where"/wine-tkg-profiles/wine-tkg.cfg && source "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg && msg2 "Preset configuration $_LOCAL_PRESET will be used to override customization.cfg values." && msg2 ""
-	fi
+      source "$_where"/wine-tkg-profiles/wine-tkg.cfg
+      if [ -e "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg ]; then
+        source "$_where"/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg
+      elif [ -e "$_where"/wine-tkg-profiles/legacy/wine-tkg-"$_LOCAL_PRESET".cfg ]; then
+        source "$_where"/wine-tkg-profiles/legacy/wine-tkg-"$_LOCAL_PRESET".cfg
+      fi
+      msg2 "Preset configuration $_LOCAL_PRESET will be used to override customization.cfg values." && msg2 ""
+    fi
+  elif [ -n "$_LOCAL_PRESET" ] && [ "$_LOCAL_PRESET" != "none" ]; then
+    error "Preset '$_LOCAL_PRESET' was not found anywhere! exiting..." && exit 1
   fi
 
   # Disable undesirable patchsets when using official proton wine source
@@ -310,28 +393,30 @@ _pkgnaming() {
     msg2 "Overriding default pkgname. New pkgname: ${pkgname}"
   else
     if [ "$_use_staging" = "true" ]; then
-      pkgname="${pkgname/%-git/-staging-git}"
+      pkgname+="-staging"
       msg2 "Using staging patchset"
     fi
 
     if [ "$_use_esync" = "true" ]; then
       if [ "$_use_fsync" = "true" ]; then
-        pkgname="${pkgname/%-git/-fsync-git}"
+        pkgname+="-fsync"
         msg2 "Using fsync patchset"
       else
-        pkgname="${pkgname/%-git/-esync-git}"
+        pkgname+="-esync"
         msg2 "Using esync patchset"
       fi
     fi
     if [ "$_use_legacy_gallium_nine" = "true" ]; then
-      pkgname="${pkgname/%-git/-nine-git}"
+      pkgname+="-nine"
       msg2 "Using gallium nine patchset (legacy)"
     fi
+    # Add trailing -git for non-overriden pkgnames
+    pkgname+="-git"
   fi
 
   # External install
   if [ "$_EXTERNAL_INSTALL" = "true" ]; then
-    pkgname="${pkgname/%-git/-$_EXTERNAL_INSTALL_TYPE-git}"
+    pkgname+="-$_EXTERNAL_INSTALL_TYPE"
     msg2 "Installing to $_DEFAULT_EXTERNAL_PATH/$pkgname"
   elif [ "$_EXTERNAL_INSTALL" = "proton" ]; then
     pkgname="proton_dist"
@@ -406,11 +491,22 @@ user_patcher() {
 }
 
 _describe_wine() {
+  if [ -e "$_where"/temp ]; then
+    source "$_where"/temp
+  fi
   if [ "$_LOCAL_PRESET" = "valve-exp-bleeding" ]; then
-    # On experimental bleeding edge, we want to keep only the first 8 out of 14 bits
-    echo $( git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//' | cut -d'.' -f1-8 )
+    # On experimental bleeding edge, we want to keep only the first 7 out of 13 bits
+    if [ "$_ismakepkg" = "true" ]; then
+      echo "$_bleeding_tag" | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//;s/\.wine//' | cut -d'.' -f1-7 | sed 's/experimental.//;s/bleeding.edge.//'
+    else
+      echo "$_bleeding_tag" | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//;s/\.wine//' | cut -d'.' -f1-7
+    fi
   else
-    git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//'
+    if [ "$_ismakepkg" = "true" ]; then
+      git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//;s/experimental.//'
+    else
+      git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//'
+    fi
   fi
 }
 
@@ -445,20 +541,20 @@ _source_cleanup() {
 }
 
 _prepare() {
-	# holds extra arguments to staging's patcher script, if applicable
-	local _staging_args=()
+  # holds extra arguments to staging's patcher script, if applicable
+  local _staging_args=()
 
-	source "$_where"/wine-tkg-patches/hotfixes/earlyhotfixer
+  source "$_where"/wine-tkg-patches/hotfixes/earlyhotfixer
 
-	# grabs userdefined staging args if any
-	_staging_args+=($_staging_userargs)
+  # grabs userdefined staging args if any
+  _staging_args+=($_staging_userargs)
 
-	if [ "$_use_staging" = "true" ] && [ "$_staging_upstreamignore" != "true" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
-	  cd "${srcdir}"/"${_winesrcdir}"
-	  # change back to the wine upstream commit that this version of wine-staging is based in
-	  msg2 'Changing wine HEAD to the wine-staging base commit...'
-	  git -c advice.detachedHead=false checkout "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)"
-	fi
+  if [ "$_use_staging" = "true" ] && [ "$_staging_upstreamignore" != "true" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
+    cd "${srcdir}"/"${_winesrcdir}"
+    # change back to the wine upstream commit that this version of wine-staging is based in
+    msg2 'Changing wine HEAD to the wine-staging base commit...'
+    git -c advice.detachedHead=false checkout "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)"
+  fi
 
   # Community patches
   if [ -n "$_community_patches" ]
@@ -649,9 +745,29 @@ _prepare() {
 	  fi
 	}
 
+	# Backports
+	nonuser_cherry_picker() {
+	  if [ "$_NUKR" != "debug" ] || [[ "$_DEBUGANSW1" =~ [yY] ]]; then
+	    if ! git merge-base --is-ancestor $_committocherrypick HEAD; then
+	      echo -e "\n$_committocherrypick cherry picked $_hotfixmsg" >> "$_where"/prepare.log
+	      git cherry-pick -n --keep-redundant-commits $_committocherrypick >> "$_where"/prepare.log || (error "Patch application has failed. The error was logged to $_where/prepare.log for your convenience." && exit 1)
+	      if [ "$_hotfixmsg" != "(hotfix)" ] && [ "$_hotfixmsg" != "(staging hotfix)" ]; then
+	        echo -e "$_committocherrypick cherry picked $_hotfixmsg" >> "$_where"/last_build_config.log
+	      fi
+	    fi
+	  fi
+	}
+
 	# Hotfixer
 	if [ "$_LOCAL_PRESET" != "staging" ] && [ "$_LOCAL_PRESET" != "mainline" ] && [ "$_NUKR" != "debug" ] || [[ "$_DEBUGANSW1" =~ [yY] ]]; then
 	  source "$_where"/wine-tkg-patches/hotfixes/hotfixer
+	  msg2 "cherry picking..."
+	  for _commit in ${_hotfix_mainlinebackports[@]}; do
+	    cd "${srcdir}"/"${_winesrcdir}"
+	    _committocherrypick=$_commit _hotfixmsg="(hotfix)" nonuser_cherry_picker
+	    cd "${srcdir}"/"${_winesrcdir}"
+	  done
+	  echo -e "Done applying backports hotfixes (if any) - list available in prepare.log" >> "$_where"/last_build_config.log
 	  msg2 "Hotfixing..."
 	  for _commit in ${_hotfix_mainlinereverts[@]}; do
 	    cd "${srcdir}"/"${_winesrcdir}"
@@ -761,6 +877,9 @@ _prepare() {
 	# Manual staging patches application on top of proton valve trees
 	if [[ "$_custom_wine_source" = *"ValveSoftware"* ]] && [ "$_use_staging" = "true" ]; then
 	  _proton_staging
+	  if [ "$_use_GE_patches" = "true" ]; then
+	    _GE
+	  fi
 	fi
 
     source "$_where"/wine-tkg-patches/proton/use_clock_monotonic/use_clock_monotonic
@@ -929,6 +1048,9 @@ _polish() {
 	  # Set custom version so that it reports the same as pkgver
 	  if [ "$_versioning_string" = "wine_srcdir" ]; then
 	    sed -i "s/GIT_DIR=\${$_versioning_string}.git git describe HEAD 2>\\/dev\\/null || echo \\\\\"wine-\\\\\$(PACKAGE_VERSION)\\\\\"/echo \\\\\"wine-$_realwineversion\\\\\"/g" "$_versioning_path"
+	    if [ -e "${srcdir}/${_winesrcdir}/configure" ]; then
+	      sed -i "s/GIT_DIR=\${$_versioning_string}.git git describe HEAD 2>\\/dev\\/null || echo \\\\\"wine-\\\\\$(PACKAGE_VERSION)\\\\\"/echo \\\\\"wine-$_realwineversion\\\\\"/g" "${srcdir}/${_winesrcdir}/configure"
+	    fi
 	  else
 	    sed -i "s/GIT_DIR=\$($_versioning_string)\\/.git git describe HEAD 2>\\/dev\\/null || echo \"wine-\$(PACKAGE_VERSION)\"/echo \"wine-$_realwineversion\"/g" "$_versioning_path"
 	  fi
@@ -941,13 +1063,13 @@ _polish() {
 	  else
 	    _version_tags+=(Plain)
 	  fi
-	  if [ "$_use_esync" = "true" ] || [ "$_staging_esync" = "true" ]; then
+	  if [ "$_use_esync" = "true" ] || [ "$_staging_esync" = "true" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
 	   _version_tags+=(Esync)
 	  fi
-	  if [ "$_use_fsync" = "true" ] && [ "$_staging_esync" = "true" ]; then
+	  if [ "$_use_fsync" = "true" ] && [ "$_staging_esync" = "true" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
 	    _version_tags+=(Fsync)
 	  fi
-	  if [ "$_use_pba" = "true" ] && [ "$_pba_version" != "none" ]; then
+	  if [ "$_use_pba" = "true" ] && [ "$_pba_version" != "none" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
 	    _version_tags+=(PBA)
 	  fi
 	  if [ "$_use_legacy_gallium_nine" = "true" ]; then
