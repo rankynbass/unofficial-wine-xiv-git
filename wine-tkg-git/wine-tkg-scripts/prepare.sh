@@ -62,6 +62,7 @@ _exit_cleanup() {
     echo "_NUKR='${_NUKR}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_winesrcdir='${_winesrcdir}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_standard_dlopen='${_standard_dlopen}'" >> "$_proton_tkg_path"/proton_tkg_token
+    echo "_processinfoclass='${_processinfoclass}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "_no_loader_array='${_no_loader_array}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "CUSTOM_MINGW_PATH='${CUSTOM_MINGW_PATH}'" >> "$_proton_tkg_path"/proton_tkg_token
     echo "CUSTOM_GCC_PATH='${CUSTOM_GCC_PATH}'" >> "$_proton_tkg_path"/proton_tkg_token
@@ -252,6 +253,7 @@ msg2 ''
     fi
     if [ -z "$_LOCAL_PRESET" ]; then
       msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base:"
+      warning "With Valve trees, most wine-specific customization options will be ignored such as game-specific patches, esync/fsync/fastsync or Proton-specific features support. Those patches and features are for the most part already in, but some bits deemed useful such as FSR support for Proton's fshack are made available through community patches. Staging and GE patches are available through regular .cfg options."
       read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (The most experimental)\n    choice[1-4?]: '`" CONDITION;
       if [ "$CONDITION" = "2" ]; then
         _LOCAL_PRESET="valve-exp"
@@ -361,9 +363,11 @@ msg2 ''
     _FS_bypass_compositor="false"
     _use_esync="false"
     _use_fsync="false"
+    _use_fastsync="false"
     _fsync_futex_waitv="false"
 #    _use_staging="false"
     _proton_fs_hack="false"
+    _proton_rawinput="false"
     _large_address_aware="false"
     _proton_mf_hacks="false"
     _update_winevulkan="false"
@@ -390,6 +394,11 @@ _pkgnaming() {
       pkgname="${pkgname}"
     else
       pkgname="${pkgname}-${_PKGNAME_OVERRIDE}"
+    fi
+
+    # Add trailing -git for non-valve presets
+    if [ -n "$_LOCAL_PRESET" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
+      pkgname+="-git"
     fi
     msg2 "Overriding default pkgname. New pkgname: ${pkgname}"
   else
@@ -554,7 +563,15 @@ _prepare() {
     cd "${srcdir}"/"${_winesrcdir}"
     # change back to the wine upstream commit that this version of wine-staging is based in
     msg2 'Changing wine HEAD to the wine-staging base commit...'
-    git -c advice.detachedHead=false checkout "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)"
+    if $( git merge-base "$( cat ../"$_stgsrcdir"/staging/upstream-commit )" --is-ancestor "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)" ); then
+      msg2 "Using patchinstall.sh --upstream-commit"
+      # Use patchinstall.sh --upstream-commit
+      git -c advice.detachedHead=false checkout "$(../"$_stgsrcdir"/patches/patchinstall.sh --upstream-commit)"
+    else
+      msg2 "Using upstream-commit file"
+      # Use upstream-commit file if patchinstall.sh --upstream-commit doesn't report the same upstream commit target
+      git -c advice.detachedHead=false checkout "$( cat ../"$_stgsrcdir"/staging/upstream-commit )"
+    fi
   fi
 
   # Community patches
@@ -983,6 +1000,10 @@ _prepare() {
 	  _standard_dlopen="false"
 	fi
 
+	if [[ "$_custom_wine_source" != *"ValveSoftware"* ]] && ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor ce91ef6426bf5065bd31bb82fa4f76011e7a9a36 HEAD ); then
+	  _processinfoclass="true"
+	fi
+
 	echo -e "" >> "$_where"/last_build_config.log
 	_commitmsg="04-post-staging" _committer
 }
@@ -1008,7 +1029,13 @@ _polish() {
 
 	echo "" >> "$_where"/last_build_config.log
 
-    source "$_where"/wine-tkg-patches/misc/wine-tkg/wine-tkg
+	source "$_where"/wine-tkg-patches/misc/wine-tkg/wine-tkg
+
+	# tools/make_makefiles destroys Valve trees - disable on those
+	if [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
+	  git add * && true
+	  tools/make_makefiles
+	fi
 
 	echo -e "\nRunning make_vulkan" >> "$_where"/prepare.log && dlls/winevulkan/make_vulkan >> "$_where"/prepare.log 2>&1
 	tools/make_requests
@@ -1097,9 +1124,6 @@ _polish() {
 	    sed -i "s|-lldap_r|-lldap|" "$srcdir/$_winesrcdir/configure"
 	  fi
 	fi
-
-	# fix path of opencl headers
-	sed 's|OpenCL/opencl.h|CL/opencl.h|g' -i configure*
 
 	_commitmsg="07-tags-n-polish" _committer
 

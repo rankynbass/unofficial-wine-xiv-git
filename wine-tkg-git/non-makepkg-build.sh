@@ -78,6 +78,10 @@ pkgver() {
   if [ -n "$_nomakepkg_dep_resolution_distro" ]; then
     source "$_where"/wine-tkg-scripts/deps
     if [ "$_nomakepkg_dep_resolution_distro" = "debuntu" ]; then
+      if [ "$_ci_build" != "true" ]; then
+        warning "PLEASE MAKE SURE TO READ https://github.com/Frogging-Family/wine-tkg-git/issues/773 BEFORE ATTEMPTING TO USE \"debuntu\" dependency resolution"
+        read -rp "Either press enter to continue, or ctrl+c to leave."
+      fi
       _debuntu_64
     elif [ "$_nomakepkg_dep_resolution_distro" = "fedora" ]; then
       _fedora_6432
@@ -156,7 +160,7 @@ _nomakepkgsrcinit() {
     rm -rf "${srcdir}/${_winesrcdir}" && git clone "$_where"/"${_winesrcdir}" "${srcdir}/${_winesrcdir}"
     cd "${srcdir}"/"${_winesrcdir}"
     git -c advice.detachedHead=false checkout --force --no-track -B makepkg origin/HEAD
-    if [ -n "$_plain_version" ] && [ "$_use_staging" != "true" ] || [ "$_LOCAL_PRESET" = "valve-exp-bleeding" ]; then
+    if [ -n "$_plain_version" ] && [ "$_use_staging" != "true" ] || [[ "$_custom_wine_source" = *"ValveSoftware"* ]]; then
       git -c advice.detachedHead=false checkout "${_plain_version}"
       if [ "$_LOCAL_PRESET" = "valve-exp-bleeding" ]; then
         if [ -z "$_bleeding_tag" ]; then

@@ -2,10 +2,10 @@
 
 _hotfix_import() {
   if [ -z "$_hotfix_boundary" ] || ( cd "${srcdir}"/"${_winesrcdir}" && ! git merge-base --is-ancestor "$_hotfix_boundary" HEAD ); then
-    if source "$_where"/wine-tkg-patches/hotfixes/"$_hotfix"/hotfixes; then
-      msg2 "Hotfixer: $_hotfix loaded"
-    else
+    if ! source "$_where"/wine-tkg-patches/hotfixes/"$_hotfix"/hotfixes; then
       warning "Hotfixer: !!! $_hotfix missing !!!"
+    elif [ "$_hotfixes_no_confirm" = "false" ]; then
+      msg2 "Hotfixer: $_hotfix loaded"
     fi
   fi
 }
@@ -41,6 +41,8 @@ if [ "$_unfrog" != "true" ]; then
   _hotfix="dfddef96" _hotfix_boundary="" _hotfix_import
   #_hotfix="RtlGetCurrentUmsThread" _hotfix_boundary="" _hotfix_import # This doesn't actually fix https://bugs.winehq.org/show_bug.cgi?id=51990
   _hotfix="EGS" _hotfix_boundary="" _hotfix_import
+  _hotfix="ow2" _hotfix_boundary="" _hotfix_import
+  _hotfix="autoconf-opencl-hotfix" _hotfix_boundary="" _hotfix_import
 
   # Custom hotfix patches with a commit boundary
   _hotfix="fd799297" _hotfix_boundary="1f6423f778f7036a3875613e10b9c8c3b84584f0" _hotfix_import
@@ -70,7 +72,7 @@ hotfixer() {
   for _f in "${_hotfixes[@]}"; do
     if [ -e "${_f}.${_userpatch_ext}revert" ]; then
       msg2 "## Applying reverting hotfix for ${_userpatch_target}: ${_f##*/}.${_userpatch_ext}revert"
-      echo -e "\nApplying reverting hotfix ${_f##*/}.${_userpatch_ext}revert" >> "$_where"/prepare.log
+      echo -e "\nApplying reverting hotfix ${_f##*/wine-tkg-git/}.${_userpatch_ext}revert" >> "$_where"/prepare.log
       if ! patch -Np1 -R < "${_f}.${_userpatch_ext}revert" >> "$_where"/prepare.log; then
         error "Patch application has failed. The error was logged to $_where/prepare.log for your convenience."
         if [ -n "$_last_known_good_mainline" ] || [ -n "$_last_known_good_staging" ]; then
@@ -85,7 +87,7 @@ hotfixer() {
   for _f in "${_hotfixes[@]}"; do
     if [ -e "${_f}.${_userpatch_ext}patch" ]; then
       msg2 "## Applying hotfix for ${_userpatch_target}: ${_f##*/}.${_userpatch_ext}patch"
-      echo -e "\nApplying hotfix ${_f##*/}.${_userpatch_ext}patch" >> "$_where"/prepare.log
+      echo -e "\nApplying hotfix ${_f##*/wine-tkg-git/}.${_userpatch_ext}patch" >> "$_where"/prepare.log
       if ! patch -Np1 < "${_f}.${_userpatch_ext}patch" >> "$_where"/prepare.log; then
         error "Patch application has failed. The error was logged to $_where/prepare.log for your convenience."
         if [ -n "$_last_known_good_mainline" ] || [ -n "$_last_known_good_staging" ]; then

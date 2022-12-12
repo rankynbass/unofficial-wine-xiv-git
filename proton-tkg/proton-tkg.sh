@@ -444,6 +444,10 @@ function build_steamhelper {
     fi
   fi
 
+  if [ "$_processinfoclass" = "true" ]; then
+    ( cd Proton && patch -Np1 < "$_nowhere/proton_template/steamhelper_PROCESSINFOCLASS.patch" ) || exit 1
+  fi
+
   if [[ $_proton_branch != *3.* ]]; then
     source "$_nowhere/proton_tkg_token" || true
 
@@ -469,7 +473,7 @@ function build_steamhelper {
 
     # 32-bit
     if [ -e "$_nowhere"/Proton/steam_helper/32/libsteam_api.so ]; then
-      make -e CC="winegcc -m32" CXX="wineg++ -m32 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win32" LIBRARIES="-L$_nowhere/Proton/steam_helper/32/ -L$_nowhere/Proton/steam_helper/64/ -lsteam_api -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
+      make -e CC="winegcc -m32" CXX="wineg++ -m32 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win32" LIBRARIES="-L$_nowhere/Proton/steam_helper/32/ -lsteam_api -lole32 -lmsi -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
     else
       make -e CC="winegcc -m32" CXX="wineg++ -m32 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win32" LIBRARIES="-lsteam_api -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
     fi
@@ -482,8 +486,9 @@ function build_steamhelper {
     # 64-bit
     if [ -e "$_nowhere"/Proton/steam_helper/64/libsteam_api.so ]; then
       cd "$_nowhere"/Proton/build/steam.win64
-      winemaker $WINEMAKERFLAGS --guiexe -lsteam_api -lole32 -I"$_nowhere/Proton/lsteamclient/steamworks_sdk_142/" -I"$_nowhere/openvr/headers/" -L"$_nowhere/Proton/steam_helper/32/" -L"$_nowhere/Proton/steam_helper/64/" .
-      make -e CC="winegcc -m64" CXX="wineg++ -m64 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win64" LIBRARIES="-L$_nowhere/Proton/steam_helper/32/ -L$_nowhere/Proton/steam_helper/64/ -lsteam_api -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
+      winemaker $WINEMAKERFLAGS --guiexe -lsteam_api -lole32 -I"$_nowhere/Proton/lsteamclient/steamworks_sdk_142/" -I"$_nowhere/openvr/headers/" -L"$_nowhere/Proton/steam_helper" .
+      make -e CC="winegcc -m64" CXX="wineg++ -m64 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win64" LIBRARIES="-L$_nowhere/Proton/steam_helper/64/ -lsteam_api -lmsi -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so
+
 
       touch "$_nowhere/Proton/build/steam.win64/steam.spec"
       winebuild --exe --fake-module -m64 -E "$_nowhere/Proton/build/steam.win64/steam.spec" --dll-name=steam -o steam.exe.fake || exit 1
@@ -612,17 +617,29 @@ function proton_tkg_uninstaller {
     echo "What Proton-tkg build do you want to uninstall?"
 
     i=1
-    for build in ${_strip_builds[@]}; do
-      echo "  $i - $build" && ((i+=1))
-    done
+    if [ -n "$_just_built" ]; then
+      _newest_build="${_just_built//proton_tkg_/}"
+      for build in ${_strip_builds[@]//$_newest_build/}; do
+        echo "  $i - $build" && ((i+=1))
+      done
+    else
+      for build in ${_strip_builds[@]}; do
+        echo "  $i - $build" && ((i+=1))
+      done
+    fi
 
     read -rp "choice [1-$(($i-1))]: " _to_uninstall;
 
     i=1
     for build in ${_strip_builds[@]}; do
       if [ "$_to_uninstall" = "$i" ]; then
-        rm -rf "proton_tkg_$build" && _available_builds=( `ls -d proton_tkg_* | sort -V` ) && _newest_build="${_available_builds[-1]//proton_tkg_/}"
-        sed -i "s/\"Proton-tkg $build\"/\"Proton-tkg ${_newest_build[@]}\"/;s/\"TKG-proton-$build\"/\"TKG-proton-${_newest_build[@]}\"/" "$_config_file"
+        if [ -n "$_just_built" ]; then
+          rm -rf "proton_tkg_$build" && _available_builds=( `ls -d proton_tkg_* | sort -V` )
+          sed -i "s/\"Proton-tkg $build\"/\"Proton-tkg ${_newest_build}\"/;s/\"TKG-proton-$build\"/\"TKG-proton-${_newest_build}\"/" "$_config_file"
+        else
+          rm -rf "proton_tkg_$build" && _available_builds=( `ls -d proton_tkg_* | sort -V` ) && _newest_build="${_available_builds[-1]//proton_tkg_/}"
+          sed -i "s/\"Proton-tkg $build\"/\"Proton-tkg ${_newest_build[@]}\"/;s/\"TKG-proton-$build\"/\"TKG-proton-${_newest_build[@]}\"/" "$_config_file"
+        fi
         echo "###########################################################################################################################"
         echo ""
         echo "Proton-tkg $build was uninstalled and games previously depending on it will now use Proton-tkg ${_newest_build[@]} instead."
@@ -971,7 +988,7 @@ else
       fi
     fi
 
-    if [ "$_use_dxvk" = "git" ]; then
+    if [ "$_proton_nvapi_disable" != "true" ]; then
       build_dxvk_nvapi
       mkdir -p "$_nowhere"/proton_dist_tmp/lib64/wine/nvapi
       mkdir -p "$_nowhere"/proton_dist_tmp/lib/wine/nvapi
@@ -1179,18 +1196,30 @@ else
       echo "Fixing x86_64 PE files..."
       ( cd "$_nowhere/proton_tkg_$_protontkg_version/files/$_x86_64_windows_tail"
       if [ "$_pkg_strip" = "true" ]; then
-        find -type f -not '(' -iname '*.pc' -or -iname '*.cmake' -or -iname '*.a' -or -iname '*.la' -or -iname '*.def' ')' -printf '--strip-debug\0%p\0%p\0' | xargs -0 -r -P1 -n3 objcopy --file-alignment=4096 --set-section-flags .text=contents,alloc,load,readonly,code
+        if [ "$_pefixup" = "objcopy" ]; then
+          find -type f -not '(' -iname '*.pc' -or -iname '*.cmake' -or -iname '*.a' -or -iname '*.la' -or -iname '*.def' ')' -printf '--strip-debug\0%p\0%p\0' | xargs -0 -r -P1 -n3 objcopy --file-alignment=4096 --set-section-flags .text=contents,alloc,load,readonly,code
+        else
+          find -type f -not '(' -iname '*.pc' -or -iname '*.cmake' -or -iname '*.a' -or -iname '*.la' -or -iname '*.def' ')' -printf '--strip-debug\0%p\0%p\0' | xargs -0 -r -P1 -n3 objcopy --file-alignment=4096
+        fi
       fi
-      #find -type f -name "*.dll" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
-      #find -type f -name "*.drv" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
+      if [ "$_pefixup" = "py" ]; then
+        find -type f -name "*.dll" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
+        find -type f -name "*.drv" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
+      fi
       )
       echo "Fixing i386 PE files..."
       ( cd "$_nowhere/proton_tkg_$_protontkg_version/files/$_i386_windows_tail"
       if [ "$_pkg_strip" = "true" ]; then
-        find -type f -not '(' -iname '*.pc' -or -iname '*.cmake' -or -iname '*.a' -or -iname '*.la' -or -iname '*.def' ')' -printf '--strip-debug\0%p\0%p\0' | xargs -0 -r -P1 -n3 objcopy --file-alignment=4096 --set-section-flags .text=contents,alloc,load,readonly,code
+        if [ "$_pefixup" = "objcopy" ]; then
+          find -type f -not '(' -iname '*.pc' -or -iname '*.cmake' -or -iname '*.a' -or -iname '*.la' -or -iname '*.def' ')' -printf '--strip-debug\0%p\0%p\0' | xargs -0 -r -P1 -n3 objcopy --file-alignment=4096 --set-section-flags .text=contents,alloc,load,readonly,code
+        else
+          find -type f -not '(' -iname '*.pc' -or -iname '*.cmake' -or -iname '*.a' -or -iname '*.la' -or -iname '*.def' ')' -printf '--strip-debug\0%p\0%p\0' | xargs -0 -r -P1 -n3 objcopy --file-alignment=4096
+        fi
       fi
-      #find -type f -name "*.dll" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
-      #find -type f -name "*.drv" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
+      if [ "$_pefixup" = "py" ]; then
+        find -type f -name "*.dll" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
+        find -type f -name "*.drv" -printf "%p\0" | xargs -0 -r -P8 -n1 "$_nowhere/proton_template/pefixup.py"
+      fi
       )
     fi
 
@@ -1251,6 +1280,7 @@ else
           echo ""
           echo "####################################################################################################"
           if [ "$_skip_uninstaller" != "true" ]; then
+            _just_built="proton_tkg_$_protontkg_version"
             echo ""
             read -rp "Do you want to run the uninstaller to remove previous/superfluous builds? N/y: " _ask_uninstall;
             if [[ "$_ask_uninstall" =~ [yY] ]]; then

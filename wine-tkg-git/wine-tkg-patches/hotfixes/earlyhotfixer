@@ -27,16 +27,15 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       cp "$_where"/wine-tkg-patches/hotfixes/valve/fixes/*.mypatch "$_where"/
 
       if [ "$_steamclient_noswap" = "true" ]; then
-        if [ "$_LOCAL_PRESET" = "valve-exp-bleeding" ]; then
-          cp "$_where"/wine-tkg-patches/hotfixes/valve/0001-proton-steamclient-swap-revert-be.mypatch "$_where"/
-        else
           cp "$_where"/wine-tkg-patches/hotfixes/valve/0001-proton-steamclient-swap-revert.mypatch "$_where"/
-        fi
       fi
 
       if [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]]; then
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
         _GE_FSR="true"
+      #elif [[ "$_LOCAL_PRESET" = valve-exp* ]]; then # Disable FSR patchsets until rebased
+      #  _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
+      #  _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack-alternative.mypatch//g" | tr -s " ")
       fi
 
       if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]]; then
@@ -47,7 +46,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
         cp "$_where"/wine-tkg-patches/hotfixes/valve/proton-wayland_driver.mypatch "$_where"/
       fi
 
-      warning "Disabling any known to be broken community patch on valve proton tree"
+      warning "Disabling any known to be broken (or already patched in) community patch on valve proton tree"
       _community_patches=$(echo $_community_patches | sed "s/0001-ntdll-Use-kernel-soft-dirty-flags-for-write-watches-.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/0002-proton_QPC.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/EA_desktop_fix.mypatch//g" | tr -s " ")
@@ -61,6 +60,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       _community_patches=$(echo $_community_patches | sed "s/wine_wayland_driver.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/unhide-prefix-update-window.mypatch//g" | tr -s " ")
       _community_patches=$(echo $_community_patches | sed "s/Add-SORT_DIGITSAS-UMBERS-flag-to-CompareStringsEx.mypatch//g" | tr -s " ")
+      _community_patches=$(echo $_community_patches | sed "s/persona-5-royal_transacted-file-APIs.mypatch//g" | tr -s " ")
     fi
     # /Valve Proton specifics
 
@@ -75,7 +75,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
     # Disable the amd_fsr_fshack patch if _proton_fs_hack is disabled.
     if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]] || [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]] && [ "$_unfrog" != "true" ]; then
       if [ "$_proton_fs_hack" != "true" ] || [ "$_use_staging" != "true" ] || [ "$_shared_gpu_resources" = "true" ]; then
-        warning "Disabling the amd_fsr_fshack community patch because its _proton_fs_hack dependency is disabled"
+        warning "Disabling the amd_fsr_fshack community patch because either its _proton_fs_hack dependency is disabled or the incompatible shared_gpu_resources option is enabled"
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack-alternative.mypatch//g" | tr -s " ")
       elif [ "$_use_staging" = "true" ] && [ "$_proton_fs_hack" = "true" ]; then
@@ -98,7 +98,9 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
     # Star Citizen fixes
     if [[ ${_community_patches[*]} =~ "star-citizen-StorageDeviceSeekPenaltyProperty.mypatch" ]] && [ "$_use_staging" = "true" ]; then
       warning "Disabling staging patchsets breaking Star Citizen: ntdll-ForceBottomUpAlloc, ntdll-WRITECOPY and ntdll-Builtin_Prot"
-      _staging_args+=(-W ntdll-ForceBottomUpAlloc -W ntdll-WRITECOPY -W ntdll-Builtin_Prot)
+      if [ "$_use_staging" = "true" ] && ! grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/ntdll-ForceBottomUpAlloc/definition"; then
+        _staging_args+=(-W ntdll-ForceBottomUpAlloc -W ntdll-WRITECOPY -W ntdll-Builtin_Prot)
+      fi
     fi
 
     # Disable Add-SORT_DIGITSAS-UMBERS-flag-to-CompareStringsEx patch if the Wine version selected already contains the commit which implements it.
