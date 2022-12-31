@@ -2,6 +2,7 @@ name: Wine Fedora CI
 
 on:
   workflow_dispatch:
+  push:
 
 jobs:
   build:
