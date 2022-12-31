@@ -297,7 +297,9 @@ msg2 ''
   else
     if [ ! -e "$_where"/BIG_UGLY_FROGMINER ] && [ -z "$_LOCAL_PRESET" ]; then
       msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base (or hit enter for default) :"
-      warning "(mainline and staging options will make clean & untouched wine and wine-staging builds)"
+      warning "! \"mainline\" and \"staging\" options will make clean & untouched wine and wine-staging builds, ignoring your .cfg settings !"
+      warning "! \"valve\" profiles will use Valve proton wine trees instead of upstream, ignoring many incompatibble .cfg settings !"
+      warning "! \"default-tkg\" profile will use the main customization.cfg and wine-tkg-profiles/advanced-customization.cfg files !"
 
       i=0
       for _profiles in "$_where/wine-tkg-profiles"/wine-tkg-*.cfg; do
@@ -575,13 +577,19 @@ _prepare() {
   fi
 
   # Community patches
+  if [[ "$(realpath -Lm . 2>&1)" =~ -Lm ]]; then
+    warning "Detected non-GNU realpath (busybox?), please disable community patches in case of issues"
+  else
+    _realpath_arg="-Lm"
+  fi
+
   if [ -n "$_community_patches" ]
   then
     _community_patches_repo_roots=()
 
     for _p in "../.." ".." "."
     do
-      _new_path="$(realpath -Lm "${_where}/${_p}/community-patches")"
+      _new_path="$(realpath $_realpath_arg "${_where}/${_p}/community-patches")"
 
       if [[ ${#_community_patches_repo_roots[@]} -eq 0 ]] || [[ ! ${_new_path} == ${_community_patches_repo_roots[${#_community_patches_repo_roots[@]}-1]} ]]
       then
