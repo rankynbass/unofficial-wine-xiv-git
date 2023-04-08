@@ -28,7 +28,7 @@ _exports_32() {
   else
     export PKG_CONFIG_PATH='/usr/lib/pkgconfig' # Pretty common path, possibly helpful for OpenSuse & Fedora
     # Workaround for Fedora freetype2 libs not being detected now that it's been moved to a subdir
-    CFLAGS+=" -I/usr/include/freetype2"
+    CFLAGS+=" -I/usr/include/freetype2 -I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/sysprof-4 -pthread"
     CROSSCFLAGS+=" -I/usr/include/freetype2"
     if [[ "$_plain_version" = *_8.0 ]] || [[ "$_plain_version" = *_9.0 ]]; then
       CFLAGS+=" -I/usr/lib/glib-2.0/include -I/usr/include/glib-2.0 -I/usr/include/gstreamer-1.0 -I/usr/lib/gstreamer-1.0/include"
