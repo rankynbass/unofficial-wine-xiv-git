@@ -7,6 +7,12 @@
   #_nowhere="$PWD"
   source "$_nowhere/proton_tkg_token" || source "$_nowhere/src/proton_tkg_token"
 
+  # Disable lib32 stuff when _NOLIB32 is enabled
+  if [ "$_NOLIB32" = "true" ]; then
+    _lib32_gstreamer="false"
+    _use_lib32_mpeg2dec_and_x264="false"
+  fi
+
   cd "$_nowhere"/external-resources
 
   git clone https://github.com/GStreamer/gstreamer.git || true # It'll complain the path already exists on subsequent builds
@@ -103,6 +109,7 @@
     -D libnice=disabled
     -D vaapi=disabled
     -D introspection=disabled
+    -D orc-source=auto
     -D gstreamer:dbghelp=disabled
     -D gstreamer:gobject-cast-checks=disabled
     -D gstreamer:ptp-helper-permissions=capabilities
@@ -316,6 +323,7 @@
     -D libnice=disabled
     -D vaapi=disabled
     -D introspection=disabled
+    -D orc-source=auto
     -D gstreamer:dbghelp=disabled
     -D gstreamer:gobject-cast-checks=disabled
     -D gstreamer:ptp-helper-permissions=capabilities
@@ -410,6 +418,7 @@
 	-D gst-plugins-good:wavenc=disabled
 	-D gst-plugins-good:ximagesrc=disabled
 	-D gst-plugins-good:y4m=disabled
+    -D gst-plugins-bad:dc1394=disabled
     -D gst-plugins-bad:directfb=disabled
     -D gst-plugins-bad:flite=disabled
     -D gst-plugins-bad:gobject-cast-checks=disabled
@@ -447,7 +456,6 @@
 	-D gst-plugins-bad:dts=disabled
 	-D gst-plugins-bad:faac=disabled
 	-D gst-plugins-bad:faad=disabled
-	-D gst-plugins-bad:libmms=disabled
 	-D gst-plugins-bad:mpeg2enc=disabled
 	-D gst-plugins-bad:mplex=disabled
 	-D gst-plugins-bad:neon=disabled
@@ -463,10 +471,14 @@
 	-D gst-plugins-bad:avtp=disabled
 	-D gst-plugins-bad:kate=disabled
 	-D gst-plugins-bad:openexr=disabled
+	-D gst-plugins-bad:soundtouch=disabled
+	-D gst-plugins-bad:svtav1=disabled
 	-D gst-plugins-bad:ladspa=disabled
-	-D gst-plugins-bad:ofa=disabled
+	-D gst-plugins-bad:ldac=disabled
+	-D gst-plugins-bad:openaptx=disabled
 	-D gst-plugins-bad:microdns=disabled
 	-D gst-plugins-bad:openh264=disabled
+	-D gst-plugins-bad:qroverlay=disabled
 	-D gst-plugins-bad:resindvd=disabled
 	-D gst-plugins-bad:spandsp=disabled
 	-D gst-plugins-bad:svthevcenc=disabled

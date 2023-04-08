@@ -1,11 +1,13 @@
 # Created by: Tk-Glitch <ti3nou at gmail dot com>
 
-pkgname=proton-tkg-git
+pkgname=proton-tkg
 pkgver=0
 pkgrel=1
 _frogwhere="$PWD"
 # Arch chroot workaround
-if [[ "${_frogwhere}" != "/startdir" ]]; then
+if [[ "${_frogwhere}" = "/startdir" ]]; then
+  touch /build/chroot
+elif [ ! -e /build/chroot ]; then
   export BUILDDIR="${_frogwhere}" # Override makepkg BUILDDIR path and use PKGBUILDs dirs instead
 fi
 arch=('x86_64')
@@ -28,7 +30,6 @@ depends=(
     'libsm'                 'lib32-libsm'
     'gcc-libs'              'lib32-gcc-libs'
     'libpcap'               'lib32-libpcap'
-    'faudio'                'lib32-faudio'
     'desktop-file-utils'    'tk'
     'vulkan-icd-loader'     'lib32-vulkan-icd-loader'
     'jxrlib'                'gst-plugins-ugly'
@@ -110,8 +111,11 @@ if msg2; then # Arch chroot workaround for even more looping fun
 fi
 
 exit_cleanup() {
-  if [ "$pkgver" != "0" ]; then
-    sed -i "s/pkgver=$pkgver.*/pkgver=0/g" "${_frogwhere}"/PKGBUILD
+  if [ -d "${srcdir}" ]; then
+    cd "${srcdir}"/..
+  fi
+  if [ "$pkgver" != "0" ] && [ -e PKGBUILD ]; then
+    sed -i "0,/pkgver/{s/pkgver=$pkgver/pkgver=0/}" PKGBUILD
   fi
   rm -rf src
   remove_deps
@@ -129,71 +133,22 @@ recursive_installer() {
 }
 
 pkgver() {
-  cd "${_frogwhere}/../wine-tkg-git/${_pkgvertargdir}"
-
-  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//;s/\.rc/rc/;s/^wine\.//'
+  cd "${srcdir}" && source proton_tkg_tmp
+  echo "${_tmp_ver}"
 }
 
 prepare() {
   # Arch chroot workaround
   if [[ "${_frogwhere}" = "/startdir" ]]; then
     msg2 "Arch chroot detected!"
-    export _frogwhere=/build/proton-tkg-git
-    git clone https://github.com/Frogging-Family/wine-tkg-git.git || true
-    if [ -d wine-tkg-git/wine-tkg-git ]; then
-      mv wine-tkg-git/wine-tkg-git /build/wine-tkg-git
-    fi
-    if [ -d wine-tkg-git/proton-tkg ]; then
-      mv wine-tkg-git/proton-tkg/* /build/proton-tkg-git/
-    fi
-  fi
-
-  # overcomplicated BS
-  _srcdirlock="${_frogwhere}/../wine-tkg-git"
-
-  warning "The next step might take some time, please be patient..."
-  source "${_frogwhere}"/proton-tkg.cfg
-  source "${_frogwhere}"/proton-tkg-profiles/advanced-customization.cfg
-  if [ -e "$_EXT_CONFIG_PATH" ]; then
-    source "$_EXT_CONFIG_PATH"
-  fi
-  if [ -n "$_LOCAL_PRESET" ] && [ -e "${_frogwhere}"/../wine-tkg-git/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg ]; then
-    source "${_frogwhere}"/../wine-tkg-git/wine-tkg-profiles/wine-tkg.cfg && source "${_frogwhere}"/../wine-tkg-git/wine-tkg-profiles/wine-tkg-"$_LOCAL_PRESET".cfg
-  fi
-  if [ -n "$_custom_wine_source" ]; then
-    _winesrcdir=$( sed 's|/|-|g' <<< $(sed 's|.*://.[^/]*/||g' <<< $_custom_wine_source))
-  else
-    if [ "$_plain_mirrorsrc" = "true" ]; then
-      _winesrcdir="wine-mirror-git"
-      _winesrctarget="https://github.com/wine-mirror/wine.git"
-    else
-      _winesrcdir="wine-git"
-      _winesrctarget="git://source.winehq.org/git/wine.git"
-    fi
-  fi
-
-  cd "${_srcdirlock}"
-  _pkgvertargdir="${_winesrcdir}"
-  # Empty clone failsafe
-  git clone --mirror "${_winesrctarget}" "$_winesrcdir" || true
-
-  if [ "$_use_staging" = "true" ]; then
-    _stgsrcdir='wine-staging-git'
-    _pkgvertargdir="${_stgsrcdir}"
-    # Empty clone failsafe
-    git clone --mirror https://github.com/wine-staging/wine-staging.git "$_stgsrcdir" || true
-  fi
-
-  cd "${_srcdirlock}/${_pkgvertargdir}"
-  git fetch --all -p >/dev/null 2>&1
-  rm -rf "${_srcdirlock}/src/${_pkgvertargdir}" && git clone "${_srcdirlock}/${_pkgvertargdir}" "${_srcdirlock}/src/${_pkgvertargdir}" >/dev/null 2>&1
-  cd "${_srcdirlock}/src/${_pkgvertargdir}"
-  git checkout --force --no-track -B makepkg origin/HEAD
-  if [ -n "$_plain_version" ] && [ "$_use_staging" != "true" ]; then
-    git checkout "${_plain_version}"
-  fi
-  if [ -n "$_staging_version" ] && [ "$_use_staging" = "true" ]; then
-    git checkout "${_staging_version}"
+    ( cd /build && git clone https://github.com/Frogging-Family/wine-tkg-git.git wine-tkg
+      mv wine-tkg/wine-tkg-git /build/wine-tkg-git
+      for _protonstuff in wine-tkg/proton-tkg/*; do
+        if [[ "$_protonstuff" != *PKGBUILD ]]; then
+          mv "$_protonstuff" /build/proton-tkg/
+        fi
+      done
+    )
   fi
 
   cd "${_frogwhere}"
@@ -206,16 +161,23 @@ prepare() {
   ln -s -f "${_frogwhere}/proton-tkg.sh" "${srcdir}/"
   ln -s -f "${_frogwhere}/proton-tkg-userpatches" "${srcdir}/"
   ln -s -f "${_frogwhere}/proton-tkg-profiles" "${srcdir}/"
+
+  warning "Please DO NOT use this PKGBUILD unless you really can't use the regular route (proton-tkg.sh script)."
+  warning "Packaging proton requires some ugly hacks that can break expected behavior."
+  warning "As a result, this path is not supported nor maintained."
+  warning "Also note that SteamVR support is forcefully disabled when using the PKGBUILD,"
+  warning "independently of its functioning state in proton-tkg."
+  read -rp "If you understand yet still want this, press enter to continue... (CTRL+C to exit)"
+
+  cd "${srcdir}"
+  # makepkg proton pkgver loop hack
+  _ispkgbuild="true" _isfirstloop="true" ./proton-tkg.sh
 }
 
 build() {
-  warning "Using this PKGBUILD is not the recommended way to build proton-tkg."
-  warning "Unless you really want a package, please favor the proton-tkg.sh script route instead."
-  warning "Also note that SteamVR support is forcefully disabled when using the PKGBUILD,"
-  warning "independently of its functioning state in proton-tkg."
-  sleep 2
   cd "${srcdir}"
-  _ispkgbuild="true" ./proton-tkg.sh
+  source proton_tkg_tmp
+  _ispkgbuild="true" _isfirstloop="false" ./proton-tkg.sh
 }
 
 package() {
@@ -224,12 +186,12 @@ package() {
 
   cd "${srcdir}"
   rm -f proton_tkg_token
+  rm -f proton_tkg_tmp
 
   recursive_installer proton_tkg_* "${pkgdir}/usr/share/steam/compatibilitytools.d" >>"${_frogwhere}"/proton-tkg.log 2>&1
 
   cd "${pkgdir}"/usr/share/steam/compatibilitytools.d/proton_tkg_*
   ln -s -f "/tmp" "__pycache__"
-
 }
 
 trap exit_cleanup EXIT

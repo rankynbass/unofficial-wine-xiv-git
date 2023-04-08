@@ -799,6 +799,7 @@ class CompatData:
                 steamdir = os.environ["HOME"] + ".steam/root/"
 
             use_wined3d = "wined3d" in g_session.compat_config
+            use_custom9 = "custom9" in g_session.compat_config
             use_wine_dxgi = "WINEDLLOVERRIDES" in g_session.env and "dxgi=b" in g_session.env["WINEDLLOVERRIDES"]
             use_nvapi = 'enablenvapi' in g_session.compat_config
 
@@ -1009,6 +1010,7 @@ class CompatData:
                 g_proton.default_pfx_dir,
                 getmtimestr(g_proton.default_pfx_dir, 'system.reg'),
                 str(use_wined3d),
+                str(use_custom9),
                 str(use_wine_dxgi),
                 builtin_dll_copy,
                 str(use_nvapi),
@@ -1068,6 +1070,14 @@ class CompatData:
                     wined3dfiles.append("dxgi")
                 else:
                     dxvkfiles.append("dxgi")
+
+                if use_custom9:
+                    if use_wined3d:
+                        g_session.dlloverrides["d3d9"] = "n"
+                    else:
+                        wined3dfiles.append("d3d9")
+                        dxvkfiles.remove("d3d9")
+                        g_session.dlloverrides["d3d9"] = "n"
 
                 for f in wined3dfiles:
                     if not os.path.exists(self.prefix_dir + "drive_c/windows/syswow64"):
@@ -1489,6 +1499,7 @@ class Session:
         self.check_environment("PROTON_NO_ESYNC", "noesync")
         self.check_environment("PROTON_NO_FSYNC", "nofsync")
         self.check_environment("PROTON_NO_FUTEX2", "nofutex2")
+        self.check_environment("PROTON_NO_NTSYNC", "nontsync")
         self.check_environment("PROTON_DISABLE_LARGE_ADDRESS_AWARE", "disablelgadd")
         self.check_environment("PROTON_OLD_GL_STRING", "oldglstr")
         self.check_environment("PROTON_USE_SECCOMP", "seccomp")
@@ -1499,7 +1510,6 @@ class Session:
         self.check_environment("PROTON_NO_XIM", "noxim")
         self.check_environment("PROTON_HEAP_DELAY_FREE", "heapdelayfree")
         self.check_environment("PROTON_ENABLE_NVAPI", "enablenvapi")
-        self.check_environment("PROTON_DXVK_ASYNC", "dxvkasync")
         self.check_environment("PROTON_NVAPI_DISABLE", "nonvapi")
         self.check_environment("PROTON_GLES2_DISABLE", "disablelibglesv2")
         self.check_environment("PROTON_GL_OSMESA", "useglosmesa")
@@ -1541,6 +1551,11 @@ class Session:
         else:
             self.env["WINEFSYNC_FUTEX2"] = "1"
 
+        if "nontsync" in self.compat_config:
+            self.env.pop("WINE_DISABLE_FAST_SYNC", "1")
+        else:
+            self.env["WINE_DISABLE_FAST_SYNC"] = "0"
+
         if "seccomp" in self.compat_config:
             self.env["WINESECCOMP"] = "1"
 
@@ -1557,9 +1572,6 @@ class Session:
             self.env["WINE_LARGE_ADDRESS_AWARE"] = "0"
         else:
             self.env["WINE_LARGE_ADDRESS_AWARE"] = "1"
-
-        if "dxvkasync" in self.compat_config:
-            self.env["DXVK_ASYNC"] = "1"
 
         if "heapdelayfree" in self.compat_config:
             self.env["WINE_HEAP_DELAY_FREE"] = "1"
