@@ -18,10 +18,10 @@ Signed-off-by: Marc-Aurel Zent <marc_aurel@me.com>
  dlls/ntdll/unix/loader.c | 31 +++++++++++++++++++++++++++++++
  1 file changed, 31 insertions(+)
 
-diff --git dlls/ntdll/unix/loader.c dlls/ntdll/unix/loader.c
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
 index 16c044d502e..8945d49ee35 100644
---- dlls/ntdll/unix/loader.c
-+++ dlls/ntdll/unix/loader.c
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
 @@ -731,9 +731,40 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const pe_image_info_t *pe_i
      ULONGLONG res_start = pe_info->base;
      ULONGLONG res_end = pe_info->base + pe_info->map_size;
