@@ -324,7 +324,7 @@ _package_nomakepkg() {
 	  touch "${pkgdir}"/../HL3_confirmed
 	else
 	  if [ -e "$_where"/tarplz ];then
-	    ( cd "$_where"/non-makepkg-builds && tar -cvf "${_nomakepkg_pkgname}".tar "${_nomakepkg_pkgname}" && rm -rf "${_nomakepkg_pkgname}" )
+	    ( cd "$_where"/non-makepkg-builds && tar -cvJf "${_nomakepkg_pkgname}".tar.xz "${_nomakepkg_pkgname}" && rm -rf "${_nomakepkg_pkgname}" )
 	  fi
 	fi
 }

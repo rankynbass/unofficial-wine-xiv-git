@@ -18,7 +18,7 @@
 
 ## You're on your own to resolve additional dependencies you might want to build with, such as Faudio.
 
-pkgname=wine-xiv
+pkgname=unofficial-wine-xiv
 
 _build_in_tmpfs="true"
 
