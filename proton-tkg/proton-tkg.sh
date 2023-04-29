@@ -170,7 +170,7 @@ function build_vrclient {
   export CFLAGS="-O2 -g"
   export CXXFLAGS="-Wno-attributes -std=c++0x -O2 -g"
   PATH="$_nowhere"/proton_dist_tmp/bin:$PATH
-  if [[ "$_proton_branch" = *6.* ]] || [[ "$_proton_branch" = *7.* ]]; then
+  if [[ "$_proton_branch" = *6.* ]] || [[ "$_proton_branch" = *7.* ]] || [[ "$_proton_branch" = *8.* ]]; then
     WINEMAKERFLAGS+=" -ldl"
   elif [ "$_standard_dlopen" = "true" ] && [[ "$_proton_branch" != *5.13 ]]; then
     patch -Np1 < "$_nowhere/proton_template/vrclient-remove-library.h-dep.patch" || exit 1
@@ -187,6 +187,9 @@ function build_vrclient {
   rm -rf build/vrclient.win32
   mkdir -p build/vrclient.win64
   mkdir -p build/vrclient.win32
+  if [ ! -e "$_nowhere/proton_dist_tmp/include/wine/unixlib.h" ]; then
+    cp "$_wine_tkg_git_path/src/$_winesrcdir/include/wine/unixlib.h" "$_nowhere/proton_dist_tmp/include/wine/"
+  fi
 
   cp -a "${_nowhere}"/Proton/vrclient_x64/* build/vrclient.win64
   cp -a "${_nowhere}"/Proton/vrclient_x64/* build/vrclient.win32 && mv build/vrclient.win32/vrclient_x64 build/vrclient.win32/vrclient && mv build/vrclient.win32/vrclient/vrclient_x64.spec build/vrclient.win32/vrclient/vrclient.spec
@@ -395,6 +398,8 @@ function build_mediaconverter {
   fi
 
   if [ "$_build_mediaconv" = "true" ]; then
+    # git 2.40 workaround
+    git config --local index.skipHash false && git add .
     if [ -d "$_nowhere"/Proton/media-converter ]; then
       cd "$_nowhere"/Proton/media-converter
 
@@ -487,7 +492,7 @@ function build_steamhelper {
     if [ "$_NOLIB32" != "true" ]; then
       # 32-bit
       if [ -e "$_nowhere"/Proton/steam_helper/32/libsteam_api.so ]; then
-        make -e CC="winegcc -m32" CXX="wineg++ -m32 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win32" LIBRARIES="-L$_nowhere/Proton/steam_helper/32/ -lsteam_api -lole32 -lmsi -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
+        make -e CC="winegcc -m32" CXX="wineg++ -m32 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win32" LIBRARIES="-L$_nowhere/Proton/steam_helper/32/ -lsteam_api -lole32 -lshlwapi -lmsi -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
       else
         make -e CC="winegcc -m32" CXX="wineg++ -m32 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win32" LIBRARIES="-lsteam_api -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so || exit 1
       fi
@@ -502,7 +507,7 @@ function build_steamhelper {
     if [ -e "$_nowhere"/Proton/steam_helper/64/libsteam_api.so ]; then
       cd "$_nowhere"/Proton/build/steam.win64
       winemaker $WINEMAKERFLAGS --guiexe -lsteam_api -lole32 -I"$_nowhere/Proton/lsteamclient/steamworks_sdk_142/" -I"$_nowhere/openvr/headers/" -L"$_nowhere/Proton/steam_helper" .
-      make -e CC="winegcc -m64" CXX="wineg++ -m64 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win64" LIBRARIES="-L$_nowhere/Proton/steam_helper/64/ -lsteam_api -lmsi -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so
+      make -e CC="winegcc -m64" CXX="wineg++ -m64 $_cxx_addon" -C "$_nowhere/Proton/build/steam.win64" LIBRARIES="-L$_nowhere/Proton/steam_helper/64/ -lsteam_api -lshlwapi -lmsi -lole32 -ldl -static-libgcc -static-libstdc++" -j$(nproc) && strip --strip-debug steam.exe.so
 
 
       touch "$_nowhere/Proton/build/steam.win64/steam.spec"
@@ -930,10 +935,10 @@ else
     fi
 
     # Embed fake data to spoof desired fonts
-    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationSans-Regular" "Arial" "Arial" "Arial"
-    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationSans-Bold" "Arial-Bold" "Arial" "Arial Bold"
-    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationSerif-Regular" "TimesNewRoman" "Times New Roman" "Times New Roman"
-    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationMono-Regular" "CourierNew" "Courier New" "Courier New"
+    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationSans-Regular" "Arial" "Arial" "Arial" "$_nowhere/proton_template/share/fonts"/arial.ttf
+    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationSans-Bold" "Arial-Bold" "Arial" "Arial Bold" "$_nowhere/proton_template/share/fonts"/arialbd.ttf
+    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationSerif-Regular" "TimesNewRoman" "Times New Roman" "Times New Roman" "$_nowhere/proton_template/share/fonts"/times.ttf
+    fontforge -script "$_nowhere/Proton/fonts/scripts/generatefont.pe" "$_nowhere/proton_template/share/fonts/LiberationMono-Regular" "CourierNew" "Courier New" "Courier New" "$_nowhere/proton_template/share/fonts"/cour.ttf
 
     # Build GST/mediaconverter
     if [ "$_build_mediaconv" = "true" ] || [ "$_build_gstreamer" = "true" ]; then
