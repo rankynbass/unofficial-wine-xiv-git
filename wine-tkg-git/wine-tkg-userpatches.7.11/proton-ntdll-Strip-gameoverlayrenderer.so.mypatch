@@ -1,4 +1,4 @@
-From ca0b95585378c144be683ceb45ef54dcc5bf9b82 Mon Sep 17 00:00:00 2001
+From 1a133063e6c4b24b889efcc960c55548069f3b15 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Wed, 18 Dec 2019 13:49:00 +0100
 Subject: [PATCH] HACK: proton: ntdll: Strip gameoverlayrenderer.so from
@@ -19,18 +19,21 @@ Signed-off-by: Marc-Aurel Zent <marc_aurel@me.com>
  1 file changed, 31 insertions(+)
 
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index 16c044d502e..8945d49ee35 100644
+index a7e79a828ca6..3df74d45bd7b 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -731,9 +731,40 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const pe_image_info_t *pe_i
-     ULONGLONG res_start = pe_info->base;
+@@ -725,6 +725,7 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const pe_image_info_t *pe_i
      ULONGLONG res_end = pe_info->base + pe_info->map_size;
-     char preloader_reserve[64], socket_env[64];
+     const char *loader = argv0;
+     const char *loader_env = getenv( "WINELOADER" );
 +    const char *ld_preload = getenv( "LD_PRELOAD" );
-
-     if (pe_info->image_flags & IMAGE_FLAGS_WineFakeDll) res_start = res_end = 0;
-     if (pe_info->image_flags & IMAGE_FLAGS_ComPlusNativeReady) machine = native_machine;
-+    
+     char preloader_reserve[64], socket_env[64];
+     BOOL is_child_64bit;
+ 
+@@ -759,6 +760,36 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const pe_image_info_t *pe_i
+         else loader = is_child_64bit ? "wine64" : "wine";
+     }
+ 
 +    /* HACK: Unset LD_PRELOAD before executing explorer.exe to disable buggy gameoverlayrenderer.so */
 +    if (ld_preload && argv[2] && !strcmp( argv[2], "C:\\windows\\system32\\explorer.exe" ) &&
 +        argv[3] && !strcmp( argv[3], "/desktop" ))
@@ -60,8 +63,10 @@ index 16c044d502e..8945d49ee35 100644
 +
 +        putenv( env );
 +    }
- 
++
      signal( SIGPIPE, SIG_DFL );
  
+     sprintf( socket_env, "WINESERVERSOCKET=%u", socketfd );
 -- 
 2.39.2
+

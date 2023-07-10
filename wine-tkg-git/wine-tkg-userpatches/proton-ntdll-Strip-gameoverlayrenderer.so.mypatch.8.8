@@ -27,8 +27,8 @@ index 16c044d502e..8945d49ee35 100644
      ULONGLONG res_end = pe_info->base + pe_info->map_size;
      char preloader_reserve[64], socket_env[64];
 +    const char *ld_preload = getenv( "LD_PRELOAD" );
-
-     if (pe_info->image_flags & IMAGE_FLAGS_WineFakeDll) res_start = res_end = 0;
+ 
+     if (pe_info->wine_fakedll) res_start = res_end = 0;
      if (pe_info->image_flags & IMAGE_FLAGS_ComPlusNativeReady) machine = native_machine;
 +    
 +    /* HACK: Unset LD_PRELOAD before executing explorer.exe to disable buggy gameoverlayrenderer.so */
