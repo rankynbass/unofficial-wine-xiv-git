@@ -125,7 +125,7 @@ _build_serial() {
     _configure_64
     _build_64
   fi
-  if [ "$_NOLIB32" != "true" ]; then
+  if [ "$_NOLIB32" != "true" ] && [ "$_NOLIB32" != "wow64" ]; then
     # build wine 32-bit
     # nomakepkg
     if [ "$_nomakepkg_midbuild_prompt" = "true" ]; then
@@ -209,7 +209,7 @@ _package_nomakepkg() {
 	  fi
 	fi
 
-	if [ "$_NOLIB32" != "true" ]; then
+	if [ "$_NOLIB32" = "false" ]; then
 	  # package wine 32-bit
 	  # (according to the wine wiki, this reverse 32-bit/64-bit packaging order is important)
 	  msg2 'Packaging Wine-32...'
@@ -351,7 +351,7 @@ _package_makepkg() {
 	  fi
 	fi
 
-	if [ "$_NOLIB32" != "true" ]; then
+	if [ "$_NOLIB32" = "false" ]; then
 	  # package wine 32-bit
 	  # (according to the wine wiki, this reverse 32-bit/64-bit packaging order is important)
 	  msg2 'Packaging Wine-32...'

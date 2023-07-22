@@ -104,7 +104,7 @@ index d0f8be6c309..f9f6e252b6c 100644
 +
 +static void async_file_complete_io( struct async_file_read_job *job, NTSTATUS status, ULONG total )
 +{
-+    job->io->u.Status = status;
++    job->io->Status = status;
 +    job->io->Information = total;
 +
 +    if (job->event) NtSetEvent( job->event, NULL );
@@ -325,7 +325,7 @@ index d0f8be6c309..f9f6e252b6c 100644
      TRACE( "%p %p\n", handle, io_status );
  
 +    if (ac_odyssey && !cancel_async_file_read( handle, NULL ))
-+        return (io_status->u.Status = STATUS_SUCCESS);
++        return (io_status->Status = STATUS_SUCCESS);
 +
      SERVER_START_REQ( cancel_async )
      {
@@ -335,7 +335,7 @@ index d0f8be6c309..f9f6e252b6c 100644
      TRACE( "%p %p %p\n", handle, io, io_status );
  
 +    if (ac_odyssey && !cancel_async_file_read( handle, io ))
-+        return (io_status->u.Status = STATUS_SUCCESS);
++        return (io_status->Status = STATUS_SUCCESS);
 +
      SERVER_START_REQ( cancel_async )
      {

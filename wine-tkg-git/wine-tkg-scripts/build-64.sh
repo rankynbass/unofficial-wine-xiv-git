@@ -6,6 +6,12 @@ _exports_64() {
 	fi
 	if [ -e /usr/bin/ccache ] && [ "$_NOMINGW" != "true" ]; then
 		export CROSSCC="ccache x86_64-w64-mingw32-gcc" && echo "CROSSCC64 = ${CROSSCC}" >>"$_LAST_BUILD_CONFIG"
+		export x86_64_CC="${CROSSCC}"
+
+		# Required for new-style WoW64 builds (otherwise 32-bit portions won't be ccached)
+		if [ "${_NOLIB32}" != "false" ]; then
+			export i386_CC="ccache i686-w64-mingw32-gcc"
+		fi
 	fi
   fi
   # If /usr/lib32 doesn't exist (such as on Fedora), make sure we're using /usr/lib64 for 64-bit pkgconfig path
@@ -19,7 +25,7 @@ _configure_64() {
   cd  "${srcdir}"/"${pkgname}"-64-build
   if [ "$_NUKR" != "debug" ] || [[ "$_DEBUGANSW3" =~ [yY] ]]; then
     chmod +x ../"${_winesrcdir}"/configure
-    if [ "$_NOLIB32" != "true" ]; then
+    if [ "$_NOLIB32" != "wow64" ]; then
       ../"${_winesrcdir}"/configure \
 	    --prefix="$_prefix" \
 		--enable-win64 \

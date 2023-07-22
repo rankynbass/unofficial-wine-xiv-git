@@ -441,7 +441,7 @@ function build_mediaconverter {
 
 function build_steamhelper {
   export CFLAGS="-Wno-attributes -O2 -g"
-  export CXXFLAGS="-Wno-attributes -O2 -g"
+  export CXXFLAGS="-Wno-attributes -O2 -g -fpermissive"
   # disable openvr support for now since we don't support it
   if [[ "$_proton_branch" = *6.3 ]]; then
     _cxx_addon="-std=c++17"
@@ -462,7 +462,7 @@ function build_steamhelper {
     fi
   fi
 
-  if [ "$_processinfoclass" = "true" ]; then
+  if [[ "$_proton_branch" = *6.* ]] || [[ "$_proton_branch" = *7.* ]] && [ "$_processinfoclass" = "true" ]; then
     ( cd Proton && patch -Np1 < "$_nowhere/proton_template/steamhelper_PROCESSINFOCLASS.patch" ) || exit 1
   fi
 
@@ -723,8 +723,9 @@ function download_dxvk_version {
         echo "#######################################################"
         echo ""
         echo "$_dxvk_version_response" \
-        | grep "browser_download_url.*tar.gz" \
-        | cut -d : -f 2,3 \
+        | jq .assets[].browser_download_url \
+        | grep -v "dxvk-native" \
+        | head -1 \
         | tr -d \" \
         | wget -qi -
         break
