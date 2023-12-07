@@ -1558,9 +1558,9 @@ index af2094a96f0..9c98209d43d 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
 @@ -76,7 +76,7 @@ BOOL use_primary_selection = FALSE;
- BOOL use_take_focus = TRUE;
  BOOL use_primary_selection = FALSE;
  BOOL use_system_cursors = TRUE;
+ BOOL show_systray = TRUE;
 -BOOL grab_fullscreen = FALSE;
 +BOOL grab_fullscreen = TRUE;
  int keyboard_layout = -1;
@@ -2922,22 +2922,15 @@ diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
 index 516c817715f..a0287c1ff09 100755
 --- a/dlls/winevulkan/make_vulkan
 +++ b/dlls/winevulkan/make_vulkan
-@@ -245,7 +245,6 @@ MANUAL_UNIX_THUNKS = {
-     "vkEnumeratePhysicalDevices",
-     "vkFreeCommandBuffers",
-     "vkFreeMemory",
--    "vkGetCalibratedTimestampsEXT",
-     "vkGetDeviceProcAddr",
-     "vkGetDeviceQueue",
-     "vkGetDeviceQueue2",
-@@ -285,6 +285,7 @@ MANUAL_LOADER_THUNKS = {
-     "vkEnumerateInstanceExtensionProperties",
-     "vkEnumerateInstanceVersion",
-     "vkFreeCommandBuffers",
-+    "vkGetCalibratedTimestampsEXT",
-     "vkGetPhysicalDeviceProperties2",
-     "vkGetPhysicalDeviceProperties2KHR",
- }
+@@ -254,7 +254,7 @@ FUNCTION_OVERRIDES = {
+ 
+     # VK_EXT_calibrated_timestamps
+     "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE},
+-    "vkGetCalibratedTimestampsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE},
++    "vkGetCalibratedTimestampsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE, "loader_thunk" : ThunkType.PRIVATE},
+ 
+     # VK_EXT_debug_utils
+     "vkCreateDebugUtilsMessengerEXT" : {"dispatch": True, "driver" : False, "thunk" : ThunkType.NONE},
 From 003223a6816f3121a8e60d8ef3ec79e1768878ce Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Fri, 7 May 2021 13:44:00 -0500
@@ -2989,9 +2982,9 @@ index acba3544e39..9d1b1cde342 100644
 +++ b/dlls/dxgi/dxgi_private.h
 @@ -209,4 +209,6 @@ struct dxgi_surface
  HRESULT dxgi_surface_init(struct dxgi_surface *surface, IDXGIDevice *device,
-         IUnknown *outer, struct wined3d_texture *wined3d_texture);
+         IUnknown *outer, struct wined3d_texture *wined3d_texture) DECLSPEC_HIDDEN;
  
-+HRESULT get_re8_dxgi_factory(REFIID riid, void **factory);
++HRESULT get_re8_dxgi_factory(REFIID riid, void **factory) DECLSPEC_HIDDEN;
 +
  #endif /* __WINE_DXGI_PRIVATE_H */
 diff --git a/dlls/dxgi/factory.c b/dlls/dxgi/factory.c
