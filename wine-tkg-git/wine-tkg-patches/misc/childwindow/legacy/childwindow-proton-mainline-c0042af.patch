@@ -114,14 +114,14 @@ index 2eeff42c56e..d905412ca0d 100755
 --- a/dlls/winevulkan/make_vulkan
 +++ b/dlls/winevulkan/make_vulkan
 @@ -226,6 +226,8 @@ FUNCTION_OVERRIDES = {
- # functions for which a user driver entry must be generated
- USER_DRIVER_FUNCS = {
-     "vkCreateInstance",
-+    "vkAcquireNextImageKHR",
-+    "vkAcquireNextImage2KHR",
-     "vkCreateSwapchainKHR",
-     "vkCreateWin32SurfaceKHR",
-     "vkDestroyInstance",
+     "vkGetPhysicalDeviceWin32PresentationSupportKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+
+     # VK_KHR_swapchain
++    "vkAcquireNextImageKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
++    "vkAcquireNextImage2KHR": {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+     "vkCreateSwapchainKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+     "vkDestroySwapchainKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+     "vkGetSwapchainImagesKHR": {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
 diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
 index 743a964c44c..71ab92297d2 100644
 --- a/dlls/winex11.drv/vulkan.c
@@ -336,7 +336,7 @@ index 7ceaeb7c2df..104d922c156 100644
          if (ctx) sync_context( ctx );
 -        escape.gl_drawable = gl->pixmap;
 +        escape.drawable = gl->pixmap;
-         if (ctx && pglXCopySubBufferMESA) {
+         if (pglXCopySubBufferMESA) {
              /* (glX)SwapBuffers has an implicit glFlush effect, however
               * GLX_MESA_copy_sub_buffer doesn't. Make sure GL is flushed before
 @@ -3371,10 +3371,10 @@ static BOOL WINAPI glxdrv_wglSwapBuffers( HDC hdc )
@@ -347,8 +347,8 @@ index 7ceaeb7c2df..104d922c156 100644
 +        if (gl->type == DC_GL_CHILD_WIN) escape.drawable = gl->window;
          /* fall through */
      default:
--        if (ctx && escape.gl_drawable && pglXSwapBuffersMscOML)
-+        if (ctx && escape.drawable && pglXSwapBuffersMscOML)
+-        if (escape.gl_drawable && pglXSwapBuffersMscOML)
++        if (escape.drawable && pglXSwapBuffersMscOML)
          {
              pglFlush();
              target_sbc = pglXSwapBuffersMscOML( gdi_display, gl->drawable, 0, 0, 0 );
@@ -356,15 +356,15 @@ index 7ceaeb7c2df..104d922c156 100644
          break;
      }
  
--    if (ctx && escape.gl_drawable && pglXWaitForSbcOML)
-+    if (ctx && escape.drawable && pglXWaitForSbcOML)
+-    if (escape.gl_drawable && pglXWaitForSbcOML)
++    if (escape.drawable && pglXWaitForSbcOML)
          pglXWaitForSbcOML( gdi_display, gl->drawable, target_sbc, &ust, &msc, &sbc );
  
      release_gl_drawable( gl );
  
 -    if (escape.gl_drawable)
 +    if (escape.drawable)
-         NtGdiExtEscape( ctx ? ctx->hdc : hdc, NULL, 0, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
+         NtGdiExtEscape( ctx->hdc, NULL, 0, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
      return TRUE;
  }
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
@@ -428,7 +428,7 @@ index 71ab92297d2..210c7989b3c 100644
 @@ -63,6 +64,8 @@ struct wine_vk_surface
      struct list entry;
      Window window;
-     VkSurfaceKHR host_surface;
+     VkSurfaceKHR surface; /* native surface */
 +    BOOL offscreen; /* drawable is offscreen */
 +    HDC hdc;
      HWND hwnd;
@@ -650,7 +650,7 @@ index 210c7989b3c..34b1be5c61b 100644
 @@ -64,6 +64,7 @@ struct wine_vk_surface
      struct list entry;
      Window window;
-     VkSurfaceKHR host_surface;
+     VkSurfaceKHR surface; /* native surface */
 +    VkPresentModeKHR present_mode;
      BOOL offscreen; /* drawable is offscreen */
      HDC hdc;
@@ -1662,7 +1662,7 @@ index 2770123deba..77fd1b5ef66 100644
 +++ b/dlls/winex11.drv/vulkan.c
 @@ -64,6 +64,7 @@ struct wine_vk_surface
      Window window;
-     VkSurfaceKHR host_surface;
+     VkSurfaceKHR surface; /* native surface */
      VkPresentModeKHR present_mode;
 +    BOOL known_child; /* hwnd is or has a child */
      BOOL offscreen; /* drawable is offscreen */
