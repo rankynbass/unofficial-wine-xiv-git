@@ -149,7 +149,7 @@ index c6e3a2ca597..fd919295c5a 100644
 -    if (!tm) return E_UNEXPECTED;
 +    if (FAILED(TF_GetThreadMgr(&tm))) return E_UNEXPECTED;
  
-     actsvr = HeapAlloc(GetProcessHeap(),0,sizeof(ActivatedTextService));
+     actsvr = malloc(sizeof(ActivatedTextService));
 -    if (!actsvr) return E_OUTOFMEMORY;
 +    if (!actsvr) goto fail;
  
@@ -160,7 +160,7 @@ index c6e3a2ca597..fd919295c5a 100644
  
 -    if (!actsvr->tid)
 -    {
--        HeapFree(GetProcessHeap(),0,actsvr);
+-        free(actsvr);
 -        return E_OUTOFMEMORY;
 -    }
 +    if (!actsvr->tid) goto fail;
@@ -174,11 +174,11 @@ index c6e3a2ca597..fd919295c5a 100644
 -        activate_given_ts(actsvr, tm);
 +        activate_given_ts(actsvr, (ITfThreadMgrEx *)tm);
  
-     entry = HeapAlloc(GetProcessHeap(),0,sizeof(AtsEntry));
+     entry = malloc(sizeof(AtsEntry));
 -
 -    if (!entry)
 -    {
--        HeapFree(GetProcessHeap(),0,actsvr);
+-        free(actsvr);
 -        return E_OUTOFMEMORY;
 -    }
 +    if (!entry) goto fail;
@@ -191,7 +191,7 @@ index c6e3a2ca597..fd919295c5a 100644
 +
 +fail:
 +    ITfThreadMgr_Release(tm);
-+    HeapFree(GetProcessHeap(), 0, actsvr);
++    free(actsvr);
 +    return E_OUTOFMEMORY;
  }
  
@@ -237,9 +237,9 @@ index 584bb1044ed..ace2bee23d9 100644
  #define COOKIE_MAGIC_UIELEMENTSINK 0x00a0
  #define COOKIE_MAGIC_INPUTPROCESSORPROFILEACTIVATIONSINK 0x00b0
  
--extern DWORD tlsIndex DECLSPEC_HIDDEN;
- extern TfClientId processId DECLSPEC_HIDDEN;
- extern ITfCompartmentMgr *globalCompartmentMgr DECLSPEC_HIDDEN;
+-extern DWORD tlsIndex;
+ extern TfClientId processId;
+ extern ITfCompartmentMgr *globalCompartmentMgr;
  
 diff --git a/dlls/msctf/threadmgr.c b/dlls/msctf/threadmgr.c
 index 2c208fbc04f..2119ea2193b 100644
@@ -376,7 +376,7 @@ index 2c208fbc04f..2119ea2193b 100644
          return S_OK;
 -    }
  
-     This = HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,sizeof(ThreadMgr));
+     This = calloc(1, sizeof(ThreadMgr));
      if (This == NULL)
 @@ -1359,7 +1408,6 @@ HRESULT ThreadMgr_Constructor(IUnknown *pUnkOuter, IUnknown **ppOut)
      This->ITfUIElementMgr_iface.lpVtbl = &ThreadMgrUIElementMgrVtbl;
@@ -652,10 +652,10 @@ index 69c4a2f3902..1a3e88a0d29 100644
 --- a/dlls/dsound/dsound_private.h
 +++ b/dlls/dsound/dsound_private.h
 @@ -202,7 +202,6 @@ HRESULT IKsPrivatePropertySetImpl_Create(REFIID riid, void **ppv) DECLSPEC_HIDDE
- HRESULT DSOUND_Create(REFIID riid, void **ppv) DECLSPEC_HIDDEN;
- HRESULT DSOUND_Create8(REFIID riid, void **ppv) DECLSPEC_HIDDEN;
- HRESULT IDirectSoundImpl_Create(IUnknown *outer_unk, REFIID riid, void **ppv, BOOL has_ds8) DECLSPEC_HIDDEN;
--void DSOUND_ParseSpeakerConfig(DirectSoundDevice *device) DECLSPEC_HIDDEN;
+ HRESULT DSOUND_Create(REFIID riid, void **ppv);
+ HRESULT DSOUND_Create8(REFIID riid, void **ppv);
+ HRESULT IDirectSoundImpl_Create(IUnknown *outer_unk, REFIID riid, void **ppv, BOOL has_ds8);
+-void DSOUND_ParseSpeakerConfig(DirectSoundDevice *device);
  
  /* primary.c */
  
@@ -759,102 +759,6 @@ index 852ec51b7ff..fdbbc00cd33 100644
              device->speaker_config = DSOUND_FindSpeakerConfig(device->mmdevice, mixwfe->Format.nChannels);
              DSOUND_ParseSpeakerConfig(device);
          } else if (mixwfe->Format.nChannels > device->num_speakers) {
-From 749bf5fcd5f41a39301428a7fccd1e4febcd6f90 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
-Date: Fri, 13 Dec 2019 15:54:28 +0200
-Subject: [PATCH] dwmapi: Improve DwmGetWindowAttribute stub.
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-
-Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
----
- dlls/dwmapi/dwmapi_main.c | 26 ++++++++++++++++++++++++--
- 1 file changed, 24 insertions(+), 2 deletions(-)
-
-diff --git a/dlls/dwmapi/dwmapi_main.c b/dlls/dwmapi/dwmapi_main.c
-index 6378a091f0b..e976fda77f2 100644
---- a/dlls/dwmapi/dwmapi_main.c
-+++ b/dlls/dwmapi/dwmapi_main.c
-@@ -205,9 +205,31 @@ BOOL WINAPI DwmDefWindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam,
-  */
- HRESULT WINAPI DwmGetWindowAttribute(HWND hwnd, DWORD attribute, PVOID pv_attribute, DWORD size)
- {
--    FIXME("(%p %ld %p %ld) stub\n", hwnd, attribute, pv_attribute, size);
-+    if (!hwnd) return E_HANDLE;
-+    if (!pv_attribute) return E_INVALIDARG;
-
--    return E_NOTIMPL;
-+    switch (attribute)
-+    {
-+    case DWMWA_NCRENDERING_ENABLED:
-+        if (size < sizeof(BOOL)) return E_INVALIDARG;
-+
-+        WARN("DWMWA_NCRENDERING_ENABLED: always returning FALSE.\n");
-+        *(BOOL*)(pv_attribute) = FALSE;
-+        break;
-+
-+    case DWMWA_CLOAKED:
-+        if (size < sizeof(DWORD)) return E_INVALIDARG;
-+
-+        WARN("DWMWA_CLOAKED: always returning 0.\n");
-+        *(DWORD*)(pv_attribute) = 0;
-+        break;
-+
-+    default:
-+        FIXME("unimplemented attribute %d, size %u, for hwnd %p.\n", attribute, size, hwnd);
-+        return E_INVALIDARG;
-+    }
-+
-+    return S_OK;
- }
-
- /**********************************************************************
-From 1a2e600a9c35a9558b32e7986668d7dc81c8b5ae Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
-Date: Fri, 13 Dec 2019 15:54:30 +0200
-Subject: [PATCH] dwmapi: Add partial implementation of
- DWMWA_EXTENDED_FRAME_BOUNDS.
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-
-Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
----
- dlls/dwmapi/Makefile.in    |  1 +
- dlls/dwmapi/dwmapi_main.c  |  7 +++++++
- dlls/dwmapi/tests/dwmapi.c | 14 ++++++++++++++
- 3 files changed, 22 insertions(+)
-
-diff --git a/dlls/dwmapi/Makefile.in b/dlls/dwmapi/Makefile.in
-index 3a3691326f8..d273a22c8f3 100644
---- a/dlls/dwmapi/Makefile.in
-+++ b/dlls/dwmapi/Makefile.in
-@@ -1,5 +1,6 @@
- MODULE    = dwmapi.dll
- IMPORTLIB = dwmapi
-+IMPORTS   = user32
-
- EXTRADLLFLAGS = -Wb,--prefer-native
-
-diff --git a/dlls/dwmapi/dwmapi_main.c b/dlls/dwmapi/dwmapi_main.c
-index e976fda77f2..212c88c5a02 100644
---- a/dlls/dwmapi/dwmapi_main.c
-+++ b/dlls/dwmapi/dwmapi_main.c
-@@ -217,6 +217,13 @@ HRESULT WINAPI DwmGetWindowAttribute(HWND hwnd, DWORD attribute, PVOID pv_attrib
-         *(BOOL*)(pv_attribute) = FALSE;
-         break;
-
-+    case DWMWA_EXTENDED_FRAME_BOUNDS:
-+        if (size < sizeof(RECT)) return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-+
-+        WARN("DWMWA_EXTENDED_FRAME_BOUNDS: returning window rect.\n");
-+        GetWindowRect(hwnd, pv_attribute);
-+        break;
-+
-     case DWMWA_CLOAKED:
-         if (size < sizeof(DWORD)) return E_INVALIDARG;
-
 From b739d48093cce805b7b4f48fdbd9d0bb62bc8013 Mon Sep 17 00:00:00 2001
 From: Brendan Shanks <bshanks@codeweavers.com>
 Date: Mon, 13 Apr 2020 16:25:47 -0700
@@ -1291,7 +1195,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -1181,7 +1181,7 @@ static WCHAR *get_bios_string( BYTE id, const char *buf, UINT len )
  static WCHAR *get_bios_manufacturer( const char *buf, UINT len )
  {
-     WCHAR *ret = get_bios_string( 1, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_BIOS, offsetof(struct smbios_bios, vendor), buf, len );
 -    if (!ret) return wcsdup( L"The Wine Project" );
 +    if (!ret) return wcsdup( L"The Proton Project" );
      return ret;
@@ -1300,7 +1204,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -1227,7 +1227,7 @@ static WCHAR *get_bios_releasedate( const char *buf, UINT len )
  static WCHAR *get_bios_smbiosbiosversion( const char *buf, UINT len )
  {
-     WCHAR *ret = get_bios_string( 2, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_BIOS, offsetof(struct smbios_bios, version), buf, len );
 -    if (!ret) return wcsdup( L"Wine" );
 +    if (!ret) return wcsdup( L"Proton" );
      return ret;
@@ -1318,7 +1222,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -1641,14 +1641,14 @@ static WCHAR *get_compsysproduct_string( BYTE id, const char *buf, UINT len )
  static WCHAR *get_compsysproduct_name( const char *buf, UINT len )
  {
-     WCHAR *ret = get_compsysproduct_string( 2, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_SYSTEM, offsetof(struct smbios_system, product), buf, len );
 -    if (!ret) return wcsdup( L"Wine" );
 +    if (!ret) return wcsdup( L"Proton" );
      return ret;
@@ -1326,21 +1230,21 @@ index 43268221936..f39d6f0cd7b 100644
 
  static WCHAR *get_compsysproduct_vendor( const char *buf, UINT len )
  {
-     WCHAR *ret = get_compsysproduct_string( 1, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_SYSTEM, offsetof(struct smbios_system, vendor), buf, len );
 -    if (!ret) return wcsdup( L"The Wine Project" );
 +    if (!ret) return wcsdup( L"The Proton Project" );
      return ret;
  }
 
-@@ -2652,7 +2652,7 @@ static enum fill_status fill_networkadapter( struct table *table, const struct e
+@@ -2894,7 +2894,7 @@ static enum fill_status fill_networkadapter( struct table *table, const struct e
          rec->index                = aa->u.s.IfIndex;
          rec->interface_index      = aa->u.s.IfIndex;
          rec->mac_address          = get_mac_address( aa->PhysicalAddress, aa->PhysicalAddressLength );
 -        rec->manufacturer         = L"The Wine Project";
 +        rec->manufacturer         = L"The Proton Project";
+         rec->netconnection_id     = NULL; /* FIXME Windows seems to fill this when it's connected and in use */
          rec->name                 = wcsdup( aa->FriendlyName );
-         rec->netconnection_status = get_connection_status( aa->OperStatus );
-         rec->physicaladapter      = physical;
+         rec->netenabled           = connection_status ? -1 : 0;
 @@ -3475,7 +3475,7 @@ static enum fill_status fill_operatingsystem( struct table *table, const struct
      rec->lastbootuptime         = get_lastbootuptime();
      rec->localdatetime          = get_localdatetime();
@@ -1353,7 +1257,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -3740,7 +3740,7 @@ static WCHAR *get_systemenclosure_string( BYTE id, const char *buf, UINT len )
  static WCHAR *get_systemenclosure_manufacturer( const char *buf, UINT len )
  {
-     WCHAR *ret = get_systemenclosure_string( 1, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_CHASSIS, offsetof(struct smbios_chassis, vendor), buf, len );
 -    if (!ret) return wcsdup( L"Wine" );
 +    if (!ret) return wcsdup( L"Proton" );
      return ret;
@@ -1503,7 +1407,7 @@ index 00000000000..e50ed37f700
 +
 +EXTRADLLFLAGS = -mwindows -mno-cygwin
 +
-+C_SRCS = \
++SOURCES = \
 +	main.c
 diff --git a/programs/dotnetfx35/main.c b/programs/dotnetfx35/main.c
 new file mode 100644
@@ -1558,9 +1462,9 @@ index af2094a96f0..9c98209d43d 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
 @@ -76,7 +76,7 @@ BOOL use_primary_selection = FALSE;
+ BOOL use_take_focus = TRUE;
+ BOOL use_primary_selection = FALSE;
  BOOL use_system_cursors = TRUE;
- BOOL show_systray = TRUE;
- BOOL grab_pointer = TRUE;
 -BOOL grab_fullscreen = FALSE;
 +BOOL grab_fullscreen = TRUE;
  int keyboard_layout = -1;
@@ -1622,8 +1526,9 @@ index a4a10bc8e93..551ef146cd7 100644
  
 -EXTRADLLFLAGS = -Wb,--prefer-native
 -
- RC_SRCS = version.rc
-
+ SOURCES = \
+ 	version.rc \
+ 	vulkan.c
 From 07461415f4399934a3c03c8dd6e146167bd67dfd Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Thu, 25 Mar 2021 17:53:37 +0300
@@ -1986,8 +1891,8 @@ index dca4ffb8647..560e45e965a 100644
 +            || !(arch_str = string_from_processor_arch(package_id->processorArchitecture)))
 +        return ERROR_INVALID_PARAMETER;
 +
-+    swprintf(ver_str, ARRAY_SIZE(ver_str), L"%u.%u.%u.%u", package_id->version.u.s.Major,
-+            package_id->version.u.s.Minor, package_id->version.u.s.Build, package_id->version.u.s.Revision);
++    swprintf(ver_str, ARRAY_SIZE(ver_str), L"%u.%u.%u.%u", package_id->version.Major,
++            package_id->version.Minor, package_id->version.Build, package_id->version.Revision);
 +    have_length = *length;
 +    *length = lstrlenW(package_id->name) + 1 + lstrlenW(ver_str) + 1 + lstrlenW(arch_str) + 1
 +            + lstrlenW(package_id->resourceId) + 1 + lstrlenW(package_id->publisherId) + 1;
@@ -2160,6 +2065,68 @@ index be59bc70f5f..c73cb8d26ef 100644
 -- 
 2.30.2
 
+From 240556e2b8cb94fc9cc85949b7e043f392b1802a Mon Sep 17 00:00:00 2001
+From: Etaash Mathamsetty <etaash.mathamsetty@gmail.com>
+Date: Tue, 22 Aug 2023 10:35:33 -0400
+Subject: [PATCH] kernelbase: Add GetPackagePathByFullName stub.
+
+---
+ dlls/kernel32/kernel32.spec     |  1 +
+ dlls/kernelbase/kernelbase.spec |  2 +-
+ dlls/kernelbase/version.c       | 13 +++++++++++++
+ 3 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index eb70a8763b50..52a17bd7a8c2 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -775,6 +775,7 @@
+ @ stdcall GetPackageFamilyName(long ptr ptr) kernelbase.GetPackageFamilyName
+ @ stdcall GetPackageFullName(long ptr ptr) kernelbase.GetPackageFullName
+ @ stdcall -import GetPackagePath(ptr long ptr ptr)
++@ stdcall GetPackagePathByFullName(wstr ptr wstr) kernelbase.GetPackagePathByFullName
+ @ stdcall -import GetPhysicallyInstalledSystemMemory(ptr)
+ @ stdcall -import GetPriorityClass(long)
+ @ stdcall GetPrivateProfileIntA(str str long str)
+diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
+index 5d5256eb65fc..104dd99d619a 100644
+--- a/dlls/kernelbase/kernelbase.spec
++++ b/dlls/kernelbase/kernelbase.spec
+@@ -631,7 +631,7 @@
+ # @ stub GetPackageInstallTime
+ # @ stub GetPackageOSMaxVersionTested
+ @ stdcall GetPackagePath(ptr long ptr ptr)
+-# @ stub GetPackagePathByFullName
++@ stdcall GetPackagePathByFullName(wstr ptr wstr)
+ # @ stub GetPackagePathOnVolume
+ # @ stub GetPackageProperty
+ # @ stub GetPackagePropertyString
+diff --git a/dlls/kernelbase/version.c b/dlls/kernelbase/version.c
+index d8db79b1263a..4631ac8d0bcf 100644
+--- a/dlls/kernelbase/version.c
++++ b/dlls/kernelbase/version.c
+@@ -1618,6 +1618,19 @@ LONG WINAPI DECLSPEC_HOTPATCH GetPackagesByPackageFamily(const WCHAR *family_nam
+     return ERROR_SUCCESS;
+ }
+
++/***********************************************************************
++ *         GetPackagePathByFullName   (kernelbase.@)
++ */
++LONG WINAPI GetPackagePathByFullName(const WCHAR *name, UINT32 *len, WCHAR *path)
++{
++    if (!len || !name)
++        return ERROR_INVALID_PARAMETER;
++
++    FIXME( "(%s %p %p): stub\n", debugstr_w(name), len, path );
++
++    return APPMODEL_ERROR_NO_PACKAGE;
++}
++
+ static const struct
+ {
+     UINT32 code;
+
+
 From 995fdfb8cdb0a8eed82e16640034dc9673ded681 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Fri, 12 Mar 2021 23:58:39 +0300
@@ -2308,7 +2275,7 @@ index af18bdd2c32..020faa26a11 100644
 +    TRACE("%p decreasing refcount to %u.\n", swapchain, refcount);
 +
 +    if (!refcount)
-+        heap_free(swapchain);
++        free(swapchain);
 +
 +    return refcount;
 +}
@@ -2757,7 +2724,7 @@ index af18bdd2c32..020faa26a11 100644
 +        {
 +            struct proxy_swapchain *obj;
 +
-+            obj = heap_alloc_zero(sizeof(*obj));
++            obj = calloc(1, sizeof(*obj));
 +            obj->IDXGISwapChain4_iface.lpVtbl = &proxy_swapchain_vtbl;
 +            obj->swapchain = swapchain_impl;
 +            *swapchain = (IDXGISwapChain1 *)&obj->IDXGISwapChain4_iface;
@@ -2852,70 +2819,29 @@ index d3ac9f57763..fcb79983114 100644
 +    return VK_SUCCESS;
 +}
 +
- static BOOL WINAPI call_vulkan_debug_report_callback( struct wine_vk_debug_report_params *params, ULONG size )
+ static NTSTATUS WINAPI call_vulkan_debug_report_callback( void *args, ULONG size )
  {
-     return params->user_callback(params->flags, params->object_type, params->object_handle, params->location,
+     struct wine_vk_debug_report_params *params = args;
 diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
 index 516c817715f..a0287c1ff09 100755
 --- a/dlls/winevulkan/make_vulkan
 +++ b/dlls/winevulkan/make_vulkan
-@@ -254,7 +254,7 @@ FUNCTION_OVERRIDES = {
- 
-     # VK_EXT_calibrated_timestamps
-     "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE},
--    "vkGetCalibratedTimestampsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE},
-+    "vkGetCalibratedTimestampsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE, "loader_thunk" : ThunkType.PRIVATE},
- 
-     # VK_EXT_debug_utils
-     "vkCreateDebugUtilsMessengerEXT" : {"dispatch": True, "driver" : False, "thunk" : ThunkType.NONE},
-From fec2ecbd2dfd3c357f63c8f7bd9383b7a10d4553 Mon Sep 17 00:00:00 2001
-From: Esme Povirk <esme@codeweavers.com>
-Date: Thu, 22 Apr 2021 14:35:40 -0500
-Subject: [PATCH] HACK: mscoree: For M&B2:Bannerlord, redirect ManagedStarter
- loads to Bannerlord.exe
-
-For M&B2:Bannerlord.
----
- dlls/mscoree/metahost.c | 26 ++++++++++++++++++++++++++
- 1 file changed, 26 insertions(+)
-
-diff --git a/dlls/mscoree/metahost.c b/dlls/mscoree/metahost.c
-index d9b599fadc7..25acdced21e 100644
---- a/dlls/mscoree/metahost.c
-+++ b/dlls/mscoree/metahost.c
-@@ -1742,6 +1742,32 @@ static MonoAssembly* CDECL mono_assembly_preload_hook_fn(MonoAssemblyName *aname
-         }
-     }
- 
-+    if (!strcmp(assemblyname, "ManagedStarter"))
-+    {
-+        /* HACK for Mount & Blade II: Bannerlord
-+         *
-+         * The launcher executable uses an AssemblyResolve event handler
-+         * to redirect loads of the "ManagedStarter" assembly to
-+         * Bannerlord.exe. Due to Mono issue #11319, the runtime attempts
-+         * to load ManagedStarter before executing the static constructor
-+         * that adds this event handler. We work around this by doing the
-+         * same thing in our own assembly load hook. */
-+        const char* sgi = getenv("SteamGameId");
-+        if (sgi && !strcmp(sgi, "261550"))
-+        {
-+            FIXME("hack, using Bannerlord.exe\n");
-+
-+            result = mono_assembly_open("Bannerlord.exe", &stat);
-+
-+            if (result)
-+                goto done;
-+            else
-+            {
-+                ERR("Bannerlord.exe failed to load\n");
-+            }
-+        }
-+    }
-+
-     /* FIXME: We should search the given paths before the GAC. */
- 
-     if ((search_flags & ASSEMBLY_SEARCH_GAC) != 0)
+@@ -245,7 +245,6 @@ MANUAL_UNIX_THUNKS = {
+     "vkEnumeratePhysicalDevices",
+     "vkFreeCommandBuffers",
+     "vkFreeMemory",
+-    "vkGetCalibratedTimestampsEXT",
+     "vkGetDeviceProcAddr",
+     "vkGetDeviceQueue",
+     "vkGetDeviceQueue2",
+@@ -285,6 +285,7 @@ MANUAL_LOADER_THUNKS = {
+     "vkEnumerateInstanceExtensionProperties",
+     "vkEnumerateInstanceVersion",
+     "vkFreeCommandBuffers",
++    "vkGetCalibratedTimestampsEXT",
+     "vkGetPhysicalDeviceProperties2",
+     "vkGetPhysicalDeviceProperties2KHR",
+ }
 From 003223a6816f3121a8e60d8ef3ec79e1768878ce Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Fri, 7 May 2021 13:44:00 -0500
@@ -2967,9 +2893,9 @@ index acba3544e39..9d1b1cde342 100644
 +++ b/dlls/dxgi/dxgi_private.h
 @@ -209,4 +209,6 @@ struct dxgi_surface
  HRESULT dxgi_surface_init(struct dxgi_surface *surface, IDXGIDevice *device,
-         IUnknown *outer, struct wined3d_texture *wined3d_texture) DECLSPEC_HIDDEN;
+         IUnknown *outer, struct wined3d_texture *wined3d_texture);
  
-+HRESULT get_re8_dxgi_factory(REFIID riid, void **factory) DECLSPEC_HIDDEN;
++HRESULT get_re8_dxgi_factory(REFIID riid, void **factory);
 +
  #endif /* __WINE_DXGI_PRIVATE_H */
 diff --git a/dlls/dxgi/factory.c b/dlls/dxgi/factory.c
@@ -3206,11 +3132,11 @@ index c84e0a0a638..69c52616e3f 100644
 --- a/dlls/msvcrt/msvcrt.h
 +++ b/dlls/msvcrt/msvcrt.h
 @@ -32,6 +32,7 @@
- #include "winbase.h"
  #undef strncpy
+ #undef wcsncpy
 
-+extern BOOL erms_supported DECLSPEC_HIDDEN;
- extern BOOL sse2_supported DECLSPEC_HIDDEN;
++extern BOOL erms_supported;
+ extern BOOL sse2_supported;
 
  #define DBL80_MAX_10_EXP 4932
 diff --git a/dlls/msvcrt/string.c b/dlls/msvcrt/string.c
@@ -3432,293 +3358,6 @@ index cbc53e22ac1..60b03c57137 100644
  }
 
 
-From cdbb70dee8f9db1c983bf7dbc659fc4b77249f9f Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
-Date: Fri, 4 Jun 2021 10:24:10 +0200
-Subject: [PATCH] wineboot: Compute and write the TSC frequency to registry
- ~Mhz.
-
-In HKEY_LOCAL_MACHINE\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor
-
-Squashed with patches from:
-
-* Arkadiusz Hiler <ahiler@codeweavers.com>
-
-Check if the kernel trusts TSC before using it for Qpc.
-
-Even if the bits are claiming that TSC meets our requirements the
-hardware implementation may still be broken.
-
-The Linux kernel does a lot of quality testing before deciding to use as
-the clock source. If it (or the user, through an override) does not trust
-the TSC we should not trust it either.
-
-* Joshua Ashton <joshua@froggi.es>
-
-Some games such as Horizon Zero Dawn use this registry value to
-correlate values from rtdsc to real time.
-
-Testing across a few devices, is seems like Windows always returns the
-TSC frequency in this entry, not the current/maximum frequency of the
-processor.
-
-Returning the nominal/maximum cpu frequency here causes the game to run
-in slow motion as it may not match the tsc frequency of the processor.
-
-Ideally we'd not have to measure this and the kernel would return
-tsc_khz to userspace, but this is a good enough stop-gap until
-https://lkml.org/lkml/2020/12/31/72 or something similar is merged.
-
-CW-Bug-Id: #18918
-CW-Bug-Id: #18958
----
- programs/wineboot/wineboot.c | 175 ++++++++++++++++++++++++++++++++++-
- 1 file changed, 170 insertions(+), 5 deletions(-)
-
-diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
-index c05ce580298..731242c75eb 100644
---- a/programs/wineboot/wineboot.c
-+++ b/programs/wineboot/wineboot.c
-@@ -82,6 +82,8 @@
- 
- WINE_DEFAULT_DEBUG_CHANNEL(wineboot);
- 
-+#define TICKSPERSEC        10000000
-+
- extern BOOL shutdown_close_windows( BOOL force );
- extern BOOL shutdown_all_desktops( BOOL force );
- extern void kill_processes( BOOL kill_desktop );
-@@ -241,15 +243,173 @@ static void initialize_xstate_features(struct _KUSER_SHARED_DATA *data)
-     TRACE("XSAVE feature 2 %#x, %#x, %#x, %#x.\n", regs[0], regs[1], regs[2], regs[3]);
- }
- 
-+static UINT64 read_tsc_frequency( BOOL has_rdtscp )
-+{
-+    UINT64 freq = 0;
-+
-+/* FIXME: Intel provides TSC freq in some CPUID but it's been slightly broken,
-+   fix it properly and test it on real Intel hardware */
-+
-+#if 0
-+    int regs[4], cpuid_level, tmp;
-+    UINT64 denom, numer;
-+
-+    __cpuid( regs, 0 );
-+    tmp = regs[2];
-+    regs[2] = regs[3];
-+    regs[3] = tmp;
-+
-+    /* only available on some intel CPUs */
-+    if (memcmp( regs + 1, "GenuineIntel", 12 )) freq = 0;
-+    else if ((cpuid_level = regs[0]) < 0x15) freq = 0;
-+    else
-+    {
-+        __cpuid( regs, 0x15 );
-+        if (!(denom = regs[0]) || !(numer = regs[1])) freq = 0;
-+        else
-+        {
-+            if ((freq = regs[2])) freq = freq * numer / denom;
-+            else if (cpuid_level >= 0x16)
-+            {
-+                __cpuid( regs, 0x16 ); /* eax is base freq in MHz */
-+                freq = regs[0] * (UINT64)1000000;
-+            }
-+            else freq = 0;
-+        }
-+
-+        if (!freq) WARN( "Failed to read TSC frequency from CPUID, falling back to calibration.\n" );
-+        else TRACE( "TSC frequency read from CPUID, found %I64u Hz\n", freq );
-+    }
-+#endif
-+
-+    if (freq == 0)
-+    {
-+        LONGLONG time0, time1, tsc0, tsc1, tsc2, tsc3, freq0, freq1, error;
-+        unsigned int aux;
-+        UINT retries = 50;
-+        int regs[4];
-+
-+        do
-+        {
-+            if (has_rdtscp)
-+            {
-+                tsc0 = __rdtscp( &aux );
-+                time0 = RtlGetSystemTimePrecise();
-+                tsc1 = __rdtscp( &aux );
-+                Sleep( 1 );
-+                tsc2 = __rdtscp( &aux );
-+                time1 = RtlGetSystemTimePrecise();
-+                tsc3 = __rdtscp( &aux );
-+            }
-+            else
-+            {
-+                tsc0 = __rdtsc(); __cpuid( regs, 0 );
-+                time0 = RtlGetSystemTimePrecise();
-+                tsc1 = __rdtsc(); __cpuid( regs, 0 );
-+                Sleep(1);
-+                tsc2 = __rdtsc(); __cpuid( regs, 0 );
-+                time1 = RtlGetSystemTimePrecise();
-+                tsc3 = __rdtsc(); __cpuid( regs, 0 );
-+            }
-+
-+            freq0 = (tsc2 - tsc0) * 10000000 / (time1 - time0);
-+            freq1 = (tsc3 - tsc1) * 10000000 / (time1 - time0);
-+            error = llabs( (freq1 - freq0) * 1000000 / min( freq1, freq0 ) );
-+        }
-+        while (error > 100 && --retries);
-+
-+        if (!retries) WARN( "TSC frequency calibration failed, unstable TSC?\n" );
-+        else
-+        {
-+            freq = (freq0 + freq1) / 2;
-+            TRACE( "TSC frequency calibration complete, found %I64u Hz\n", freq );
-+        }
-+    }
-+
-+    return freq;
-+}
-+
-+static BOOL is_tsc_trusted_by_the_kernel(void)
-+{
-+    char buf[4] = {};
-+    DWORD num_read;
-+    HANDLE handle;
-+    BOOL ret = TRUE;
-+
-+    handle = CreateFileA( "\\??\\unix\\sys\\bus\\clocksource\\devices\\clocksource0\\current_clocksource",
-+                          GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0 );
-+    if (handle == INVALID_HANDLE_VALUE) return TRUE;
-+
-+    if (ReadFile( handle, buf, sizeof(buf) - 1, &num_read, NULL ) && strcmp( "tsc", buf ))
-+        ret = FALSE;
-+
-+    CloseHandle( handle );
-+    return ret;
-+}
-+
-+static void initialize_qpc_features( struct _KUSER_SHARED_DATA *data, UINT64 *tsc_frequency )
-+{
-+    BOOL has_rdtscp = FALSE;
-+    int regs[4];
-+
-+    data->QpcBypassEnabled = 0;
-+    data->QpcFrequency = TICKSPERSEC;
-+    data->QpcShift = 0;
-+    data->QpcBias = 0;
-+    *tsc_frequency = 0;
-+
-+    if (!is_tsc_trusted_by_the_kernel())
-+    {
-+        WARN( "Failed to compute TSC frequency, not trusted by the kernel.\n" );
-+        return;
-+    }
-+
-+    if (!data->ProcessorFeatures[PF_RDTSC_INSTRUCTION_AVAILABLE])
-+    {
-+        WARN( "Failed to compute TSC frequency, RDTSC instruction not supported.\n" );
-+        return;
-+    }
-+
-+    __cpuid( regs, 0x80000000 );
-+    if (regs[0] < 0x80000007)
-+    {
-+        WARN( "Failed to compute TSC frequency, unable to check invariant TSC.\n" );
-+        return;
-+    }
-+
-+    /* check for invariant tsc bit */
-+    __cpuid( regs, 0x80000007 );
-+    if (!(regs[3] & (1 << 8)))
-+    {
-+        WARN( "Failed to compute TSC frequency, no invariant TSC.\n" );
-+        return;
-+    }
-+
-+    /* check for rdtscp support bit */
-+    __cpuid( regs, 0x80000001 );
-+    if ((regs[3] & (1 << 27))) has_rdtscp = TRUE;
-+
-+    *tsc_frequency = read_tsc_frequency( has_rdtscp );
-+}
-+
- #else
- 
- static void initialize_xstate_features(struct _KUSER_SHARED_DATA *data)
- {
- }
- 
-+static void initialize_qpc_features( struct _KUSER_SHARED_DATA *data, UINT64 *tsc_frequency )
-+{
-+    data->QpcBypassEnabled = 0;
-+    data->QpcFrequency = TICKSPERSEC;
-+    data->QpcShift = 0;
-+    data->QpcBias = 0;
-+    *tsc_frequency = 0;
-+}
-+
- #endif
- 
--static void create_user_shared_data(void)
-+static void create_user_shared_data( UINT64 *tsc_frequency )
- {
-     struct _KUSER_SHARED_DATA *data;
-     RTL_OSVERSIONINFOEXW version;
-@@ -368,6 +528,7 @@ static void create_user_shared_data(void)
-     data->ActiveGroupCount = 1;
- 
-     initialize_xstate_features( data );
-+    initialize_qpc_features( data, tsc_frequency );
- 
-     UnmapViewOfFile( data );
- }
-@@ -660,7 +821,7 @@ static void create_bios_key( HKEY system_key )
- }
- 
- /* create the volatile hardware registry keys */
--static void create_hardware_registry_keys(void)
-+static void create_hardware_registry_keys( UINT64 tsc_frequency )
- {
-     unsigned int i;
-     HKEY hkey, system_key, cpu_key, fpu_key;
-@@ -737,13 +898,16 @@ static void create_hardware_registry_keys(void)
-         if (!RegCreateKeyExW( cpu_key, numW, 0, NULL, REG_OPTION_VOLATILE,
-                               KEY_ALL_ACCESS, NULL, &hkey, NULL ))
-         {
-+            DWORD tsc_freq_mhz = (DWORD)(tsc_frequency / 1000000ull); /* Hz -> Mhz */
-+            if (!tsc_freq_mhz) tsc_freq_mhz = power_info[i].MaxMhz;
-+
-             RegSetValueExW( hkey, L"FeatureSet", 0, REG_DWORD, (BYTE *)&sci.ProcessorFeatureBits, sizeof(DWORD) );
-             set_reg_value( hkey, L"Identifier", id );
-             /* TODO: report ARM properly */
-             RegSetValueExA( hkey, "ProcessorNameString", 0, REG_SZ, (const BYTE *)name_buffer,
-                             strlen( (char *)name_buffer ) + 1 );
-             set_reg_value( hkey, L"VendorIdentifier", vendorid );
--            RegSetValueExW( hkey, L"~MHz", 0, REG_DWORD, (BYTE *)&power_info[i].MaxMhz, sizeof(DWORD) );
-+            RegSetValueExW( hkey, L"~MHz", 0, REG_DWORD, (BYTE *)&tsc_freq_mhz, sizeof(DWORD) );
-             RegCloseKey( hkey );
-         }
-         if (sci.ProcessorArchitecture != PROCESSOR_ARCHITECTURE_ARM &&
-@@ -1625,6 +1789,7 @@ int __cdecl main( int argc, char *argv[] )
-     BOOL end_session, force, init, kill, restart, shutdown, update;
-     HANDLE event;
-     OBJECT_ATTRIBUTES attr;
-+    UINT64 tsc_frequency = 0;
-     UNICODE_STRING nameW = RTL_CONSTANT_STRING( L"\\KernelObjects\\__wineboot_event" );
-     BOOL is_wow64;
- 
-@@ -1710,8 +1875,8 @@ int __cdecl main( int argc, char *argv[] )
- 
-     ResetEvent( event );  /* in case this is a restart */
- 
--    create_user_shared_data();
--    create_hardware_registry_keys();
-+    create_user_shared_data( &tsc_frequency );
-+    create_hardware_registry_keys( tsc_frequency );
-     create_dynamic_registry_keys();
-     create_environment_registry_keys();
-     create_computer_name_keys();
-
-
 From 3244ba9966c0e7bcd445a65b5c325801f9b77131 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Wed, 5 Jan 2022 13:31:14 +0300
@@ -3769,156 +3408,6 @@ index 00000000000..a1884e53243
 +# @ stub DllGetClassObject
 +# @ stub DllRegisterServer
 +# @ stub DllUnregisterServer
-From 9bf094c8a6e962b969a1832613127bc4b7cf0fb3 Mon Sep 17 00:00:00 2001
-From: Paul Gofman <pgofman@codeweavers.com>
-Date: Thu, 10 Feb 2022 16:17:41 +0300
-Subject: [PATCH] ntdll: Guard against syscall stack overrun.
-
----
- dlls/ntdll/unix/signal_arm.c    |  4 ++++
- dlls/ntdll/unix/signal_arm64.c  |  4 ++++
- dlls/ntdll/unix/signal_i386.c   |  4 ++++
- dlls/ntdll/unix/signal_x86_64.c |  4 ++++
- dlls/ntdll/unix/unix_private.h  | 10 +++++++++-
- dlls/ntdll/unix/virtual.c       |  5 +++++
- 6 files changed, 30 insertions(+), 1 deletion(-)
-
-diff --git a/dlls/ntdll/unix/signal_arm.c b/dlls/ntdll/unix/signal_arm.c
-index eaa41d9e139..ff4dbedccac 100644
---- a/dlls/ntdll/unix/signal_arm.c
-+++ b/dlls/ntdll/unix/signal_arm.c
-@@ -835,6 +835,10 @@ static BOOL handle_syscall_fault( ucontext_t *context, EXCEPTION_RECORD *rec )
-            (DWORD)IP_sig(context), (DWORD)SP_sig(context), (DWORD)LR_sig(context),
-            (DWORD)PC_sig(context), (DWORD)CPSR_sig(context) );
-
-+    if (rec->ExceptionCode == STATUS_ACCESS_VIOLATION
-+            && is_inside_syscall_stack_guard( (char *)rec->ExceptionInformation[1] ))
-+        ERR_(seh)( "Syscall stack overrun.\n ");
-+
-     if (ntdll_get_thread_data()->jmp_buf)
-     {
-         TRACE( "returning to handler\n" );
-diff --git a/dlls/ntdll/unix/signal_arm64.c b/dlls/ntdll/unix/signal_arm64.c
-index 26910173b81..ba3e3564c1a 100644
---- a/dlls/ntdll/unix/signal_arm64.c
-+++ b/dlls/ntdll/unix/signal_arm64.c
-@@ -860,6 +860,10 @@ static BOOL handle_syscall_fault( ucontext_t *context, EXCEPTION_RECORD *rec )
-           (DWORD64)REGn_sig(28, context), (DWORD64)FP_sig(context),
-           (DWORD64)LR_sig(context), (DWORD64)SP_sig(context) );
-
-+    if (rec->ExceptionCode == STATUS_ACCESS_VIOLATION
-+            && is_inside_syscall_stack_guard( (char *)rec->ExceptionInformation[1] ))
-+        ERR_(seh)( "Syscall stack overrun.\n ");
-+
-     if (ntdll_get_thread_data()->jmp_buf)
-     {
-         TRACE( "returning to handler\n" );
-diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
-index 53da5d3ac59..a0afd33ea13 100644
---- a/dlls/ntdll/unix/signal_i386.c
-+++ b/dlls/ntdll/unix/signal_i386.c
-@@ -1757,6 +1757,10 @@ static BOOL handle_syscall_fault( ucontext_t *sigcontext, void *stack_ptr,
-           context->Ebp, context->Esp, context->SegCs, context->SegDs,
-           context->SegEs, context->SegFs, context->SegGs, context->EFlags );
-
-+    if (rec->ExceptionCode == STATUS_ACCESS_VIOLATION
-+            && is_inside_syscall_stack_guard( (char *)rec->ExceptionInformation[1] ))
-+        ERR_(seh)( "Syscall stack overrun.\n ");
-+
-     if (ntdll_get_thread_data()->jmp_buf)
-     {
-         TRACE( "returning to handler\n" );
-diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index 7d7f9090986..b1cc682649b 100644
---- a/dlls/ntdll/unix/signal_x86_64.c
-+++ b/dlls/ntdll/unix/signal_x86_64.c
-@@ -2792,6 +2792,10 @@ static BOOL handle_syscall_fault( ucontext_t *sigcontext, EXCEPTION_RECORD *rec,
-     TRACE_(seh)( " r12=%016lx r13=%016lx r14=%016lx r15=%016lx\n",
-                  context->R12, context->R13, context->R14, context->R15 );
-
-+    if (rec->ExceptionCode == STATUS_ACCESS_VIOLATION
-+            && is_inside_syscall_stack_guard( (char *)rec->ExceptionInformation[1] ))
-+        ERR_(seh)( "Syscall stack overrun.\n ");
-+
-     if (ntdll_get_thread_data()->jmp_buf)
-     {
-         TRACE_(seh)( "returning to handler\n" );
-diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 9bc19e75228..4bf0e7cb84e 100644
---- a/dlls/ntdll/unix/unix_private.h
-+++ b/dlls/ntdll/unix/unix_private.h
-@@ -88,7 +88,8 @@ static const SIZE_T teb_size = 0x3800;  /* TEB64 + TEB32 + debug info */
- static const SIZE_T signal_stack_mask = 0xffff;
- static const SIZE_T signal_stack_size = 0x10000 - 0x3800;
- static const SIZE_T kernel_stack_size = 0x100000;
--static const SIZE_T min_kernel_stack  = 0x2000;
-+static const SIZE_T kernel_stack_guard_size = 0x1000;
-+static const SIZE_T min_kernel_stack  = 0x3000;
- static const LONG teb_offset = 0x2000;
-
- #define FILE_WRITE_TO_END_OF_FILE      ((LONGLONG)-1)
-@@ -331,6 +332,13 @@ static inline BOOL is_inside_signal_stack( void *ptr )
-             (char *)ptr < (char *)get_signal_stack() + signal_stack_size);
- }
-
-+static inline BOOL is_inside_syscall_stack_guard( const char *stack_ptr )
-+{
-+    const char *kernel_stack = ntdll_get_thread_data()->kernel_stack;
-+
-+    return (stack_ptr >= kernel_stack && stack_ptr < kernel_stack + kernel_stack_guard_size);
-+}
-+
- static inline void mutex_lock( pthread_mutex_t *mutex )
- {
-     if (!process_exiting) pthread_mutex_lock( mutex );
-diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index e7caf162ee1..10e2bf1477c 100644
---- a/dlls/ntdll/unix/virtual.c
-+++ b/dlls/ntdll/unix/virtual.c
-@@ -3225,6 +3225,7 @@ NTSTATUS virtual_alloc_thread_stack( INITIAL_TEB *stack, ULONG_PTR zero_bits, SI
-                                      SIZE_T commit_size, SIZE_T extra_size )
- {
-     struct file_view *view;
-+    char *kernel_stack;
-     NTSTATUS status;
-     sigset_t sigset;
-     SIZE_T size;
-@@ -3268,6 +3269,10 @@ NTSTATUS virtual_alloc_thread_stack( INITIAL_TEB *stack, ULONG_PTR zero_bits, SI
-             delete_view( view );
-             goto done;
-         }
-+        /* setup kernel stack no access guard page */
-+        kernel_stack = (char *)view->base + view->size;
-+        set_page_vprot( kernel_stack, kernel_stack_guard_size, VPROT_COMMITTED );
-+        mprotect_range( kernel_stack, kernel_stack_guard_size, 0, 0 );
-     }
-
-     /* note: limit is lower than base since the stack grows down */
-From 59b705ed31d38065c12f44e281dc8c18d5024acf Mon Sep 17 00:00:00 2001
-From: Paul Gofman <pgofman@codeweavers.com>
-Date: Fri, 16 Sep 2022 17:14:54 -0500
-Subject: [PATCH] fixup! ntdll: Guard against syscall stack overrun.
-
-Make guard pages readable.
-
-CW-Bug-Id: #21305
----
- dlls/ntdll/unix/virtual.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 550d7f41dec..8dfe3da0a7e 100644
---- a/dlls/ntdll/unix/virtual.c
-+++ b/dlls/ntdll/unix/virtual.c
-@@ -3271,7 +3271,7 @@ NTSTATUS virtual_alloc_thread_stack( INITIAL_TEB *stack, ULONG_PTR zero_bits, SI
-         }
-         /* setup kernel stack no access guard page */
-         kernel_stack = (char *)view->base + view->size;
--        set_page_vprot( kernel_stack, kernel_stack_guard_size, VPROT_COMMITTED );
-+        set_page_vprot( kernel_stack, kernel_stack_guard_size, VPROT_COMMITTED | VPROT_READ );
-         mprotect_range( kernel_stack, kernel_stack_guard_size, 0, 0 );
-     }
- 
 From ba4e9dc41c7fb272c4354669b032b781d96e2e59 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Thu, 19 Dec 2019 09:12:17 -0600
@@ -3967,3 +3456,100 @@ index 0a080ea6be8..667013df5ac 100644
      }
      pXRRFreeScreenResources( screen_resources );
      return FALSE;
+From 98bce52ddf46c0c8c6be57c27d4aa9c48303798b Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 14 Mar 2023 21:12:22 -0600
+Subject: [PATCH] ntdll: HACK: Add WINE_SIMULATE_WRITECOPY option.
+
+CW-Bug-Id: #22034
+
+Edit: Enable for UplayWebCore.exe
+---
+ dlls/ntdll/unix/loader.c       |  5 +++++
+ dlls/ntdll/unix/unix_private.h |  1 +
+ dlls/ntdll/unix/virtual.c      | 13 +++++++++++--
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 9f00e45..67d071a 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -1346,6 +1346,7 @@ const unixlib_entry_t unix_call_wow64_funcs[] =
+ 
+ BOOL ac_odyssey;
+ BOOL fsync_simulate_sched_quantum;
++BOOL simulate_writecopy;
+ 
+ static void hacks_init(void)
+ {
+@@ -1367,6 +1368,10 @@ static void hacks_init(void)
+     if (fsync_simulate_sched_quantum)
+         ERR("HACK: Simulating sched quantum in fsync.\n");
+ 
++    env_str = getenv("WINE_SIMULATE_WRITECOPY");
++    if (env_str) simulate_writecopy = atoi(env_str);
++    else if (main_argc > 1 && strstr(main_argv[1], "UplayWebCore.exe")) simulate_writecopy = TRUE;
++
+     env_str = getenv("SteamGameId");
+     if (env_str && !strcmp(env_str, "50130"))
+         setenv("WINESTEAMNOEXEC", "1", 0);
+diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
+index 2bf8975..8a5baf3 100644
+--- a/dlls/ntdll/unix/unix_private.h
++++ b/dlls/ntdll/unix/unix_private.h
+@@ -175,6 +175,7 @@ extern struct ldt_copy __wine_ldt_copy;
+ 
+ extern BOOL ac_odyssey;
+ extern BOOL fsync_simulate_sched_quantum;
++extern BOOL simulate_writecopy;
+ 
+ extern void init_environment( int argc, char *argv[], char *envp[] );
+ extern void init_startup_info(void);
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 59c0e6d..9a7af20 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -1107,7 +1107,8 @@ static const char *get_prot_str( BYTE prot )
+     buffer[0] = (prot & VPROT_COMMITTED) ? 'c' : '-';
+     buffer[1] = (prot & VPROT_GUARD) ? 'g' : ((prot & VPROT_WRITEWATCH) ? 'H' : '-');
+     buffer[2] = (prot & VPROT_READ) ? 'r' : '-';
+-    buffer[3] = (prot & VPROT_WRITECOPY) ? 'W' : ((prot & VPROT_WRITE) ? 'w' : '-');
++    buffer[3] = (prot & VPROT_WRITECOPY) ? (prot & VPROT_WRITTEN ? 'w' : 'W')
++        : ((prot & VPROT_WRITE) ? 'w' : '-');
+     buffer[4] = (prot & VPROT_EXEC) ? 'x' : '-';
+     buffer[5] = 0;
+     return buffer;
+@@ -4730,6 +4731,33 @@ NTSTATUS WINAPI NtProtectVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T
+         {
+             old = get_win32_prot( vprot, view->protect );
+             status = set_protection( view, base, size, new_prot );
++
++            if (simulate_writecopy && status == STATUS_SUCCESS
++                && ((old == PAGE_WRITECOPY || old == PAGE_EXECUTE_WRITECOPY)))
++            {
++                TRACE("Setting VPROT_WRITTEN.\n");
++
++                set_page_vprot_bits(base, size, VPROT_WRITTEN, 0);
++                vprot |= VPROT_WRITTEN;
++                old = get_win32_prot( vprot, view->protect );
++            }
++            else if (status == STATUS_SUCCESS && (view->protect & SEC_IMAGE) &&
++                    base == (void*)NtCurrentTeb()->Peb->ImageBaseAddress)
++            {
++                /* GTA5 HACK: Mark first page as copied. */
++                const WCHAR gta5W[] = { 'g','t','a','5','.','e','x','e',0 };
++                WCHAR *name, *p;
++
++                name = NtCurrentTeb()->Peb->ProcessParameters->ImagePathName.Buffer;
++                p = wcsrchr(name, '\\');
++                p = p ? p+1 : name;
++
++                if(!wcsicmp(p, gta5W))
++                {
++                    FIXME("HACK: changing GTA5.exe vprot\n");
++                    set_page_vprot_bits(base, page_size, VPROT_WRITTEN, 0);
++                }
++            }
+         }
+         else status = STATUS_NOT_COMMITTED;
+     }

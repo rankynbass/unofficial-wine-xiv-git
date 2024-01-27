@@ -121,11 +121,11 @@ index f5b1a078907..756d47ef20d 100644
  }
  
 +void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_texture *texture,
-+        wined3d_gl_texture_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
++        wined3d_gl_texture_callback callback, const void *data, unsigned int size);
 +
- static inline void wined3d_device_context_push_constants(struct wined3d_device_context *context,
-         enum wined3d_push_constants p, unsigned int start_idx, unsigned int count, const void *constants)
- {
+ void wined3d_device_context_emit_blt_sub_resource(struct wined3d_device_context *context,
+         struct wined3d_resource *dst_resource, unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box,
+         struct wined3d_resource *src_resource, unsigned int src_sub_resource_idx, const struct wined3d_box *src_box,
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
 index dd1c15f14ed..2123e857a52 100644
 --- a/include/wine/wined3d.h
@@ -252,12 +252,12 @@ index 756d47ef20d..602647b1e94 100644
 @@ -4764,6 +4764,8 @@ static inline void wined3d_cs_finish(struct wined3d_cs *cs, enum wined3d_cs_queu
  
  void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_texture *texture,
-         wined3d_gl_texture_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
+         wined3d_gl_texture_callback callback, const void *data, unsigned int size);
 +void wined3d_cs_emit_user_callback(struct wined3d_cs *cs,
-+        wined3d_cs_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
++        wined3d_cs_callback callback, const void *data, unsigned int size);
  
- static inline void wined3d_device_context_push_constants(struct wined3d_device_context *context,
-         enum wined3d_push_constants p, unsigned int start_idx, unsigned int count, const void *constants)
+ void wined3d_device_context_emit_blt_sub_resource(struct wined3d_device_context *context,
+         struct wined3d_resource *dst_resource, unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box,
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
 index 2123e857a52..39689bdb4e1 100644
 --- a/include/wine/wined3d.h
@@ -301,9 +301,9 @@ index 1a8cdc6d77c..2b1809726ca 100644
  
 +#include "wine/wined3d-interop.h"
 +
- #define MAKE_TAG(ch0, ch1, ch2, ch3) \
-     ((DWORD)(ch0) | ((DWORD)(ch1) << 8) | \
-     ((DWORD)(ch2) << 16) | ((DWORD)(ch3) << 24 ))
+ struct d3d_device;
+ 
+ /* TRACE helper functions */
 @@ -144,7 +146,7 @@ struct d3d_texture1d *unsafe_impl_from_ID3D10Texture1D(ID3D10Texture1D *iface) D
  /* ID3D11Texture2D, ID3D10Texture2D */
  struct d3d_texture2d
@@ -327,14 +327,14 @@ index 0819918b2a1..41967dd0a1c 100644
      return S_OK;
  }
 @@ -6594,7 +6594,7 @@ static HRESULT CDECL device_parent_create_swapchain_texture(struct wined3d_devic
- 
-     *wined3d_texture = texture->wined3d_texture;
-     wined3d_texture_incref(*wined3d_texture);
--    ID3D11Texture2D_Release(&texture->ID3D11Texture2D_iface);
-+    IWineD3D11Texture2D_Release(&texture->ID3D11Texture2D_iface);
- 
-     return S_OK;
+         return hr;
+
+     hr = IUnknown_QueryInterface(object->dxgi_resource, &IID_IDXGISurface, (void **)ret_surface);
+-    ID3D11Texture2D_Release(&object->ID3D11Texture2D_iface);
++    IWineD3D11Texture2D_Release(&object->ID3D11Texture2D_iface);
+     return hr;
  }
+
 diff --git a/dlls/d3d11/texture.c b/dlls/d3d11/texture.c
 index 061bbb09795..dd21c6d7f08 100644
 --- a/dlls/d3d11/texture.c
@@ -792,13 +792,13 @@ index 602647b1e94..8a38f6d4925 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -4766,6 +4766,7 @@ void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_t
-         wined3d_gl_texture_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
+         wined3d_gl_texture_callback callback, const void *data, unsigned int size);
  void wined3d_cs_emit_user_callback(struct wined3d_cs *cs,
-         wined3d_cs_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_wait_idle(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+         wined3d_cs_callback callback, const void *data, unsigned int size);
++void wined3d_cs_emit_wait_idle(struct wined3d_cs *cs);
  
- static inline void wined3d_device_context_push_constants(struct wined3d_device_context *context,
-         enum wined3d_push_constants p, unsigned int start_idx, unsigned int count, const void *constants)
+ void wined3d_device_context_emit_blt_sub_resource(struct wined3d_device_context *context,
+         struct wined3d_resource *dst_resource, unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box,
 diff --git a/include/wine/wined3d-interop.idl b/include/wine/wined3d-interop.idl
 index d5c91623b3c..6f8ea3770e3 100644
 --- a/include/wine/wined3d-interop.idl
@@ -957,12 +957,12 @@ index 8a38f6d4925..a01ee1690c1 100644
  }
  
  void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_texture *texture,
--        wined3d_gl_texture_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
+-        wined3d_gl_texture_callback callback, const void *data, unsigned int size);
 +        wined3d_gl_texture_callback callback, struct wined3d_texture *depth_texture,
-+        const void *data, unsigned int size) DECLSPEC_HIDDEN;
++        const void *data, unsigned int size);
  void wined3d_cs_emit_user_callback(struct wined3d_cs *cs,
-         wined3d_cs_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_wait_idle(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+         wined3d_cs_callback callback, const void *data, unsigned int size);
+ void wined3d_cs_emit_wait_idle(struct wined3d_cs *cs);
 diff --git a/include/wine/wined3d-interop.idl b/include/wine/wined3d-interop.idl
 index 6f8ea3770e3..c5395ccc0ed 100644
 --- a/include/wine/wined3d-interop.idl
@@ -1056,13 +1056,13 @@ index a01ee1690c1..0a18d909c5e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -4767,7 +4767,6 @@ void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_t
-         const void *data, unsigned int size) DECLSPEC_HIDDEN;
+         const void *data, unsigned int size);
  void wined3d_cs_emit_user_callback(struct wined3d_cs *cs,
-         wined3d_cs_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
--void wined3d_cs_emit_wait_idle(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+         wined3d_cs_callback callback, const void *data, unsigned int size);
+-void wined3d_cs_emit_wait_idle(struct wined3d_cs *cs);
  
- static inline void wined3d_device_context_push_constants(struct wined3d_device_context *context,
-         enum wined3d_push_constants p, unsigned int start_idx, unsigned int count, const void *constants)
+ void wined3d_device_context_emit_blt_sub_resource(struct wined3d_device_context *context,
+         struct wined3d_resource *dst_resource, unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box,
 -- 
 2.30.2
 
@@ -1219,7 +1219,7 @@ index b8fa5d7d3ae..25c5e57fca0 100644
 +static const struct wined3d_gl_info *wined3d_prepare_vr_gl_context(struct wined3d_device *device)
 +{
 +    const struct wined3d_adapter *adapter = device->adapter;
-+    const struct wined3d_gl_info *gl_info = &adapter->gl_info;
++    const struct wined3d_gl_info *gl_info = &wined3d_adapter_gl_const(adapter)->gl_info;
 +    struct wined3d_vr_gl_context *ctx = &device->vr_context;
 +    PIXELFORMATDESCRIPTOR pfd;
 +    int pixel_format;
@@ -1346,6 +1346,14 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
 index 0a18d909c5e..4bd32d95cda 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
+@@ -50,6 +50,7 @@
+ #include "wine/wined3d.h"
+ #include "wine/list.h"
+ #include "wine/rbtree.h"
++#include "wine/wgl.h"
+
+ static inline size_t align(size_t addr, size_t alignment)
+ {
 @@ -3774,6 +3774,14 @@ struct wined3d_so_desc_entry
      struct wined3d_stream_output_element elements[1];
  };
@@ -1372,16 +1380,16 @@ index 0a18d909c5e..4bd32d95cda 100644
  };
 @@ -4768,6 +4778,11 @@ void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_t
  void wined3d_cs_emit_user_callback(struct wined3d_cs *cs,
-         wined3d_cs_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
+         wined3d_cs_callback callback, const void *data, unsigned int size);
  
-+GLsync wined3d_cs_synchronize(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
++GLsync wined3d_cs_synchronize(struct wined3d_cs *cs);
 +
-+void wined3d_destroy_gl_vr_context(struct wined3d_vr_gl_context *ctx) DECLSPEC_HIDDEN;
++void wined3d_destroy_gl_vr_context(struct wined3d_vr_gl_context *ctx);
 +
 +
- static inline void wined3d_device_context_push_constants(struct wined3d_device_context *context,
-         enum wined3d_push_constants p, unsigned int start_idx, unsigned int count, const void *constants)
- {
+ void wined3d_device_context_emit_blt_sub_resource(struct wined3d_device_context *context,
+         struct wined3d_resource *dst_resource, unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box,
+         struct wined3d_resource *src_resource, unsigned int src_sub_resource_idx, const struct wined3d_box *src_box,
 diff --git a/include/wine/wined3d-interop.idl b/include/wine/wined3d-interop.idl
 index c5395ccc0ed..b1bda8ada76 100644
 --- a/include/wine/wined3d-interop.idl
@@ -1491,12 +1499,12 @@ index 4bd32d95cda..2a9b2c08877 100644
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -4778,7 +4778,7 @@ void wined3d_cs_emit_gl_texture_callback(struct wined3d_cs *cs, struct wined3d_t
  void wined3d_cs_emit_user_callback(struct wined3d_cs *cs,
-         wined3d_cs_callback callback, const void *data, unsigned int size) DECLSPEC_HIDDEN;
+         wined3d_cs_callback callback, const void *data, unsigned int size);
  
--GLsync wined3d_cs_synchronize(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
-+GLsync wined3d_cs_synchronize(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
+-GLsync wined3d_cs_synchronize(struct wined3d_cs *cs);
++GLsync wined3d_cs_synchronize(struct wined3d_cs *cs, struct wined3d_texture *texture);
  
- void wined3d_destroy_gl_vr_context(struct wined3d_vr_gl_context *ctx) DECLSPEC_HIDDEN;
+ void wined3d_destroy_gl_vr_context(struct wined3d_vr_gl_context *ctx);
  
 -- 
 2.30.2
