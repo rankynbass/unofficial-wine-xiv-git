@@ -1,0 +1,65 @@
+From 92cccd853a8f66c59de9e9eeb2bb76105c147ad6 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Wed, 27 Dec 2017 13:31:59 -0600
+Subject: [PATCH] HACK: steam: wine.inf: Add required Steam registry entries.
+
+---
+ loader/wine.inf.in | 25 ++++++++++++++++++++++---
+ 1 file changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index f1525c4f6dd..fdb0161f75d 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -95,7 +95,8 @@ AddReg=\
+     Tapi,\
+     ThemeManager,\
+     VersionInfo,\
+-    LicenseInformation
++    LicenseInformation, \
++    SteamClient
+ 
+ [DefaultInstall.ntamd64]
+ RegisterDlls=RegisterDllsSection
+@@ -120,7 +121,8 @@ AddReg=\
+     Tapi,\
+     ThemeManager,\
+     VersionInfo.ntamd64,\
+-    LicenseInformation
++    LicenseInformation, \
++    SteamClient.ntamd64
+ 
+ [DefaultInstall.ntarm64]
+ RegisterDlls=RegisterDllsSection
+@@ -160,7 +162,8 @@ AddReg=\
+     Misc,\
+     Tapi,\
+     VersionInfo.ntamd64,\
+-    LicenseInformation
++    LicenseInformation, \
++    SteamClient.ntamd64
+ 
+ [Wow64Install.ntarm64]
+ WineFakeDlls=FakeDllsWin32
+@@ -2672,3 +2675,19 @@ EtcFiles  = 12,etc
+ InfFiles  = 17
+ NlsFiles  = 11
+ SortFiles = 10,globalization\sorting
++
++[SteamClient]
++HKCU,Software\Valve\Steam,"SteamPath",,"%16422%\Steam"
++HKCU,Software\Valve\Steam,"SteamExe",,"%16422%\Steam\Steam.exe"
++HKCU,Software\Valve\Steam\ActiveProcess,"PID",0x10001,0x0000fffe
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16422%\Steam\steamclient.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16422%\Steam"
++
++[SteamClient.ntamd64]
++HKCU,Software\Valve\Steam,"SteamPath",,"%16422%\Steam"
++HKCU,Software\Valve\Steam,"SteamExe",,"%16422%\Steam\Steam.exe"
++HKCU,Software\Valve\Steam\ActiveProcess,"PID",0x10001,0x0000fffe
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16426%\Steam\steamclient.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"C:\windows\system32\lsteamclient.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
++HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
+-- 
+GitLab
