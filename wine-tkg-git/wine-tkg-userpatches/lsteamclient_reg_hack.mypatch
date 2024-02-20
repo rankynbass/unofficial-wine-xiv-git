@@ -4,8 +4,8 @@ Date: Wed, 27 Dec 2017 13:31:59 -0600
 Subject: [PATCH] HACK: steam: wine.inf: Add required Steam registry entries.
 
 ---
- loader/wine.inf.in | 25 ++++++++++++++++++++++---
- 1 file changed, 22 insertions(+), 3 deletions(-)
+ loader/wine.inf.in | 22 ++++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 2 deletions(-)
 
 diff --git a/loader/wine.inf.in b/loader/wine.inf.in
 index f1525c4f6dd..fdb0161f75d 100644
@@ -24,24 +24,14 @@ index f1525c4f6dd..fdb0161f75d 100644
 @@ -120,7 +121,8 @@ AddReg=\
      Tapi,\
      ThemeManager,\
-     VersionInfo.ntamd64,\
+     VersionInfo,\
 -    LicenseInformation
 +    LicenseInformation, \
 +    SteamClient.ntamd64
  
  [DefaultInstall.ntarm64]
  RegisterDlls=RegisterDllsSection
-@@ -160,7 +162,8 @@ AddReg=\
-     Misc,\
-     Tapi,\
-     VersionInfo.ntamd64,\
--    LicenseInformation
-+    LicenseInformation, \
-+    SteamClient.ntamd64
- 
- [Wow64Install.ntarm64]
- WineFakeDlls=FakeDllsWin32
-@@ -2672,3 +2675,19 @@ EtcFiles  = 12,etc
+@@ -2703,3 +2705,19 @@ EtcFiles  = 12,etc
  InfFiles  = 17
  NlsFiles  = 11
  SortFiles = 10,globalization\sorting
