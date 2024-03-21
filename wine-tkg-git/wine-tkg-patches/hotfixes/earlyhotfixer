@@ -11,7 +11,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
     fi
 
     # Wayland driver check
-    if [[ ${_community_patches[*]} =~ "wine_wayland_driver.mypatch" ]]; then
+    if [[ ${_community_patches[*]} =~ "wine_wayland_driver.mypatch" ]] && [ "$_wayland_driver" != "true" ]; then
       _wayland_driver="true"
       warning "Disabling the fshack and vk childwindow patchsets since the wayland driver is enabled"
       _proton_fs_hack="false"
@@ -24,7 +24,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       _steamvr_support="true"
 
       # Fixes for 32-bit ldap, futex_waitv outside of Valve's container
-      if [[ "$_plain_version" != *_8.0 ]]; then
+      if [[ "$_plain_version" != *_8.0 ]] && [[ "$_plain_version" != *_9.0 ]]; then
         cp "$_where"/wine-tkg-patches/hotfixes/valve/fixes/*.mypatch "$_where"/
       fi
 
@@ -37,7 +37,9 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       fi
 
       if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]]; then
-        if [[ "$_plain_version" = *_8.0 ]]; then
+        if [[ "$_plain_version" = *_9.0 ]]; then
+          cp "$_where"/wine-tkg-patches/hotfixes/valve/proton-fsr-90.mypatch "$_where"/
+        elif [[ "$_plain_version" = *_8.0 ]]; then
           cp "$_where"/wine-tkg-patches/hotfixes/valve/proton-fsr-80.mypatch "$_where"/
         else
           cp "$_where"/wine-tkg-patches/hotfixes/valve/proton-fsr-70.mypatch "$_where"/
@@ -92,8 +94,8 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
     fi
 
     # Shell32-CreateDirectoryInDestinationInFileOp-Move-multiop
-    if [[ ${_community_patches[*]} =~ "Shell32-CreateDirectoryInDestinationInFileOp-Move-multiop.mypatch" ]] && [ "$_use_staging" != "true" ]; then
-      warning "Disabling Shell32-CreateDirectoryInDestinationInFileOp-Move-multiop.mypatch on mainline"
+    if [[ ${_community_patches[*]} =~ "Shell32-CreateDirectoryInDestinationInFileOp-Move-multiop.mypatch" ]] && ( [ "$_use_staging" != "true" ] || ( ! grep -Fxq 'Disabled: true' "${srcdir}/${_stgsrcdir}/patches/shell32-Progress_Dialog/definition" ) ); then
+      warning "Disabling Shell32-CreateDirectoryInDestinationInFileOp-Move-multiop.mypatch on mainline/incompatible staging"
       _community_patches=$(echo $_community_patches | sed "s/Shell32-CreateDirectoryInDestinationInFileOp-Move-multiop.mypatch//g" | tr -s " ")
     fi
 
@@ -281,7 +283,7 @@ EOM
 
     # Disable problematic syscall emulation patchset in semi-recent trees that enable it (for new-style WoW64 builds)
     # This workarounds the "Internal error" message when running a 32-bit program in the new-style WoW64 mode
-    if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 2e9f238732289907b4f07335d826ac3e7882f5ba HEAD && [ -e "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ] && ! grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ) && [ "${_NOLIB32}" = "wow64" ]; then
+    if [ "$_unfrog" != "true" ] && ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 2e9f238732289907b4f07335d826ac3e7882f5ba HEAD && [ -e "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ] && ! grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ) && [ "${_NOLIB32}" = "wow64" ]; then
       warning "Disable ntdll-Syscall_Emulation patchset for WoW64 builds (on staging 2e9f2387+)"
       _staging_args+=(-W ntdll-Syscall_Emulation)
     fi
