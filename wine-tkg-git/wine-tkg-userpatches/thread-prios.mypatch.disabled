@@ -210,10 +210,12 @@ index 56f57cefd8f..14911a3dace 100644
      }
      if (req->mask & SET_THREAD_INFO_AFFINITY)
      {
-@@ -1413,7 +1500,10 @@ DECL_HANDLER(init_first_thread)
+@@ -1413,8 +1500,11 @@ DECL_HANDLER(init_first_thread)
+
      if (!process->parent_id)
          process->affinity = current->affinity = get_thread_affinity( current );
-     else if (!process->cpu_override.cpu_count)
+-    else
++    else if (!process->cpu_override.cpu_count)
 +    {
 +        set_thread_priority( current, current->process->priority, current->priority );
          set_thread_affinity( current, current->affinity );
@@ -221,14 +223,15 @@ index 56f57cefd8f..14911a3dace 100644
  
      debug_level = max( debug_level, req->debug_level );
  
-@@ -1444,7 +1534,10 @@ DECL_HANDLER(init_thread)
+@@ -1444,6 +1534,10 @@ DECL_HANDLER(init_thread)
  
      init_thread_context( current );
      generate_debug_event( current, DbgCreateThreadStateChange, &req->entry );
-     if (!process->cpu_override.cpu_count)
+-    set_thread_affinity( current, current->affinity );
++    if (!process->cpu_override.cpu_count)
 +    {
 +        set_thread_priority( current, current->process->priority, current->priority );
-         set_thread_affinity( current, current->affinity );
++        set_thread_affinity( current, current->affinity );
 +    }
  
      reply->suspend = (current->suspend || current->process->suspend || current->context != NULL);
