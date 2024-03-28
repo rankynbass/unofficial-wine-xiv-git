@@ -759,102 +759,6 @@ index 852ec51b7ff..fdbbc00cd33 100644
              device->speaker_config = DSOUND_FindSpeakerConfig(device->mmdevice, mixwfe->Format.nChannels);
              DSOUND_ParseSpeakerConfig(device);
          } else if (mixwfe->Format.nChannels > device->num_speakers) {
-From 749bf5fcd5f41a39301428a7fccd1e4febcd6f90 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
-Date: Fri, 13 Dec 2019 15:54:28 +0200
-Subject: [PATCH] dwmapi: Improve DwmGetWindowAttribute stub.
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-
-Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
----
- dlls/dwmapi/dwmapi_main.c | 26 ++++++++++++++++++++++++--
- 1 file changed, 24 insertions(+), 2 deletions(-)
-
-diff --git a/dlls/dwmapi/dwmapi_main.c b/dlls/dwmapi/dwmapi_main.c
-index 6378a091f0b..e976fda77f2 100644
---- a/dlls/dwmapi/dwmapi_main.c
-+++ b/dlls/dwmapi/dwmapi_main.c
-@@ -205,9 +205,31 @@ BOOL WINAPI DwmDefWindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam,
-  */
- HRESULT WINAPI DwmGetWindowAttribute(HWND hwnd, DWORD attribute, PVOID pv_attribute, DWORD size)
- {
--    FIXME("(%p %ld %p %ld) stub\n", hwnd, attribute, pv_attribute, size);
-+    if (!hwnd) return E_HANDLE;
-+    if (!pv_attribute) return E_INVALIDARG;
-
--    return E_NOTIMPL;
-+    switch (attribute)
-+    {
-+    case DWMWA_NCRENDERING_ENABLED:
-+        if (size < sizeof(BOOL)) return E_INVALIDARG;
-+
-+        WARN("DWMWA_NCRENDERING_ENABLED: always returning FALSE.\n");
-+        *(BOOL*)(pv_attribute) = FALSE;
-+        break;
-+
-+    case DWMWA_CLOAKED:
-+        if (size < sizeof(DWORD)) return E_INVALIDARG;
-+
-+        WARN("DWMWA_CLOAKED: always returning 0.\n");
-+        *(DWORD*)(pv_attribute) = 0;
-+        break;
-+
-+    default:
-+        FIXME("unimplemented attribute %d, size %u, for hwnd %p.\n", attribute, size, hwnd);
-+        return E_INVALIDARG;
-+    }
-+
-+    return S_OK;
- }
-
- /**********************************************************************
-From 1a2e600a9c35a9558b32e7986668d7dc81c8b5ae Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
-Date: Fri, 13 Dec 2019 15:54:30 +0200
-Subject: [PATCH] dwmapi: Add partial implementation of
- DWMWA_EXTENDED_FRAME_BOUNDS.
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-
-Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
----
- dlls/dwmapi/Makefile.in    |  1 +
- dlls/dwmapi/dwmapi_main.c  |  7 +++++++
- dlls/dwmapi/tests/dwmapi.c | 14 ++++++++++++++
- 3 files changed, 22 insertions(+)
-
-diff --git a/dlls/dwmapi/Makefile.in b/dlls/dwmapi/Makefile.in
-index 3a3691326f8..d273a22c8f3 100644
---- a/dlls/dwmapi/Makefile.in
-+++ b/dlls/dwmapi/Makefile.in
-@@ -1,5 +1,6 @@
- MODULE    = dwmapi.dll
- IMPORTLIB = dwmapi
-+IMPORTS   = user32
-
- EXTRADLLFLAGS = -Wb,--prefer-native
-
-diff --git a/dlls/dwmapi/dwmapi_main.c b/dlls/dwmapi/dwmapi_main.c
-index e976fda77f2..212c88c5a02 100644
---- a/dlls/dwmapi/dwmapi_main.c
-+++ b/dlls/dwmapi/dwmapi_main.c
-@@ -217,6 +217,13 @@ HRESULT WINAPI DwmGetWindowAttribute(HWND hwnd, DWORD attribute, PVOID pv_attrib
-         *(BOOL*)(pv_attribute) = FALSE;
-         break;
-
-+    case DWMWA_EXTENDED_FRAME_BOUNDS:
-+        if (size < sizeof(RECT)) return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-+
-+        WARN("DWMWA_EXTENDED_FRAME_BOUNDS: returning window rect.\n");
-+        GetWindowRect(hwnd, pv_attribute);
-+        break;
-+
-     case DWMWA_CLOAKED:
-         if (size < sizeof(DWORD)) return E_INVALIDARG;
-
 From b739d48093cce805b7b4f48fdbd9d0bb62bc8013 Mon Sep 17 00:00:00 2001
 From: Brendan Shanks <bshanks@codeweavers.com>
 Date: Mon, 13 Apr 2020 16:25:47 -0700
@@ -1291,7 +1195,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -1181,7 +1181,7 @@ static WCHAR *get_bios_string( BYTE id, const char *buf, UINT len )
  static WCHAR *get_bios_manufacturer( const char *buf, UINT len )
  {
-     WCHAR *ret = get_bios_string( 1, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_BIOS, offsetof(struct smbios_bios, vendor), buf, len );
 -    if (!ret) return wcsdup( L"The Wine Project" );
 +    if (!ret) return wcsdup( L"The Proton Project" );
      return ret;
@@ -1300,7 +1204,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -1227,7 +1227,7 @@ static WCHAR *get_bios_releasedate( const char *buf, UINT len )
  static WCHAR *get_bios_smbiosbiosversion( const char *buf, UINT len )
  {
-     WCHAR *ret = get_bios_string( 2, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_BIOS, offsetof(struct smbios_bios, version), buf, len );
 -    if (!ret) return wcsdup( L"Wine" );
 +    if (!ret) return wcsdup( L"Proton" );
      return ret;
@@ -1318,7 +1222,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -1641,14 +1641,14 @@ static WCHAR *get_compsysproduct_string( BYTE id, const char *buf, UINT len )
  static WCHAR *get_compsysproduct_name( const char *buf, UINT len )
  {
-     WCHAR *ret = get_compsysproduct_string( 2, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_SYSTEM, offsetof(struct smbios_system, product), buf, len );
 -    if (!ret) return wcsdup( L"Wine" );
 +    if (!ret) return wcsdup( L"Proton" );
      return ret;
@@ -1326,7 +1230,7 @@ index 43268221936..f39d6f0cd7b 100644
 
  static WCHAR *get_compsysproduct_vendor( const char *buf, UINT len )
  {
-     WCHAR *ret = get_compsysproduct_string( 1, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_SYSTEM, offsetof(struct smbios_system, vendor), buf, len );
 -    if (!ret) return wcsdup( L"The Wine Project" );
 +    if (!ret) return wcsdup( L"The Proton Project" );
      return ret;
@@ -1353,7 +1257,7 @@ index 43268221936..f39d6f0cd7b 100644
 @@ -3740,7 +3740,7 @@ static WCHAR *get_systemenclosure_string( BYTE id, const char *buf, UINT len )
  static WCHAR *get_systemenclosure_manufacturer( const char *buf, UINT len )
  {
-     WCHAR *ret = get_systemenclosure_string( 1, buf, len );
+     WCHAR *ret = get_smbios_string( SMBIOS_TYPE_CHASSIS, offsetof(struct smbios_chassis, vendor), buf, len );
 -    if (!ret) return wcsdup( L"Wine" );
 +    if (!ret) return wcsdup( L"Proton" );
      return ret;
@@ -1503,7 +1407,7 @@ index 00000000000..e50ed37f700
 +
 +EXTRADLLFLAGS = -mwindows -mno-cygwin
 +
-+C_SRCS = \
++SOURCES = \
 +	main.c
 diff --git a/programs/dotnetfx35/main.c b/programs/dotnetfx35/main.c
 new file mode 100644
@@ -1558,9 +1462,9 @@ index af2094a96f0..9c98209d43d 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
 @@ -76,7 +76,7 @@ BOOL use_primary_selection = FALSE;
+ BOOL use_take_focus = TRUE;
  BOOL use_primary_selection = FALSE;
  BOOL use_system_cursors = TRUE;
- BOOL show_systray = TRUE;
 -BOOL grab_fullscreen = FALSE;
 +BOOL grab_fullscreen = TRUE;
  int keyboard_layout = -1;
@@ -1622,8 +1526,9 @@ index a4a10bc8e93..551ef146cd7 100644
  
 -EXTRADLLFLAGS = -Wb,--prefer-native
 -
- RC_SRCS = version.rc
-
+ SOURCES = \
+ 	version.rc \
+ 	vulkan.c
 From 07461415f4399934a3c03c8dd6e146167bd67dfd Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Thu, 25 Mar 2021 17:53:37 +0300
@@ -2370,7 +2275,7 @@ index af18bdd2c32..020faa26a11 100644
 +    TRACE("%p decreasing refcount to %u.\n", swapchain, refcount);
 +
 +    if (!refcount)
-+        heap_free(swapchain);
++        free(swapchain);
 +
 +    return refcount;
 +}
@@ -2819,7 +2724,7 @@ index af18bdd2c32..020faa26a11 100644
 +        {
 +            struct proxy_swapchain *obj;
 +
-+            obj = heap_alloc_zero(sizeof(*obj));
++            obj = calloc(1, sizeof(*obj));
 +            obj->IDXGISwapChain4_iface.lpVtbl = &proxy_swapchain_vtbl;
 +            obj->swapchain = swapchain_impl;
 +            *swapchain = (IDXGISwapChain1 *)&obj->IDXGISwapChain4_iface;
@@ -2914,22 +2819,29 @@ index d3ac9f57763..fcb79983114 100644
 +    return VK_SUCCESS;
 +}
 +
- static BOOL WINAPI call_vulkan_debug_report_callback( struct wine_vk_debug_report_params *params, ULONG size )
+ static NTSTATUS WINAPI call_vulkan_debug_report_callback( void *args, ULONG size )
  {
-     return params->user_callback(params->flags, params->object_type, params->object_handle, params->location,
+     struct wine_vk_debug_report_params *params = args;
 diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
 index 516c817715f..a0287c1ff09 100755
 --- a/dlls/winevulkan/make_vulkan
 +++ b/dlls/winevulkan/make_vulkan
-@@ -254,7 +254,7 @@ FUNCTION_OVERRIDES = {
- 
-     # VK_EXT_calibrated_timestamps
-     "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE},
--    "vkGetCalibratedTimestampsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE},
-+    "vkGetCalibratedTimestampsEXT" : {"dispatch" : True, "driver" : False, "thunk" : ThunkType.NONE, "loader_thunk" : ThunkType.PRIVATE},
- 
-     # VK_EXT_debug_utils
-     "vkCreateDebugUtilsMessengerEXT" : {"dispatch": True, "driver" : False, "thunk" : ThunkType.NONE},
+@@ -245,7 +245,6 @@ MANUAL_UNIX_THUNKS = {
+     "vkEnumeratePhysicalDevices",
+     "vkFreeCommandBuffers",
+     "vkFreeMemory",
+-    "vkGetCalibratedTimestampsEXT",
+     "vkGetCalibratedTimestampsKHR",
+     "vkGetDeviceProcAddr",
+     "vkGetDeviceQueue",
+@@ -285,6 +285,7 @@ MANUAL_LOADER_THUNKS = {
+     "vkEnumerateInstanceExtensionProperties",
+     "vkEnumerateInstanceVersion",
+     "vkFreeCommandBuffers",
++    "vkGetCalibratedTimestampsEXT",
+     "vkGetPhysicalDeviceProperties2",
+     "vkGetPhysicalDeviceProperties2KHR",
+ }
 From 003223a6816f3121a8e60d8ef3ec79e1768878ce Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Fri, 7 May 2021 13:44:00 -0500
@@ -2981,9 +2893,9 @@ index acba3544e39..9d1b1cde342 100644
 +++ b/dlls/dxgi/dxgi_private.h
 @@ -209,4 +209,6 @@ struct dxgi_surface
  HRESULT dxgi_surface_init(struct dxgi_surface *surface, IDXGIDevice *device,
-         IUnknown *outer, struct wined3d_texture *wined3d_texture) DECLSPEC_HIDDEN;
+         IUnknown *outer, struct wined3d_texture *wined3d_texture);
  
-+HRESULT get_re8_dxgi_factory(REFIID riid, void **factory) DECLSPEC_HIDDEN;
++HRESULT get_re8_dxgi_factory(REFIID riid, void **factory);
 +
  #endif /* __WINE_DXGI_PRIVATE_H */
 diff --git a/dlls/dxgi/factory.c b/dlls/dxgi/factory.c
@@ -3446,293 +3358,6 @@ index cbc53e22ac1..60b03c57137 100644
  }
 
 
-From cdbb70dee8f9db1c983bf7dbc659fc4b77249f9f Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
-Date: Fri, 4 Jun 2021 10:24:10 +0200
-Subject: [PATCH] wineboot: Compute and write the TSC frequency to registry
- ~Mhz.
-
-In HKEY_LOCAL_MACHINE\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor
-
-Squashed with patches from:
-
-* Arkadiusz Hiler <ahiler@codeweavers.com>
-
-Check if the kernel trusts TSC before using it for Qpc.
-
-Even if the bits are claiming that TSC meets our requirements the
-hardware implementation may still be broken.
-
-The Linux kernel does a lot of quality testing before deciding to use as
-the clock source. If it (or the user, through an override) does not trust
-the TSC we should not trust it either.
-
-* Joshua Ashton <joshua@froggi.es>
-
-Some games such as Horizon Zero Dawn use this registry value to
-correlate values from rtdsc to real time.
-
-Testing across a few devices, is seems like Windows always returns the
-TSC frequency in this entry, not the current/maximum frequency of the
-processor.
-
-Returning the nominal/maximum cpu frequency here causes the game to run
-in slow motion as it may not match the tsc frequency of the processor.
-
-Ideally we'd not have to measure this and the kernel would return
-tsc_khz to userspace, but this is a good enough stop-gap until
-https://lkml.org/lkml/2020/12/31/72 or something similar is merged.
-
-CW-Bug-Id: #18918
-CW-Bug-Id: #18958
----
- programs/wineboot/wineboot.c | 175 ++++++++++++++++++++++++++++++++++-
- 1 file changed, 170 insertions(+), 5 deletions(-)
-
-diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
-index c05ce580298..731242c75eb 100644
---- a/programs/wineboot/wineboot.c
-+++ b/programs/wineboot/wineboot.c
-@@ -82,6 +82,8 @@
- 
- WINE_DEFAULT_DEBUG_CHANNEL(wineboot);
- 
-+#define TICKSPERSEC        10000000
-+
- extern BOOL shutdown_close_windows( BOOL force );
- extern BOOL shutdown_all_desktops( BOOL force );
- extern void kill_processes( BOOL kill_desktop );
-@@ -241,15 +243,173 @@ static void initialize_xstate_features(struct _KUSER_SHARED_DATA *data)
-     TRACE("XSAVE feature 2 %#x, %#x, %#x, %#x.\n", regs[0], regs[1], regs[2], regs[3]);
- }
- 
-+static UINT64 read_tsc_frequency( BOOL has_rdtscp )
-+{
-+    UINT64 freq = 0;
-+
-+/* FIXME: Intel provides TSC freq in some CPUID but it's been slightly broken,
-+   fix it properly and test it on real Intel hardware */
-+
-+#if 0
-+    int regs[4], cpuid_level, tmp;
-+    UINT64 denom, numer;
-+
-+    __cpuid( regs, 0 );
-+    tmp = regs[2];
-+    regs[2] = regs[3];
-+    regs[3] = tmp;
-+
-+    /* only available on some intel CPUs */
-+    if (memcmp( regs + 1, "GenuineIntel", 12 )) freq = 0;
-+    else if ((cpuid_level = regs[0]) < 0x15) freq = 0;
-+    else
-+    {
-+        __cpuid( regs, 0x15 );
-+        if (!(denom = regs[0]) || !(numer = regs[1])) freq = 0;
-+        else
-+        {
-+            if ((freq = regs[2])) freq = freq * numer / denom;
-+            else if (cpuid_level >= 0x16)
-+            {
-+                __cpuid( regs, 0x16 ); /* eax is base freq in MHz */
-+                freq = regs[0] * (UINT64)1000000;
-+            }
-+            else freq = 0;
-+        }
-+
-+        if (!freq) WARN( "Failed to read TSC frequency from CPUID, falling back to calibration.\n" );
-+        else TRACE( "TSC frequency read from CPUID, found %I64u Hz\n", freq );
-+    }
-+#endif
-+
-+    if (freq == 0)
-+    {
-+        LONGLONG time0, time1, tsc0, tsc1, tsc2, tsc3, freq0, freq1, error;
-+        unsigned int aux;
-+        UINT retries = 50;
-+        int regs[4];
-+
-+        do
-+        {
-+            if (has_rdtscp)
-+            {
-+                tsc0 = __rdtscp( &aux );
-+                time0 = RtlGetSystemTimePrecise();
-+                tsc1 = __rdtscp( &aux );
-+                Sleep( 1 );
-+                tsc2 = __rdtscp( &aux );
-+                time1 = RtlGetSystemTimePrecise();
-+                tsc3 = __rdtscp( &aux );
-+            }
-+            else
-+            {
-+                tsc0 = __rdtsc(); __cpuid( regs, 0 );
-+                time0 = RtlGetSystemTimePrecise();
-+                tsc1 = __rdtsc(); __cpuid( regs, 0 );
-+                Sleep(1);
-+                tsc2 = __rdtsc(); __cpuid( regs, 0 );
-+                time1 = RtlGetSystemTimePrecise();
-+                tsc3 = __rdtsc(); __cpuid( regs, 0 );
-+            }
-+
-+            freq0 = (tsc2 - tsc0) * 10000000 / (time1 - time0);
-+            freq1 = (tsc3 - tsc1) * 10000000 / (time1 - time0);
-+            error = llabs( (freq1 - freq0) * 1000000 / min( freq1, freq0 ) );
-+        }
-+        while (error > 100 && --retries);
-+
-+        if (!retries) WARN( "TSC frequency calibration failed, unstable TSC?\n" );
-+        else
-+        {
-+            freq = (freq0 + freq1) / 2;
-+            TRACE( "TSC frequency calibration complete, found %I64u Hz\n", freq );
-+        }
-+    }
-+
-+    return freq;
-+}
-+
-+static BOOL is_tsc_trusted_by_the_kernel(void)
-+{
-+    char buf[4] = {};
-+    DWORD num_read;
-+    HANDLE handle;
-+    BOOL ret = TRUE;
-+
-+    handle = CreateFileA( "\\??\\unix\\sys\\bus\\clocksource\\devices\\clocksource0\\current_clocksource",
-+                          GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0 );
-+    if (handle == INVALID_HANDLE_VALUE) return TRUE;
-+
-+    if (ReadFile( handle, buf, sizeof(buf) - 1, &num_read, NULL ) && strcmp( "tsc", buf ))
-+        ret = FALSE;
-+
-+    CloseHandle( handle );
-+    return ret;
-+}
-+
-+static void initialize_qpc_features( struct _KUSER_SHARED_DATA *data, UINT64 *tsc_frequency )
-+{
-+    BOOL has_rdtscp = FALSE;
-+    int regs[4];
-+
-+    data->QpcBypassEnabled = 0;
-+    data->QpcFrequency = TICKSPERSEC;
-+    data->QpcShift = 0;
-+    data->QpcBias = 0;
-+    *tsc_frequency = 0;
-+
-+    if (!is_tsc_trusted_by_the_kernel())
-+    {
-+        WARN( "Failed to compute TSC frequency, not trusted by the kernel.\n" );
-+        return;
-+    }
-+
-+    if (!data->ProcessorFeatures[PF_RDTSC_INSTRUCTION_AVAILABLE])
-+    {
-+        WARN( "Failed to compute TSC frequency, RDTSC instruction not supported.\n" );
-+        return;
-+    }
-+
-+    __cpuid( regs, 0x80000000 );
-+    if (regs[0] < 0x80000007)
-+    {
-+        WARN( "Failed to compute TSC frequency, unable to check invariant TSC.\n" );
-+        return;
-+    }
-+
-+    /* check for invariant tsc bit */
-+    __cpuid( regs, 0x80000007 );
-+    if (!(regs[3] & (1 << 8)))
-+    {
-+        WARN( "Failed to compute TSC frequency, no invariant TSC.\n" );
-+        return;
-+    }
-+
-+    /* check for rdtscp support bit */
-+    __cpuid( regs, 0x80000001 );
-+    if ((regs[3] & (1 << 27))) has_rdtscp = TRUE;
-+
-+    *tsc_frequency = read_tsc_frequency( has_rdtscp );
-+}
-+
- #else
- 
- static void initialize_xstate_features(struct _KUSER_SHARED_DATA *data)
- {
- }
- 
-+static void initialize_qpc_features( struct _KUSER_SHARED_DATA *data, UINT64 *tsc_frequency )
-+{
-+    data->QpcBypassEnabled = 0;
-+    data->QpcFrequency = TICKSPERSEC;
-+    data->QpcShift = 0;
-+    data->QpcBias = 0;
-+    *tsc_frequency = 0;
-+}
-+
- #endif
- 
--static void create_user_shared_data(void)
-+static void create_user_shared_data( UINT64 *tsc_frequency )
- {
-     struct _KUSER_SHARED_DATA *data;
-     RTL_OSVERSIONINFOEXW version;
-@@ -368,6 +528,7 @@ static void create_user_shared_data(void)
-     data->ActiveGroupCount = 1;
- 
-     initialize_xstate_features( data );
-+    initialize_qpc_features( data, tsc_frequency );
- 
-     UnmapViewOfFile( data );
- }
-@@ -660,7 +821,7 @@ static void create_bios_key( HKEY system_key )
- }
- 
- /* create the volatile hardware registry keys */
--static void create_hardware_registry_keys(void)
-+static void create_hardware_registry_keys( UINT64 tsc_frequency )
- {
-     unsigned int i;
-     HKEY hkey, system_key, cpu_key, fpu_key;
-@@ -737,13 +898,16 @@ static void create_hardware_registry_keys(void)
-         if (!RegCreateKeyExW( cpu_key, numW, 0, NULL, REG_OPTION_VOLATILE,
-                               KEY_ALL_ACCESS, NULL, &hkey, NULL ))
-         {
-+            DWORD tsc_freq_mhz = (DWORD)(tsc_frequency / 1000000ull); /* Hz -> Mhz */
-+            if (!tsc_freq_mhz) tsc_freq_mhz = power_info[i].MaxMhz;
-+
-             RegSetValueExW( hkey, L"FeatureSet", 0, REG_DWORD, (BYTE *)&sci.ProcessorFeatureBits, sizeof(DWORD) );
-             set_reg_value( hkey, L"Identifier", id );
-             /* TODO: report ARM properly */
-             RegSetValueExA( hkey, "ProcessorNameString", 0, REG_SZ, (const BYTE *)name_buffer,
-                             strlen( (char *)name_buffer ) + 1 );
-             set_reg_value( hkey, L"VendorIdentifier", vendorid );
--            RegSetValueExW( hkey, L"~MHz", 0, REG_DWORD, (BYTE *)&power_info[i].MaxMhz, sizeof(DWORD) );
-+            RegSetValueExW( hkey, L"~MHz", 0, REG_DWORD, (BYTE *)&tsc_freq_mhz, sizeof(DWORD) );
-             RegCloseKey( hkey );
-         }
-         if (sci.ProcessorArchitecture != PROCESSOR_ARCHITECTURE_ARM &&
-@@ -1625,6 +1789,7 @@ int __cdecl main( int argc, char *argv[] )
-     BOOL end_session, force, init, kill, restart, shutdown, update;
-     HANDLE event;
-     OBJECT_ATTRIBUTES attr;
-+    UINT64 tsc_frequency = 0;
-     UNICODE_STRING nameW = RTL_CONSTANT_STRING( L"\\KernelObjects\\__wineboot_event" );
-     BOOL is_wow64;
- 
-@@ -1710,8 +1875,8 @@ int __cdecl main( int argc, char *argv[] )
- 
-     ResetEvent( event );  /* in case this is a restart */
- 
--    create_user_shared_data();
--    create_hardware_registry_keys();
-+    create_user_shared_data( &tsc_frequency );
-+    create_hardware_registry_keys( tsc_frequency );
-     create_dynamic_registry_keys();
-     create_environment_registry_keys();
-     create_computer_name_keys();
-
-
 From 3244ba9966c0e7bcd445a65b5c325801f9b77131 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Wed, 5 Jan 2022 13:31:14 +0300
@@ -3872,14 +3497,14 @@ diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
 index 2bf8975..8a5baf3 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -175,6 +175,7 @@ extern struct ldt_copy __wine_ldt_copy DECLSPEC_HIDDEN;
+@@ -175,6 +175,7 @@ extern struct ldt_copy __wine_ldt_copy;
  
- extern BOOL ac_odyssey DECLSPEC_HIDDEN;
- extern BOOL fsync_simulate_sched_quantum DECLSPEC_HIDDEN;
-+extern BOOL simulate_writecopy DECLSPEC_HIDDEN;
+ extern BOOL ac_odyssey;
+ extern BOOL fsync_simulate_sched_quantum;
++extern BOOL simulate_writecopy;
  
- extern void init_environment( int argc, char *argv[], char *envp[] ) DECLSPEC_HIDDEN;
- extern void init_startup_info(void) DECLSPEC_HIDDEN;
+ extern void init_environment( int argc, char *argv[], char *envp[] );
+ extern void init_startup_info(void);
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
 index 59c0e6d..9a7af20 100644
 --- a/dlls/ntdll/unix/virtual.c

@@ -226,7 +226,7 @@ diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
 index d3b086f2731..948a46fa70c 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -773,42 +773,11 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const pe_image_info_t *pe_i
+@@ -773,46 +773,13 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const pe_image_info_t *pe_i
      WORD machine = pe_info->machine;
      ULONGLONG res_start = pe_info->base;
      ULONGLONG res_end = pe_info->base + pe_info->map_size;
@@ -236,6 +236,8 @@ index d3b086f2731..948a46fa70c 100644
      if (pe_info->image_flags & IMAGE_FLAGS_WineFakeDll) res_start = res_end = 0;
      if (pe_info->image_flags & IMAGE_FLAGS_ComPlusNativeReady) machine = native_machine;
  
+     unsetenv( "WINE_LD_PRELOAD" );
+
 -    /* HACK: Unset LD_PRELOAD before executing explorer.exe to disable buggy gameoverlayrenderer.so */
 -    if (ld_preload && argv[2] && !strcmp( argv[2], "C:\\windows\\system32\\explorer.exe" ) &&
 -        argv[3] && !strcmp( argv[3], "/desktop" ))
@@ -264,11 +266,13 @@ index d3b086f2731..948a46fa70c 100644
 -        while (*next);
 -
 -        putenv( env );
+-        ld_preload = NULL;
 -    }
 -
+-    if (ld_preload) setenv( "WINE_LD_PRELOAD", ld_preload, 1 );
+
      signal( SIGPIPE, SIG_DFL );
- 
-     sprintf( socket_env, "WINESERVERSOCKET=%u", socketfd );
+
 @@ -2140,22 +2109,8 @@ void *steamclient_handle_fault( LPCVOID addr, DWORD err )
      return NULL;
  }
@@ -369,22 +373,35 @@ diff --git a/dlls/winebus.sys/bus_sdl.c b/dlls/winebus.sys/bus_sdl.c
 index f4414ae1f50..4ed55ce9c01 100644
 --- a/dlls/winebus.sys/bus_sdl.c
 +++ b/dlls/winebus.sys/bus_sdl.c
-@@ -965,7 +965,7 @@ static void sdl_add_device(unsigned int index)
+@@ -965,8 +965,7 @@ static void sdl_add_device(unsigned int index)
      SDL_JoystickID id;
      SDL_JoystickType joystick_type;
      SDL_GameController *controller = NULL;
--    const char *product, *sdl_serial, *str;
+-    const char *product, *sdl_serial, *str, *env;
 +    const char *product, *sdl_serial;
+-    BOOL expose_steam_controller = (env = getenv("PROTON_EXPOSE_STEAM_CONTROLLER")) && atoi(env) == 1;
      char guid_str[33], buffer[ARRAY_SIZE(desc.product)];
      int axis_count, axis_offset;
  
-@@ -1021,10 +1021,6 @@ static void sdl_add_device(unsigned int index)
+@@ -1021,21 +1021,13 @@ static void sdl_add_device(unsigned int index)
+         return;
+     }
+
+-    if (desc.vid == 0x28de && desc.pid == 0x11ff && !expose_steam_controller)
++    if (desc.vid == 0x28de && desc.pid == 0x11ff)
+     {
+         TRACE("Steam virtual controller, pretending it's an Xbox 360 controller\n");
+         desc.vid = 0x045e;
          desc.pid = 0x028e;
      }
  
 -    /* CW-Bug-Id: #20528 Check steam virtual controller indexes to keep them ordered */
--    if ((str = pSDL_JoystickName(joystick)) && sscanf(str, "Microsoft X-Box 360 pad %u", &desc.input) == 1) desc.input++;
--    else desc.input = -1;
+-    /* CW-Bug-Id: #23185 Emulate Steam Input native hooks for native SDL */
+-    if ((str = pSDL_JoystickName(joystick)) && sscanf(str, "Microsoft X-Box 360 pad %u", &desc.input) == 1)
+-    {
+-        if (!expose_steam_controller) desc.input++;
+-        desc.version = 0; /* keep version fixed as 0 so we can hardcode it in ntdll rawinput pipe redirection */
+-    }
 -
      if (pSDL_JoystickGetSerial && (sdl_serial = pSDL_JoystickGetSerial(joystick)))
      {
@@ -527,7 +544,7 @@ index 192d75413fa..2abf33a8d45 100644
  
      preparsed = NULL;
      if (!HidD_GetPreparsedData(device, &preparsed))
-@@ -488,50 +483,13 @@ static void open_device_at_index(const WCHAR *device_path, int index)
+@@ -488,60 +483,13 @@ static void open_device_at_index(const WCHAR *device_path, int index)
          WARN("ignoring HID device, unsupported usage %04x:%04x\n", caps.UsagePage, caps.Usage);
      else if (device_is_overridden(device))
          WARN("ignoring HID device, overridden for dinput\n");
@@ -564,6 +581,16 @@ index 192d75413fa..2abf33a8d45 100644
 -        controller_destroy(&controllers[i - 1], TRUE);
 -        if (*free_slot != XUSER_MAX_COUNT) open_device_at_index(controllers[i - 1].device_path, *free_slot);
 -        *free_slot = i - 1;
+-    }
+-
+-    /* CW-Bug-Id: #23185 Emulate Steam Input native hooks for native SDL */
+-    if ((swscanf(device_path, L"\\\\?\\hid#vid_28de&pid_11ff&xi_%02u#", &i) == 1 ||
+-         swscanf(device_path, L"\\\\?\\HID#VID_28DE&PID_11FF&XI_%02u#", &i) == 1) &&
+-        i < XUSER_MAX_COUNT && *free_slot != i)
+-    {
+-        controller_destroy(&controllers[i], TRUE);
+-        if (*free_slot != XUSER_MAX_COUNT) open_device_at_index(controllers[i].device_path, *free_slot);
+-        *free_slot = i;
 -    }
 -
 -    return FALSE;
@@ -604,18 +631,9 @@ index 192d75413fa..2abf33a8d45 100644
 +    LeaveCriticalSection(&controller->crit);
 +}
 +
- static void stop_update_thread(void)
+ static LONG sign_extend(ULONG value, const HIDP_VALUE_CAPS *caps)
  {
-     int i;
-@@ -580,8 +558,6 @@ static void stop_update_thread(void)
-     CloseHandle(stop_event);
-     CloseHandle(done_event);
-     CloseHandle(update_event);
--    CloseHandle(steam_overlay_event);
--    CloseHandle(steam_keyboard_event);
- 
-     for (i = 0; i < XUSER_MAX_COUNT; i++) controller_destroy(&controllers[i], FALSE);
- }
+     UINT sign = 1 << (caps->BitSize - 1);
 @@ -779,9 +755,6 @@ static BOOL WINAPI start_update_thread_once( INIT_ONCE *once, void *param, void
  {
      HANDLE thread;

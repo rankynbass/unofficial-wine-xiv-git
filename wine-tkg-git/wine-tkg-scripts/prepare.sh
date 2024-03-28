@@ -257,7 +257,7 @@ msg2 ''
     if [ -z "$_LOCAL_PRESET" ]; then
       msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base:"
       warning "With Valve trees, most wine-specific customization options will be ignored such as game-specific patches, esync/fsync/fastsync or Proton-specific features support. Those patches and features are for the most part already in, but some bits deemed useful such as FSR support for Proton's fshack are made available through community patches. Staging and GE patches are available through regular .cfg options."
-      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (The most experimental)\n    choice[1-4?]: '`" CONDITION;
+      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (Expect breakage)\n    choice[1-4?]: '`" CONDITION;
       if [ "$CONDITION" = "2" ]; then
         _LOCAL_PRESET="valve-exp"
       elif [ "$CONDITION" = "3" ]; then
@@ -279,16 +279,11 @@ msg2 ''
     _EXTERNAL_INSTALL="proton"
     _EXTERNAL_NOVER="false"
     _nomakepkg_nover="true"
-    if [[ "$_LOCAL_PRESET" = valve* ]]; then
+    if [ "$_NOLIB32" = "true" ]; then
+      warning '_NOLIB32="true" is not compatible with Proton builds and was set to "false" as a fallback'
       _NOLIB32="false"
-      _NOLIB64="false"
-    else
-      if [ "$_NOLIB32" = "true" ]; then
-        warning '_NOLIB32="true" is not compatible with Proton builds and was set to "false" as a fallback'
-        _NOLIB32="false"
-      fi
-      _NOLIB64="false"
     fi
+    _NOLIB64="false"
     _esync_version=""
     _use_faudio="true"
     _highcorecount_fix="true"
@@ -986,7 +981,7 @@ _prepare() {
 
     source "$_where"/wine-tkg-patches/proton/valve_proton_fullscreen_hack/valve_proton_fullscreen_hack
     source "$_where"/wine-tkg-patches/misc/childwindow/childwindow-proton
-    source "$_where"/wine-tkg-patches/proton/shared-gpu-resources/shared-gpu-resources
+    #source "$_where"/wine-tkg-patches/proton/shared-gpu-resources/shared-gpu-resources # broken patchset on any version
     source "$_where"/wine-tkg-patches/proton/proton-rawinput/proton-rawinput
     source "$_where"/wine-tkg-patches/misc/winevulkan/winevulkan
     source "$_where"/wine-tkg-patches/game-specific/overwatch-mfstub/overwatch-mfstub
@@ -1087,6 +1082,9 @@ _polish() {
 
 	echo -e "\nRunning make_vulkan" >> "$_where"/prepare.log && dlls/winevulkan/make_vulkan >> "$_where"/prepare.log 2>&1
 	tools/make_requests
+	if [ -e tools/make_specfiles ]; then
+	  tools/make_specfiles
+	fi
 	autoreconf -fiv
 
 	# wine late user patches - Applied after make_vulkan/make_requests/autoreconf
