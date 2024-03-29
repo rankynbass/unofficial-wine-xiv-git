@@ -16,7 +16,7 @@ index f36dcb20b72..c68ec6f78ba 100644
 @@ -359,6 +359,11 @@ static MMDevice *MMDevice_Create(WCHAR *name, GUID *id, EDataFlow flow, DWORD st
              MMDevice_SetPropValue(id, flow, (const PROPERTYKEY*)&DEVPKEY_DeviceInterface_FriendlyName, &pv);
              MMDevice_SetPropValue(id, flow, (const PROPERTYKEY*)&DEVPKEY_Device_DeviceDesc, &pv);
- 
+
 +            if (wcscmp(name, L"Wireless Controller") == 0) {
 +              pv.pwszVal = L"{12345678-9ABC-DEF0-1234-56789ABCDEF0}";
 +              MMDevice_SetPropValue(id, flow, (const PROPERTYKEY*)&DEVPKEY_Device_ContainerId, &pv);
@@ -24,15 +24,15 @@ index f36dcb20b72..c68ec6f78ba 100644
 +
              pv.pwszVal = guidstr;
              MMDevice_SetPropValue(id, flow, &deviceinterface_key, &pv);
- 
+
 @@ -1450,9 +1455,28 @@ static HRESULT WINAPI MMDevPropStore_GetValue(IPropertyStore *iface, REFPROPERTY
      }
- 
+
      hres = MMDevice_GetPropValue(&This->parent->devguid, This->parent->flow, key, pv);
 +
      if (FAILED(hres))
          return hres;
- 
+
 +    /* Clients apps expect a CLSID */
 +    if(IsEqualPropertyKey(*key,DEVPKEY_Device_ContainerId) && pv->vt == VT_LPWSTR && pv->pwszVal) {
 +        LPWSTR guidstr = pv->pwszVal;
@@ -61,7 +61,7 @@ index aea0e605f1d..217997e8bb3 100644
 @@ -3227,6 +3227,27 @@ BOOL WINAPI SetupDiGetDeviceRegistryPropertyW(HDEVINFO devinfo,
          return FALSE;
      }
- 
+
 +    if (Property == 36) {
 +        /* Container ID. Returning a fake one so that games using the DualSense can match devices together. */
 +        STRING *guid = L"{12345678-9abc-def0-1234-56789abcdef0}";
@@ -86,5 +86,5 @@ index aea0e605f1d..217997e8bb3 100644
      if (Property < ARRAY_SIZE(PropertyMap) && PropertyMap[Property].nameW)
      {
          DWORD size = PropertyBufferSize;
--- 
+--
 2.35.1

@@ -14,7 +14,7 @@ index 60b1c7126dc..a4048fbf267 100644
 --- a/dlls/winepulse.drv/pulse.c
 +++ b/dlls/winepulse.drv/pulse.c
 @@ -521,6 +521,15 @@ static void fill_device_info(PhysDevice *dev, pa_proplist *p)
- 
+
      if ((buffer = pa_proplist_gets(p, PA_PROP_DEVICE_PRODUCT_ID)))
          dev->product_id = strtol(buffer, NULL, 16);
 +
@@ -27,7 +27,7 @@ index 60b1c7126dc..a4048fbf267 100644
 +        }
 +    }
  }
- 
+
  static void pulse_add_device(struct list *list, pa_proplist *proplist, int index, EndpointFormFactor form,
--- 
+--
 2.35.1
