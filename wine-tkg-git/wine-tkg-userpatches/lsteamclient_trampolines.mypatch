@@ -239,4 +239,3 @@ index 9cb444342fe..475e532b8cf 100644
  extern unixlib_handle_t __wine_unixlib_handle;
 -- 
 GitLab
-
