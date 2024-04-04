@@ -11,3 +11,5 @@ index 4b23d9954df..92fc8a926f2 100644
      size = max( reserve_size, commit_size );
      if (size < 1024 * 1024) size = 1024 * 1024;  /* Xlib needs a large stack */
      size = (size + 0xffff) & ~0xffff;  /* round to 64K boundary */
+--
+2.39.3 (Apple Git-145)
