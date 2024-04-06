@@ -1,0 +1,77 @@
+From bd6e11aee0fbe2f880f87bec8b3d145b3de15dab Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 22 Mar 2016 23:08:30 +0100
+Subject: [PATCH] include: Check element type in CONTAINING_RECORD and similar
+ macros.
+
+---
+ include/wine/list.h   | 10 ++++++++--
+ include/wine/rbtree.h | 10 ++++++++--
+ include/winnt.h       | 10 ++++++++--
+ 3 files changed, 24 insertions(+), 6 deletions(-)
+
+diff --git a/include/wine/list.h b/include/wine/list.h
+index b4d681fe0f3..287ad394fae 100644
+--- a/include/wine/list.h
++++ b/include/wine/list.h
+@@ -228,7 +228,13 @@ static inline void list_move_head( struct list *dst, struct list *src )
+ 
+ /* get pointer to object containing list element */
+ #undef LIST_ENTRY
+-#define LIST_ENTRY(elem, type, field) \
+-    ((type *)((char *)(elem) - offsetof(type, field)))
++#ifdef __GNUC__
++# define LIST_ENTRY(elem, type, field) ({               \
++     const typeof(((type *)0)->field) *__ptr = (elem);  \
++     (type *)((char *)__ptr - offsetof(type, field)); })
++#else
++# define LIST_ENTRY(elem, type, field) \
++     ((type *)((char *)(elem) - offsetof(type, field)))
++#endif
+ 
+ #endif  /* __WINE_SERVER_LIST_H */
+diff --git a/include/wine/rbtree.h b/include/wine/rbtree.h
+index 4e86f3cfb84..694dc039cb1 100644
+--- a/include/wine/rbtree.h
++++ b/include/wine/rbtree.h
+@@ -23,8 +23,14 @@
+ #ifndef __WINE_WINE_RBTREE_H
+ #define __WINE_WINE_RBTREE_H
+ 
+-#define RB_ENTRY_VALUE(element, type, field) \
+-    ((type *)((char *)(element) - offsetof(type, field)))
++#ifdef __GNUC__
++# define RB_ENTRY_VALUE(element, type, field) ({       \
++     const typeof(((type *)0)->field) *__ptr = (element);   \
++     (type *)((char *)__ptr - offsetof(type, field)); })
++#else
++# define RB_ENTRY_VALUE(element, type, field) \
++     ((type *)((char *)(element) - offsetof(type, field)))
++#endif
+ 
+ struct rb_entry
+ {
+diff --git a/include/winnt.h b/include/winnt.h
+index 9296a3dc555..c7406b8db39 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -840,8 +840,14 @@ typedef struct _WIN32_MEMORY_RANGE_ENTRY
+ #define RTL_FIELD_SIZE(type, field) (sizeof(((type *)0)->field))
+ #define RTL_SIZEOF_THROUGH_FIELD(type, field) (FIELD_OFFSET(type, field) + RTL_FIELD_SIZE(type, field))
+ 
+-#define CONTAINING_RECORD(address, type, field) \
+-  ((type *)((PCHAR)(address) - offsetof(type, field)))
++#ifdef __GNUC__
++# define CONTAINING_RECORD(address, type, field) ({     \
++   const typeof(((type *)0)->field) *__ptr = (address); \
++   (type *)((PCHAR)__ptr - offsetof(type, field)); })
++#else
++# define CONTAINING_RECORD(address, type, field) \
++   ((type *)((PCHAR)(address) - offsetof(type, field)))
++#endif
+ 
+ #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
+ #ifdef __WINESRC__
+-- 
+2.34.1
+
