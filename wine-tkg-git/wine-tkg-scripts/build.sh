@@ -256,6 +256,10 @@ _package_nomakepkg() {
 	cp -v "$_where"/wine-tkg-scripts/wine64-tkg "$_prefix"/bin/wine64-tkg
 	cp -v "$_where"/wine-tkg-scripts/wine-tkg-interactive "$_prefix"/bin/wine-tkg-interactive
 
+	# copy lsteamclient files
+	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
+	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+
 	# Fixes compatibility with installation scripts (like winetricks) that use
 	# the wine64 binary, which is not present in WoW64 builds.
 	if [ "$_NOLIB32" = "wow64" ]; then
