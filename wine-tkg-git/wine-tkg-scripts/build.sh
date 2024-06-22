@@ -465,6 +465,10 @@ _package_makepkg() {
 		fi
 	fi
 
+	# copy lsteamclient files
+	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
+	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+
 	cp "$_where"/last_build_config.log "${pkgdir}$_prefix"/share/wine/wine-tkg-config.txt
 
 	if [ "$_GENERATE_DEBIAN_PACKAGE" = "true" ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then
