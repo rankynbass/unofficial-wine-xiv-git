@@ -262,6 +262,10 @@ _package_nomakepkg() {
 		(cd "$_prefix/bin" && ln -s wine wine64)
 	fi
 
+	# copy lsteamclient files
+	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x64_64-unix/lsteamclient.so
+	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x64_64-windows/lsteamclient.dll
+
 	# strip
 	if [ "$_EXTERNAL_INSTALL" != "proton" ]; then
 		if [ "$_protonify" = "true" ] && (cd "${srcdir}"/"${_winesrcdir}" && ! git merge-base --is-ancestor 2e5e5ade82b5e3b1d70ebe6b1a824bdfdedfd04e HEAD); then
