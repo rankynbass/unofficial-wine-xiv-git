@@ -271,6 +271,10 @@ _package_nomakepkg() {
 	  fi
 	fi
 
+	# copy lsteamclient files. We don't want to strip these
+	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
+	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+
 	cp -v "$_where"/last_build_config.log "$_prefix"/share/wine/wine-tkg-config.txt
 
 	# move our build to some subfolder
@@ -442,6 +446,10 @@ _package_makepkg() {
 	    done
 	  fi
 	fi
+
+	# copy lsteamclient files
+	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
+	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
 
 	cp "$_where"/last_build_config.log "${pkgdir}$_prefix"/share/wine/wine-tkg-config.txt
 
