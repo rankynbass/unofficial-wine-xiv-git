@@ -755,7 +755,7 @@ deleted file mode 100644
 index edfeb03..0000000
 --- a/dlls/ntdll/unix/esync.c
 +++ /dev/null
-@@ -1,1323 +0,0 @@
+@@ -1,1325 +0,0 @@
 -/*
 - * eventfd-based synchronization objects
 - *
@@ -780,7 +780,9 @@ index edfeb03..0000000
 -#pragma makedep unix
 -#endif
 -
+-#ifndef _GNU_SOURCE
 -#define _GNU_SOURCE
+-#endif
 -
 -#include "config.h"
 -
@@ -3711,26 +3713,6 @@ index a53870f..ba0bdbd 100644
  /* Define to 1 if you have the <linux/param.h> header file. */
  #undef HAVE_LINUX_PARAM_H
  
-@@ -315,9 +318,6 @@
- /* Define to 1 if you have the 'posix_fallocate' function. */
- #undef HAVE_POSIX_FALLOCATE
- 
--/* Define to 1 if you have the 'ppoll' function. */
--#undef HAVE_PPOLL
--
- /* Define to 1 if you have the 'prctl' function. */
- #undef HAVE_PRCTL
- 
-@@ -384,9 +384,6 @@
- /* Define to 1 if 'interface_id' is a member of 'sg_io_hdr_t'. */
- #undef HAVE_SG_IO_HDR_T_INTERFACE_ID
- 
--/* Define to 1 if you have the `shm_open' function. */
--#undef HAVE_SHM_OPEN
--
- /* Define to 1 if 'si_fd' is a member of 'siginfo_t'. */
- #undef HAVE_SIGINFO_T_SI_FD
- 
 @@ -522,9 +519,6 @@
  /* Define to 1 if you have the <sys/epoll.h> header file. */
  #undef HAVE_SYS_EPOLL_H
@@ -3834,7 +3816,7 @@ index 34655d1..1f8e10a 100644
  enum request
  {
      REQ_new_process,
-@@ -5921,11 +6003,11 @@ enum request
+@@ -5921,12 +6003,12 @@ enum request
      REQ_suspend_process,
      REQ_resume_process,
      REQ_get_next_thread,
@@ -3842,16 +3824,17 @@ index 34655d1..1f8e10a 100644
 -    REQ_open_esync,
 -    REQ_get_esync_fd,
 -    REQ_esync_msgwait,
--    REQ_get_esync_apc_fd,
 +    REQ_get_linux_sync_device,
 +    REQ_get_linux_sync_obj,
 +    REQ_fast_select_queue,
 +    REQ_fast_unselect_queue,
+     REQ_set_keyboard_repeat,
+-    REQ_get_esync_apc_fd,
 +    REQ_get_fast_alert_event,
      REQ_NB_REQUESTS
  };
 
-@@ -6213,11 +6300,11 @@ union generic_request
+@@ -6213,12 +6300,12 @@ union generic_request
      struct suspend_process_request suspend_process_request;
      struct resume_process_request resume_process_request;
      struct get_next_thread_request get_next_thread_request;
@@ -3859,16 +3842,17 @@ index 34655d1..1f8e10a 100644
 -    struct open_esync_request open_esync_request;
 -    struct get_esync_fd_request get_esync_fd_request;
 -    struct esync_msgwait_request esync_msgwait_request;
--    struct get_esync_apc_fd_request get_esync_apc_fd_request;
 +    struct get_linux_sync_device_request get_linux_sync_device_request;
 +    struct get_linux_sync_obj_request get_linux_sync_obj_request;
 +    struct fast_select_queue_request fast_select_queue_request;
 +    struct fast_unselect_queue_request fast_unselect_queue_request;
+     struct set_keyboard_repeat_request set_keyboard_repeat_request;
+-    struct get_esync_apc_fd_request get_esync_apc_fd_request;
 +    struct get_fast_alert_event_request get_fast_alert_event_request;
  };
  union generic_reply
  {
-@@ -6503,11 +6595,11 @@ union generic_reply
+@@ -6503,12 +6595,12 @@ union generic_reply
      struct suspend_process_reply suspend_process_reply;
      struct resume_process_reply resume_process_reply;
      struct get_next_thread_reply get_next_thread_reply;
@@ -3876,6 +3860,7 @@ index 34655d1..1f8e10a 100644
 -    struct open_esync_reply open_esync_reply;
 -    struct get_esync_fd_reply get_esync_fd_reply;
 -    struct esync_msgwait_reply esync_msgwait_reply;
+     struct set_keyboard_repeat_reply set_keyboard_repeat_reply;
 -    struct get_esync_apc_fd_reply get_esync_apc_fd_reply;
 +    struct get_linux_sync_device_reply get_linux_sync_device_reply;
 +    struct get_linux_sync_obj_reply get_linux_sync_obj_reply;
@@ -6968,7 +6953,7 @@ index 4983691..7bc4208 100644
  /* Iterate thread list for process */
  @REQ(get_next_thread)
      obj_handle_t process;      /* process handle */
-@@ -3898,55 +3899,51 @@ struct handle_info
+@@ -3898,63 +3899,60 @@ struct handle_info
      obj_handle_t handle;       /* next thread handle */
  @END
  
@@ -7040,7 +7025,6 @@ index 4983691..7bc4208 100644
 +    obj_handle_t handle;          /* handle to the queue */
  @END
  
--/* Notify the server that we are doing a message wait or done with one. */
 -@REQ(esync_msgwait)
 -    int          in_msgwait;    /* are we in a message wait? */
 +
@@ -7049,7 +7033,16 @@ index 4983691..7bc4208 100644
 +    obj_handle_t handle;          /* handle to the queue */
 +    int          signaled;        /* was the queue signaled? */
  @END
- 
+
+ /* Setup keyboard auto-repeat */
+ @REQ(set_keyboard_repeat)
+     int enable;                /* whether to enable auto-repeat */
+     int delay;                 /* auto-repeat delay in ms */
+     int period;                /* auto-repeat period in ms */
+ @REPLY
+     int enable;                /* previous state of auto-repeat enable */
+ @END
+
 -/* Retrieve the fd to wait on for user APCs. */
 -@REQ(get_esync_apc_fd)
 +
@@ -7123,7 +7116,7 @@ index fee3a8d..287a56e 100644
      no_close_handle,              /* close_handle */
      thread_input_destroy          /* destroy */
  };
-@@ -321,17 +320,14 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
+@@ -321,32 +320,29 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
          queue->last_get_msg    = current_time;
          queue->keystate_lock   = 0;
          queue->ignore_post_msg = 0;
@@ -7137,16 +7130,31 @@ index fee3a8d..287a56e 100644
          list_init( &queue->expired_timers );
          for (i = 0; i < NB_MSG_KINDS; i++) list_init( &queue->msg_list[i] );
  
+         if (!(queue->shared = alloc_shared_object()))
+         {
+             release_object( queue );
+             return NULL;
+         }
+ 
+         SHARED_WRITE_BEGIN( queue->shared, queue_shm_t )
+         {
+             memset( (void *)shared->hooks_count, 0, sizeof(shared->hooks_count) );
+             shared->wake_mask = 0;
+             shared->wake_bits = 0;
+             shared->changed_mask = 0;
+             shared->changed_bits = 0;
+         }
+         SHARED_WRITE_END;
+ 
 -        if (do_esync())
 -            queue->esync_fd = esync_create_fd( 0, 0 );
 -
          thread->queue = queue;
-     }
-     if (new_input) release_object( new_input );
+  
 @@ -607,7 +603,11 @@ static inline void set_queue_bits( struct msg_queue *queue, unsigned int bits )
      }
-     queue->wake_bits |= bits;
-     queue->changed_bits |= bits;
+     SHARED_WRITE_END;
+ 
 -    if (is_signaled( queue )) wake_up( &queue->obj, 0 );
 +    if (is_signaled( queue ))
 +    {
@@ -7179,7 +7187,7 @@ index fee3a8d..287a56e 100644
  
      return 1;
  }
-@@ -1170,18 +1169,22 @@ static int msg_queue_signaled( struct object *obj, struct wait_queue_entry *entr
+@@ -1168,24 +1167,30 @@ static int msg_queue_signaled( struct object *obj, struct wait_queue_entry *entr
      return ret || is_signaled( queue );
  }
  
@@ -7189,8 +7197,15 @@ index fee3a8d..287a56e 100644
      struct msg_queue *queue = (struct msg_queue *)obj;
 -    *type = ESYNC_QUEUE;
 -    return queue->esync_fd;
-+    queue->wake_mask = 0;
-+    queue->changed_mask = 0;
++    const queue_shm_t *queue_shm = queue->shared;
++
++    SHARED_WRITE_BEGIN( queue_shm, queue_shm_t )
++    {
++        shared->wake_mask = 0;
++        shared->changed_mask = 0;
++    }
++    SHARED_WRITE_END;
++
 +    fast_reset_event( queue->fast_sync );
  }
  
@@ -7198,9 +7213,14 @@ index fee3a8d..287a56e 100644
 +static struct fast_sync *msg_queue_get_fast_sync( struct object *obj )
  {
      struct msg_queue *queue = (struct msg_queue *)obj;
--    queue->wake_mask = 0;
--    queue->changed_mask = 0;
-+
+     const queue_shm_t *queue_shm = queue->shared;
+ 
+-    SHARED_WRITE_BEGIN( queue_shm, queue_shm_t )
+-    {
+-        shared->wake_mask = 0;
+-        shared->changed_mask = 0;
+-    }
+-    SHARED_WRITE_END;
 +    if (!queue->fast_sync)
 +        queue->fast_sync = fast_create_event( FAST_SYNC_QUEUE, is_signaled( queue ) );
 +    if (queue->fast_sync) grab_object( queue->fast_sync );
@@ -7209,9 +7229,9 @@ index fee3a8d..287a56e 100644
  
  static void msg_queue_destroy( struct object *obj )
 @@ -1221,7 +1224,7 @@ static void msg_queue_destroy( struct object *obj )
-     release_object( queue->input );
      if (queue->hooks) release_object( queue->hooks );
      if (queue->fd) release_object( queue->fd );
+     if (queue->shared) free_shared_object( queue->shared );
 -    if (do_esync()) close( queue->esync_fd );
 +    if (queue->fast_sync) release_object( queue->fast_sync );
  }
@@ -7225,38 +7245,30 @@ index fee3a8d..287a56e 100644
  }
  
  static void thread_input_dump( struct object *obj, int verbose )
-@@ -2849,12 +2853,21 @@ DECL_HANDLER(set_queue_mask)
-         if (is_signaled( queue ))
-         {
-             /* if skip wait is set, do what would have been done in the subsequent wait */
--            if (req->skip_wait) queue->wake_mask = queue->changed_mask = 0;
--            else wake_up( &queue->obj, 0 );
-+            if (req->skip_wait)
-+            {
-+                queue->wake_mask = queue->changed_mask = 0;
+@@ -2982,11 +2982,14 @@ DECL_HANDLER(set_queue_mask)
+                     shared->changed_mask = 0;
+                 }
+                 SHARED_WRITE_END;
++
 +                fast_reset_event( queue->fast_sync );
 +            }
 +            else
 +            {
 +                wake_up( &queue->obj, 0 );
 +                fast_set_event( queue->fast_sync );
-+            }
-+        }
-+        else
-+        {
-+            fast_reset_event( queue->fast_sync );
+             }
+-            else wake_up( &queue->obj, 0 );
          }
 -
 -        if (do_esync() && !is_signaled( queue ))
 -            esync_clear( queue->esync_fd );
      }
  }
+@@ -2867,9 +2880,9 @@ DECL_HANDLER(get_queue_status)
+             shared->changed_bits &= ~req->clear_bits;
+         }
+         SHARED_WRITE_END;
  
-@@ -2868,9 +2881,8 @@ DECL_HANDLER(get_queue_status)
-         reply->wake_bits    = queue->wake_bits;
-         reply->changed_bits = queue->changed_bits;
-         queue->changed_bits &= ~req->clear_bits;
--
 -        if (do_esync() && !is_signaled( queue ))
 -            esync_clear( queue->esync_fd );
 +        if (!is_signaled( queue ))
@@ -7274,10 +7286,10 @@ index fee3a8d..287a56e 100644
      /* then check for posted messages */
      if ((filter & QS_POSTMESSAGE) &&
          get_posted_message( queue, queue->ignore_post_msg, get_win, req->get_first, req->get_last, req->flags, reply ))
-@@ -3117,11 +3132,8 @@ DECL_HANDLER(get_message)
-     if (get_win == -1 && current->process->idle_event) set_event( current->process->idle_event );
-     queue->wake_mask = req->wake_mask;
-     queue->changed_mask = req->changed_mask;
+@@ -3119,11 +3134,8 @@ DECL_HANDLER(get_message)
+     }
+     SHARED_WRITE_END;
+ 
 +    fast_reset_event( queue->fast_sync );
      set_error( STATUS_PENDING );  /* FIXME */
 -
@@ -7287,7 +7299,7 @@ index fee3a8d..287a56e 100644
      return;
  
  found_msg:
-@@ -3872,17 +3884,55 @@ DECL_HANDLER(update_rawinput_devices)
+@@ -4020,21 +4020,60 @@ DECL_HANDLER(update_rawinput_devices)
      }
  }
  
@@ -7296,15 +7308,14 @@ index fee3a8d..287a56e 100644
  {
 -    struct msg_queue *queue = get_current_queue();
 +    struct msg_queue *queue;
+     const queue_shm_t *queue_shm;
  
 -    if (!queue) return;
--    queue->esync_in_msgwait = req->in_msgwait;
 +    if (!(queue = (struct msg_queue *)get_handle_obj( current->process, req->handle,
 +                                                      SYNCHRONIZE, &msg_queue_ops )))
 +        return;
- 
--    if (current->process->idle_event && !(queue->wake_mask & QS_SMRESULT))
--        set_event( current->process->idle_event );
+     queue_shm = queue->shared;
+-    queue->esync_in_msgwait = req->in_msgwait;
 +    /* a thread can only wait on its own queue */
 +    if (current->queue != queue || queue->in_fast_wait)
 +    {
@@ -7312,29 +7323,33 @@ index fee3a8d..287a56e 100644
 +    }
 +    else
 +    {
-+        if (current->process->idle_event && !(queue->wake_mask & QS_SMRESULT))
++        if (current->process->idle_event && !(queue_shm->wake_mask & QS_SMRESULT))
 +            set_event( current->process->idle_event );
++
++        if (queue->fd)
++            set_fd_events( queue->fd, POLLIN );
+ 
+-    if (current->process->idle_event && !(queue_shm->wake_mask & QS_SMRESULT))
+-        set_event( current->process->idle_event );
++        queue->in_fast_wait = 1;
++    }
  
 -    /* and start/stop waiting on the driver */
 -    if (queue->fd)
 -        set_fd_events( queue->fd, req->in_msgwait ? POLLIN : 0 );
-+        if (queue->fd)
-+            set_fd_events( queue->fd, POLLIN );
-+
-+        queue->in_fast_wait = 1;
-+    }
-+
 +    release_object( queue );
 +}
 +
 +DECL_HANDLER(fast_unselect_queue)
 +{
 +    struct msg_queue *queue;
++    const queue_shm_t *queue_shm;
 +
 +    if (!(queue = (struct msg_queue *)get_handle_obj( current->process, req->handle,
 +                                                      SYNCHRONIZE, &msg_queue_ops )))
 +        return;
 +
++    queue_shm = queue->shared;
 +    if (current->queue != queue || !queue->in_fast_wait)
 +    {
 +        set_error( STATUS_ACCESS_DENIED );
@@ -7352,6 +7367,8 @@ index fee3a8d..287a56e 100644
 +
 +    release_object( queue );
  }
+ 
+ DECL_HANDLER(set_keyboard_repeat)
 diff --git a/server/registry.c b/server/registry.c
 index 4454de3..dd5c556 100644
 --- a/server/registry.c
@@ -7396,7 +7413,7 @@ diff --git a/server/request.h b/server/request.h
 index eb6b8f4..1636e98 100644
 --- a/server/request.h
 +++ b/server/request.h
-@@ -406,11 +406,11 @@ DECL_HANDLER(terminate_job);
+@@ -406,12 +406,12 @@ DECL_HANDLER(terminate_job);
  DECL_HANDLER(suspend_process);
  DECL_HANDLER(resume_process);
  DECL_HANDLER(get_next_thread);
@@ -7404,16 +7421,17 @@ index eb6b8f4..1636e98 100644
 -DECL_HANDLER(open_esync);
 -DECL_HANDLER(get_esync_fd);
 -DECL_HANDLER(esync_msgwait);
--DECL_HANDLER(get_esync_apc_fd);
 +DECL_HANDLER(get_linux_sync_device);
 +DECL_HANDLER(get_linux_sync_obj);
 +DECL_HANDLER(fast_select_queue);
 +DECL_HANDLER(fast_unselect_queue);
+ DECL_HANDLER(set_keyboard_repeat);
+-DECL_HANDLER(get_esync_apc_fd);
 +DECL_HANDLER(get_fast_alert_event);
  
  #ifdef WANT_REQUEST_HANDLERS
  
-@@ -704,11 +704,11 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
+@@ -704,12 +704,12 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
      (req_handler)req_suspend_process,
      (req_handler)req_resume_process,
      (req_handler)req_get_next_thread,
@@ -7421,16 +7439,17 @@ index eb6b8f4..1636e98 100644
 -    (req_handler)req_open_esync,
 -    (req_handler)req_get_esync_fd,
 -    (req_handler)req_esync_msgwait,
--    (req_handler)req_get_esync_apc_fd,
 +    (req_handler)req_get_linux_sync_device,
 +    (req_handler)req_get_linux_sync_obj,
 +    (req_handler)req_fast_select_queue,
 +    (req_handler)req_fast_unselect_queue,
+     (req_handler)req_set_keyboard_repeat,
+-    (req_handler)req_get_esync_apc_fd,
 +    (req_handler)req_get_fast_alert_event,
  };
  
  C_ASSERT( sizeof(abstime_t) == 8 );
-@@ -2363,32 +2363,23 @@ C_ASSERT( FIELD_OFFSET(struct get_next_thread_request, flags) == 28 );
+@@ -2363,37 +2363,28 @@ C_ASSERT( FIELD_OFFSET(struct get_next_thread_request, flags) == 28 );
  C_ASSERT( sizeof(struct get_next_thread_request) == 32 );
  C_ASSERT( FIELD_OFFSET(struct get_next_thread_reply, handle) == 8 );
  C_ASSERT( sizeof(struct get_next_thread_reply) == 16 );
@@ -7459,7 +7478,6 @@ index eb6b8f4..1636e98 100644
 -C_ASSERT( sizeof(struct get_esync_fd_reply) == 16 );
 -C_ASSERT( FIELD_OFFSET(struct esync_msgwait_request, in_msgwait) == 12 );
 -C_ASSERT( sizeof(struct esync_msgwait_request) == 16 );
--C_ASSERT( sizeof(struct get_esync_apc_fd_request) == 16 );
 +C_ASSERT( sizeof(struct get_linux_sync_device_request) == 16 );
 +C_ASSERT( FIELD_OFFSET(struct get_linux_sync_device_reply, handle) == 8 );
 +C_ASSERT( sizeof(struct get_linux_sync_device_reply) == 16 );
@@ -7476,6 +7494,13 @@ index eb6b8f4..1636e98 100644
 +C_ASSERT( sizeof(struct fast_unselect_queue_request) == 24 );
 +C_ASSERT( sizeof(struct get_fast_alert_event_request) == 16 );
 +C_ASSERT( FIELD_OFFSET(struct get_fast_alert_event_reply, handle) == 8 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_request, enable) == 12 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_request, delay) == 16 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_request, period) == 20 );
+ C_ASSERT( sizeof(struct set_keyboard_repeat_request) == 24 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_reply, enable) == 8 );
+ C_ASSERT( sizeof(struct set_keyboard_repeat_reply) == 16 );
+-C_ASSERT( sizeof(struct get_esync_apc_fd_request) == 16 );
 +C_ASSERT( sizeof(struct get_fast_alert_event_reply) == 16 );
  
  #endif  /* WANT_REQUEST_HANDLERS */
@@ -8074,7 +8099,7 @@ diff --git a/server/trace.c b/server/trace.c
 index af96565..c027f4b 100644
 --- a/server/trace.c
 +++ b/server/trace.c
-@@ -4619,56 +4619,45 @@ static void dump_get_next_thread_reply( const struct get_next_thread_reply *req
+@@ -4619,67 +4619,56 @@ static void dump_get_next_thread_reply( const struct get_next_thread_reply *req
      fprintf( stderr, " handle=%04x", req->handle );
  }
  
@@ -8136,7 +8161,19 @@ index af96565..c027f4b 100644
  {
 -    fprintf( stderr, " in_msgwait=%d", req->in_msgwait );
  }
- 
+
+ static void dump_set_keyboard_repeat_request( const struct set_keyboard_repeat_request *req )
+ {
+     fprintf( stderr, " enable=%d", req->enable );
+     fprintf( stderr, ", delay=%d", req->delay );
+     fprintf( stderr, ", period=%d", req->period );
+ }
+
+ static void dump_set_keyboard_repeat_reply( const struct set_keyboard_repeat_reply *req )
+ {
+     fprintf( stderr, " enable=%d", req->enable );
+ }
+
 -static void dump_get_esync_apc_fd_request( const struct get_esync_apc_fd_request *req )
 +static void dump_get_fast_alert_event_reply( const struct get_fast_alert_event_reply *req )
  {
@@ -8161,7 +8198,7 @@ index af96565..c027f4b 100644
  };
  
  static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
-@@ -5254,11 +5243,11 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
+@@ -5254,12 +5243,12 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
      NULL,
      NULL,
      (dump_func)dump_get_next_thread_reply,
@@ -8171,12 +8208,13 @@ index af96565..c027f4b 100644
 +    (dump_func)dump_get_linux_sync_device_reply,
 +    (dump_func)dump_get_linux_sync_obj_reply,
      NULL,
+     (dump_func)dump_set_keyboard_repeat_reply,
      NULL,
 +    (dump_func)dump_get_fast_alert_event_reply,
  };
  
  static const char * const req_names[REQ_NB_REQUESTS] = {
-@@ -5549,11 +5538,11 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
+@@ -5549,11 +5538,12 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
      "suspend_process",
      "resume_process",
      "get_next_thread",
@@ -8184,11 +8222,12 @@ index af96565..c027f4b 100644
 -    "open_esync",
 -    "get_esync_fd",
 -    "esync_msgwait",
--    "get_esync_apc_fd",
 +    "get_linux_sync_device",
 +    "get_linux_sync_obj",
 +    "fast_select_queue",
 +    "fast_unselect_queue",
+     "set_keyboard_repeat",
+-    "get_esync_apc_fd",
 +    "get_fast_alert_event",
  };
  

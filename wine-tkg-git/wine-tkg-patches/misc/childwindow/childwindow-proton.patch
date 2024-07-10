@@ -96,7 +96,7 @@ index 5b128afe3cb3c1f752ed0f90b0e3b06915d27420..29c9dfbdb72cc9dc433cdd61ae0b6fba
 +            RECT client_rect;
 +            HDC hdc_dst;
 +
-+            NtUserGetClientRect( surface->hwnd, &client_rect );
++            NtUserGetClientRect( surface->hwnd, &client_rect, get_win_monitor_dpi(surface->hwnd));
 +            width = client_rect.right - client_rect.left;
 +            height = client_rect.bottom - client_rect.top;
 +
@@ -263,8 +263,8 @@ index 5b128afe3cb3c1f752ed0f90b0e3b06915d27420..29c9dfbdb72cc9dc433cdd61ae0b6fba
 +        RECT client_rect;
 +        BOOL is_clipped;
 +
-+        NtUserGetClientRect( surface->hwnd, &client_rect );
-+        NtUserMapWindowPoints( surface->hwnd, toplevel, (POINT *)&client_rect, 2 );
++        NtUserGetClientRect( surface->hwnd, &client_rect, get_win_monitor_dpi(surface->hwnd));
++        NtUserMapWindowPoints( surface->hwnd, toplevel, (POINT *)&client_rect, 2, 0 /* per-monitor DPI */ );
 +        is_clipped = NtGdiRectInRegion( region, &client_rect );
 +
 +        if (is_clipped && !surface->offscreen_dc)
@@ -441,7 +441,7 @@ index 85993bc517a5d0ac2e6736278d0f3db9c52bf82b..df6882271b440bdcf7ea32854e77dfdc
 +        escape.code = X11DRV_SET_DRAWABLE;
 +        escape.mode = IncludeInferiors;
 +        escape.drawable = client_window;
-+        NtUserGetClientRect( hwnd, &escape.dc_rect );
++        NtUserGetClientRect( hwnd, &escape.dc_rect, get_win_monitor_dpi(hwnd) );
 +        NtGdiExtEscape( *hdc, NULL, 0, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
 +#ifdef SONAME_LIBXCOMPOSITE
 +        if (usexcomposite) pXCompositeRedirectWindow( gdi_display, client_window, CompositeRedirectManual );
@@ -478,7 +478,7 @@ index c6bf49c6ec8bc83580a42abb3eb9314189280673..3a93ed89afe11e21464bf5211dd09636
 +        HWND toplevel = NtUserGetAncestor( data->hwnd, GA_ROOT );
 +        POINT pos = {data->client_rect.left, data->client_rect.top};
 +
-+        NtUserMapWindowPoints( toplevel, toplevel, &pos, 1 );
++        NtUserMapWindowPoints( toplevel, toplevel, &pos, 1, 0 /* per-monitor DPI */ );
 +        changes.x = pos.x;
 +        changes.y = pos.y;
 +    }
@@ -532,7 +532,7 @@ index c6bf49c6ec8bc83580a42abb3eb9314189280673..3a93ed89afe11e21464bf5211dd09636
 +
 +        pos.x = data->client_rect.left;
 +        pos.y = data->client_rect.top;
-+        NtUserMapWindowPoints( toplevel, toplevel, &pos, 1 );
++        NtUserMapWindowPoints( toplevel, toplevel, &pos, 1, 0 /* per-monitor DPI */ );
 +    }
 +    if (!whole_window) whole_window = get_dummy_parent();
 +
@@ -569,14 +569,18 @@ index c6bf49c6ec8bc83580a42abb3eb9314189280673..3a93ed89afe11e21464bf5211dd09636
      data->whole_colormap = 0;
      data->wm_state = WithdrawnState;
      data->net_wm_state = 0;
-@@ -2627,7 +2653,6 @@ BOOL X11DRV_WindowPosChanging( HWND hwnd, HWND insert_after, UINT swp_flags,
+diff --git a/dlls/winex11.drv/bitblt.c b/dlls/winex11.drv/bitblt.c
+index 11111111111..11111111111 100644
+--- a/dlls/winex11.drv/bitblt.c
++++ b/dlls/winex11.drv/bitblt.c
+@@ -2263,7 +2263,6 @@ BOOL X11DRV_CreateWindowSurface( HWND hwnd, UINT swp_flags, const RECT *visible_
  
-     if (data->embedded) goto done;
-     if (data->whole_window == root_window) goto done;
--    if (data->client_window) goto done;
-     if (!client_side_graphics && !layered) goto done;
+     if (data->embedded) goto done; /* draw directly to the window */
+     if (data->whole_window == root_window) goto done; /* draw directly to the window */
+-    if (data->client_window) goto done; /* draw directly to the window */
+     if (!client_side_graphics && !layered) goto done; /* draw directly to the window */
  
-     if (data->surface)
+     if (!get_surface_rect( visible_rect, &surface_rect )) goto done;
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
 index 1aaba9bf24b9dadb553d53ddb6796ce43e3e25a8..e919ad36c701aeee5bbcaf52a565db3e597ca8b1 100644
 --- a/dlls/winex11.drv/x11drv.h

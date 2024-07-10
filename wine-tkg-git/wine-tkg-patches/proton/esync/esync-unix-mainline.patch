@@ -4194,9 +4194,9 @@ index 42b0f4e6bfd..a78748b96ca 100644
  #define WM_NCMOUSEFIRST WM_NCMOUSEMOVE
  #define WM_NCMOUSELAST  (WM_NCMOUSEFIRST+(WM_MOUSELAST-WM_MOUSEFIRST))
 @@ -144,6 +145,8 @@ struct msg_queue
-     struct hook_table     *hooks;           /* hook table */
      timeout_t              last_get_msg;    /* time of last get message call */
      int                    keystate_lock;   /* owns an input keystate lock */
+     const queue_shm_t     *shared;          /* queue in session shared memory */
 +    int                    esync_fd;        /* esync file descriptor (signalled on message) */
 +    int                    esync_in_msgwait; /* our thread is currently waiting on us */
  };
@@ -4279,16 +4279,16 @@ index 42b0f4e6bfd..a78748b96ca 100644
  {
      struct msg_queue *queue = (struct msg_queue *)obj;
 @@ -2491,6 +2516,9 @@ DECL_HANDLER(get_queue_status)
-         reply->wake_bits    = queue->wake_bits;
-         reply->changed_bits = queue->changed_bits;
-         queue->changed_bits &= ~req->clear_bits;
+             shared->changed_bits &= ~req->clear_bits;
+         }
+         SHARED_WRITE_END;
 +
 +        if (do_esync() && !is_signaled( queue ))
 +            esync_clear( queue->esync_fd );
      }
      else reply->wake_bits = reply->changed_bits = 0;
  }
-@@ -3493,3 +3521,18 @@ DECL_HANDLER(get_rawinput_devices)
+@@ -3493,3 +3521,20 @@ DECL_HANDLER(get_rawinput_devices)
              devices[i++] = e->device;
      }
  }
@@ -4296,11 +4296,13 @@ index 42b0f4e6bfd..a78748b96ca 100644
 +DECL_HANDLER(esync_msgwait)
 +{
 +    struct msg_queue *queue = get_current_queue();
++    const queue_shm_t *queue_shm;
 +
 +    if (!queue) return;
++    queue_shm = queue->shared;
 +    queue->esync_in_msgwait = req->in_msgwait;
 +
-+    if (current->process->idle_event && !(queue->wake_mask & QS_SMRESULT))
++    if (current->process->idle_event && !(queue_shm->wake_mask & QS_SMRESULT))
 +        set_event( current->process->idle_event );
 +
 +    /* and start/stop waiting on the driver */

@@ -259,7 +259,7 @@ index bf3d6c34f14..fc8165f2828 100644
  
              if (!logical_proc_info_add_by_id( RelationProcessorCore, phys_core, thread_mask ))
              {
-@@ -1046,36 +1046,40 @@ static NTSTATUS create_logical_proc_info( SYSTEM_LOGICAL_PROCESSOR_INFORMATION *
+@@ -1046,38 +1046,42 @@ static NTSTATUS create_logical_proc_info( SYSTEM_LOGICAL_PROCESSOR_INFORMATION *
                  return STATUS_NO_MEMORY;
              }
 
@@ -269,7 +269,7 @@ index bf3d6c34f14..fc8165f2828 100644
 +
              for (j = 0; j < 4; j++)
              {
-                 CACHE_DESCRIPTOR cache;
+                 CACHE_DESCRIPTOR cache = { .Associativity = 8, .LineSize = 64, .Type = CacheUnified, .Size = 64 * 1024 };
                  ULONG_PTR mask = 0;
  
 -                snprintf(name, sizeof(name), cache_info, i, j, "shared_cpu_map");
@@ -286,34 +286,36 @@ index bf3d6c34f14..fc8165f2828 100644
  
 -                snprintf(name, sizeof(name), cache_info, i, j, "ways_of_associativity");
 +                snprintf(name, sizeof(name), cache_info, cpu_id, j, "ways_of_associativity");
-                 f = fopen(name, "r");
-                 if(!f) continue;
-                 fscanf(f, "%u", &r);
-                 fclose(f);
-                 cache.Associativity = r;
+                 if ((f = fopen(name, "r")))
+                 {
+                     fscanf(f, "%u", &r);
+                     fclose(f);
+                     cache.Associativity = r;
+                 }
  
 -                snprintf(name, sizeof(name), cache_info, i, j, "coherency_line_size");
 +                snprintf(name, sizeof(name), cache_info, cpu_id, j, "coherency_line_size");
-                 f = fopen(name, "r");
-                 if(!f) continue;
-                 fscanf(f, "%u", &r);
-                 fclose(f);
-                 cache.LineSize = r;
+                 if ((f = fopen(name, "r")))
+                 {
+                     fscanf(f, "%u", &r);
+                     fclose(f);
+                     cache.LineSize = r;
+                 }
  
 -                snprintf(name, sizeof(name), cache_info, i, j, "size");
 +                snprintf(name, sizeof(name), cache_info, cpu_id, j, "size");
-                 f = fopen(name, "r");
-                 if(!f) continue;
-                 fscanf(f, "%u%c", &r, &op);
+                 if ((f = fopen(name, "r")))
+                 {
+                     fscanf(f, "%u%c", &r, &op);
 @@ -1088,7 +1088,7 @@ static NTSTATUS create_logical_proc_info( SYSTEM_LOGICAL_PROCESSOR_INFORMATION *
-                     WARN("unknown cache size %u%c\n", r, op);
-                 cache.Size = (op=='K' ? r*1024 : r);
+                     cache.Size = (op=='K' ? r*1024 : r);
+                 }
  
 -                snprintf(name, sizeof(name), cache_info, i, j, "type");
 +                snprintf(name, sizeof(name), cache_info, cpu_id, j, "type");
-                 f = fopen(name, "r");
-                 if(!f) continue;
-                 fscanf(f, "%s", name);
+                 if ((f = fopen(name, "r")))
+                 {
+                     fscanf(f, "%s", name);
 @@ -1100,6 +1100,19 @@ static NTSTATUS create_logical_proc_info( SYSTEM_LOGICAL_PROCESSOR_INFORMATION *
                  else
                      cache.Type = CacheUnified;
@@ -388,13 +390,13 @@ index 39ab7912490..b29de19ec8e 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
 @@ -279,6 +279,7 @@ extern NTSTATUS open_unix_file( HANDLE *handle, const char *unix_name, ACCESS_MA
-                                 ULONG options, void *ea_buffer, ULONG ea_length );
+ extern NTSTATUS get_device_info( int fd, struct _FILE_FS_DEVICE_INFORMATION *info );
  extern void init_files(void);
  extern void init_cpu_info(void);
 +extern struct cpu_topology_override *get_cpu_topology_override(void);
- extern void add_completion( HANDLE handle, ULONG_PTR value, NTSTATUS status, ULONG info, BOOL async );
-
- extern void dbg_init(void);
+ extern void file_complete_async( HANDLE handle, unsigned int options, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
+                                  IO_STATUS_BLOCK *io, NTSTATUS status, ULONG_PTR information );
+ extern void set_async_direct_result( HANDLE *async_handle, unsigned int options, IO_STATUS_BLOCK *io,
  
 diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
 index f4f45d958be..aed7090572b 100644

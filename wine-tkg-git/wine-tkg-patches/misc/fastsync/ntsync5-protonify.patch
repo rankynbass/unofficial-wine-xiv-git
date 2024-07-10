@@ -1635,7 +1635,7 @@ index 48e778c..e809f98 100644
  enum request
  {
      REQ_new_process,
-@@ -5936,6 +6018,11 @@ enum request
+@@ -5936,7 +6018,12 @@ enum request
      REQ_suspend_process,
      REQ_resume_process,
      REQ_get_next_thread,
@@ -1643,11 +1643,12 @@ index 48e778c..e809f98 100644
 +    REQ_get_linux_sync_obj,
 +    REQ_fast_select_queue,
 +    REQ_fast_unselect_queue,
+     REQ_set_keyboard_repeat,
 +    REQ_get_fast_alert_event,
      REQ_NB_REQUESTS
  };
  
-@@ -6228,6 +6315,11 @@ union generic_request
+@@ -6228,7 +6315,12 @@ union generic_request
      struct suspend_process_request suspend_process_request;
      struct resume_process_request resume_process_request;
      struct get_next_thread_request get_next_thread_request;
@@ -1655,11 +1656,12 @@ index 48e778c..e809f98 100644
 +    struct get_linux_sync_obj_request get_linux_sync_obj_request;
 +    struct fast_select_queue_request fast_select_queue_request;
 +    struct fast_unselect_queue_request fast_unselect_queue_request;
+     struct set_keyboard_repeat_request set_keyboard_repeat_request;
 +    struct get_fast_alert_event_request get_fast_alert_event_request;
  };
  union generic_reply
  {
-@@ -6518,6 +6610,11 @@ union generic_reply
+@@ -6518,7 +6610,12 @@ union generic_reply
      struct suspend_process_reply suspend_process_reply;
      struct resume_process_reply resume_process_reply;
      struct get_next_thread_reply get_next_thread_reply;
@@ -1667,6 +1669,7 @@ index 48e778c..e809f98 100644
 +    struct get_linux_sync_obj_reply get_linux_sync_obj_reply;
 +    struct fast_select_queue_reply fast_select_queue_reply;
 +    struct fast_unselect_queue_reply fast_unselect_queue_reply;
+     struct set_keyboard_repeat_reply set_keyboard_repeat_reply;
 +    struct get_fast_alert_event_reply get_fast_alert_event_reply;
  };
  
@@ -3484,7 +3487,7 @@ diff --git a/server/protocol.def b/server/protocol.def
 index f6d644d..e477d3b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3888,3 +3888,52 @@ struct handle_info
+@@ -3888,13 +3888,61 @@ struct handle_info
  @REPLY
      obj_handle_t handle;       /* next thread handle */
  @END
@@ -3530,7 +3533,16 @@ index f6d644d..e477d3b 100644
 +    obj_handle_t handle;          /* handle to the queue */
 +    int          signaled;        /* was the queue signaled? */
 +@END
-+
+
+
+ /* Setup keyboard auto-repeat */
+ @REQ(set_keyboard_repeat)
+     int enable;                /* whether to enable auto-repeat */
+     int delay;                 /* auto-repeat delay in ms */
+     int period;                /* auto-repeat period in ms */
+ @REPLY
+     int enable;                /* previous state of auto-repeat enable */
+ @END
 +
 +/* Get an event handle to be used for thread alerts with fast synchronization */
 +@REQ(get_fast_alert_event)
@@ -3542,9 +3554,9 @@ index ed099b3..b4a1c53 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -145,6 +145,8 @@ struct msg_queue
-     struct hook_table     *hooks;           /* hook table */
      timeout_t              last_get_msg;    /* time of last get message call */
      int                    keystate_lock;   /* owns an input keystate lock */
+     const queue_shm_t     *shared;          /* queue in session shared memory */
 +    struct fast_sync      *fast_sync;       /* fast synchronization object */
 +    int                    in_fast_wait;    /* are we in a client-side wait? */
  };
@@ -3585,8 +3597,8 @@ index ed099b3..b4a1c53 100644
          list_init( &queue->pending_timers );
 @@ -599,7 +606,11 @@ static inline void set_queue_bits( struct msg_queue *queue, unsigned int bits )
      }
-     queue->wake_bits |= bits;
-     queue->changed_bits |= bits;
+     SHARED_WRITE_END;
+ 
 -    if (is_signaled( queue )) wake_up( &queue->obj, 0 );
 +    if (is_signaled( queue ))
 +    {
@@ -3616,16 +3628,18 @@ index ed099b3..b4a1c53 100644
      return 1;
  }
  
-@@ -1151,6 +1168,17 @@ static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *en
-     struct msg_queue *queue = (struct msg_queue *)obj;
-     queue->wake_mask = 0;
-     queue->changed_mask = 0;
+@@ -1151,6 +1168,19 @@ static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *en
+         shared->changed_mask = 0;
+     }
+     SHARED_WRITE_END;
++
 +    fast_reset_event( queue->fast_sync );
 +}
 +
 +static struct fast_sync *msg_queue_get_fast_sync( struct object *obj )
 +{
 +    struct msg_queue *queue = (struct msg_queue *)obj;
++    const queue_shm_t *queue_shm = queue->shared;
 +
 +    if (!queue->fast_sync)
 +        queue->fast_sync = fast_create_event( FAST_SYNC_QUEUE, is_signaled( queue ) );
@@ -3635,9 +3649,9 @@ index ed099b3..b4a1c53 100644
  
  static void msg_queue_destroy( struct object *obj )
 @@ -1190,6 +1218,7 @@ static void msg_queue_destroy( struct object *obj )
-     release_object( queue->input );
      if (queue->hooks) release_object( queue->hooks );
      if (queue->fd) release_object( queue->fd );
+     if (queue->shared) free_shared_object( queue->shared );
 +    if (queue->fast_sync) release_object( queue->fast_sync );
  }
  
@@ -3650,17 +3664,14 @@ index ed099b3..b4a1c53 100644
  }
  
  static void thread_input_dump( struct object *obj, int verbose )
-@@ -2815,8 +2845,20 @@ DECL_HANDLER(set_queue_mask)
-         if (is_signaled( queue ))
-         {
-             /* if skip wait is set, do what would have been done in the subsequent wait */
--            if (req->skip_wait) queue->wake_mask = queue->changed_mask = 0;
--            else wake_up( &queue->obj, 0 );
-+            if (req->skip_wait)
-+            {
-+                queue->wake_mask = queue->changed_mask = 0;
+@@ -2830,8 +2860,18 @@ DECL_HANDLER(set_queue_mask)
+                     shared->changed_mask = 0;
+                 }
+                 SHARED_WRITE_END;
++
 +                fast_reset_event( queue->fast_sync );
-+            }
+             }
+-            else wake_up( &queue->obj, 0 );
 +            else
 +            {
 +                wake_up( &queue->obj, 0 );
@@ -3673,10 +3684,11 @@ index ed099b3..b4a1c53 100644
          }
      }
  }
-@@ -2831,6 +2873,8 @@ DECL_HANDLER(get_queue_status)
-         reply->wake_bits    = queue->wake_bits;
-         reply->changed_bits = queue->changed_bits;
-         queue->changed_bits &= ~req->clear_bits;
+@@ -2831,6 +2873,9 @@ DECL_HANDLER(get_queue_status)
+             shared->changed_bits &= ~req->clear_bits;
+         }
+         SHARED_WRITE_END;
++
 +        if (!is_signaled( queue ))
 +            fast_reset_event( queue->fast_sync );
      }
@@ -3693,70 +3705,13 @@ index ed099b3..b4a1c53 100644
      if ((filter & QS_POSTMESSAGE) &&
          get_posted_message( queue, get_win, req->get_first, req->get_last, req->flags, reply ))
 @@ -3073,6 +3120,7 @@ DECL_HANDLER(get_message)
-     if (get_win == -1 && current->process->idle_event) set_event( current->process->idle_event );
-     queue->wake_mask = req->wake_mask;
-     queue->changed_mask = req->changed_mask;
+     }
+     SHARED_WRITE_END;
+ 
 +    fast_reset_event( queue->fast_sync );
      set_error( STATUS_PENDING );  /* FIXME */
  }
  
-@@ -3815,3 +3863,56 @@ DECL_HANDLER(update_rawinput_devices)
-         release_object( desktop );
-     }
- }
-+
-+DECL_HANDLER(fast_select_queue)
-+{
-+    struct msg_queue *queue;
-+
-+    if (!(queue = (struct msg_queue *)get_handle_obj( current->process, req->handle,
-+                                                      SYNCHRONIZE, &msg_queue_ops )))
-+        return;
-+
-+    /* a thread can only wait on its own queue */
-+    if (current->queue != queue || queue->in_fast_wait)
-+    {
-+        set_error( STATUS_ACCESS_DENIED );
-+    }
-+    else
-+    {
-+        if (current->process->idle_event && !(queue->wake_mask & QS_SMRESULT))
-+            set_event( current->process->idle_event );
-+
-+        if (queue->fd)
-+            set_fd_events( queue->fd, POLLIN );
-+
-+        queue->in_fast_wait = 1;
-+    }
-+
-+    release_object( queue );
-+}
-+
-+DECL_HANDLER(fast_unselect_queue)
-+{
-+    struct msg_queue *queue;
-+
-+    if (!(queue = (struct msg_queue *)get_handle_obj( current->process, req->handle,
-+                                                      SYNCHRONIZE, &msg_queue_ops )))
-+        return;
-+
-+    if (current->queue != queue || !queue->in_fast_wait)
-+    {
-+        set_error( STATUS_ACCESS_DENIED );
-+    }
-+    else
-+    {
-+        if (queue->fd)
-+            set_fd_events( queue->fd, 0 );
-+
-+        if (req->signaled)
-+            msg_queue_satisfied( &queue->obj, NULL );
-+
-+        queue->in_fast_wait = 0;
-+    }
-+
-+    release_object( queue );
-+}
 diff --git a/server/registry.c b/server/registry.c
 index 804cfcc..f6bb34e 100644
 --- a/server/registry.c
@@ -3785,7 +3740,7 @@ diff --git a/server/request.h b/server/request.h
 index 5e85e31..b1e1b2c 100644
 --- a/server/request.h
 +++ b/server/request.h
-@@ -404,6 +404,11 @@ DECL_HANDLER(terminate_job);
+@@ -404,7 +404,12 @@ DECL_HANDLER(terminate_job);
  DECL_HANDLER(suspend_process);
  DECL_HANDLER(resume_process);
  DECL_HANDLER(get_next_thread);
@@ -3793,11 +3748,12 @@ index 5e85e31..b1e1b2c 100644
 +DECL_HANDLER(get_linux_sync_obj);
 +DECL_HANDLER(fast_select_queue);
 +DECL_HANDLER(fast_unselect_queue);
+ DECL_HANDLER(set_keyboard_repeat);
 +DECL_HANDLER(get_fast_alert_event);
  
  #ifdef WANT_REQUEST_HANDLERS
  
-@@ -695,6 +700,11 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
+@@ -695,7 +700,12 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
      (req_handler)req_suspend_process,
      (req_handler)req_resume_process,
      (req_handler)req_get_next_thread,
@@ -3805,11 +3761,12 @@ index 5e85e31..b1e1b2c 100644
 +    (req_handler)req_get_linux_sync_obj,
 +    (req_handler)req_fast_select_queue,
 +    (req_handler)req_fast_unselect_queue,
+     (req_handler)req_set_keyboard_repeat,
 +    (req_handler)req_get_fast_alert_event,
  };
  
  C_ASSERT( sizeof(abstime_t) == 8 );
-@@ -2343,6 +2353,23 @@ C_ASSERT( FIELD_OFFSET(struct get_next_thread_request, flags) == 28 );
+@@ -2343,11 +2353,28 @@ C_ASSERT( FIELD_OFFSET(struct get_next_thread_request, flags) == 28 );
  C_ASSERT( sizeof(struct get_next_thread_request) == 32 );
  C_ASSERT( FIELD_OFFSET(struct get_next_thread_reply, handle) == 8 );
  C_ASSERT( sizeof(struct get_next_thread_reply) == 16 );
@@ -3829,6 +3786,12 @@ index 5e85e31..b1e1b2c 100644
 +C_ASSERT( sizeof(struct fast_unselect_queue_request) == 24 );
 +C_ASSERT( sizeof(struct get_fast_alert_event_request) == 16 );
 +C_ASSERT( FIELD_OFFSET(struct get_fast_alert_event_reply, handle) == 8 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_request, enable) == 12 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_request, delay) == 16 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_request, period) == 20 );
+ C_ASSERT( sizeof(struct set_keyboard_repeat_request) == 24 );
+ C_ASSERT( FIELD_OFFSET(struct set_keyboard_repeat_reply, enable) == 8 );
+ C_ASSERT( sizeof(struct set_keyboard_repeat_reply) == 16 );
 +C_ASSERT( sizeof(struct get_fast_alert_event_reply) == 16 );
  
  #endif  /* WANT_REQUEST_HANDLERS */
@@ -4192,7 +4155,7 @@ diff --git a/server/trace.c b/server/trace.c
 index d76d131..a361a7e 100644
 --- a/server/trace.c
 +++ b/server/trace.c
-@@ -4603,6 +4603,47 @@ static void dump_get_next_thread_reply( const struct get_next_thread_reply *req
+@@ -4603,18 +4603,59 @@ static void dump_get_next_thread_reply( const struct get_next_thread_reply *req
      fprintf( stderr, " handle=%04x", req->handle );
  }
  
@@ -4232,6 +4195,18 @@ index d76d131..a361a7e 100644
 +{
 +}
 +
+ static void dump_set_keyboard_repeat_request( const struct set_keyboard_repeat_request *req )
+ {
+     fprintf( stderr, " enable=%d", req->enable );
+     fprintf( stderr, ", delay=%d", req->delay );
+     fprintf( stderr, ", period=%d", req->period );
+ }
+ 
+ static void dump_set_keyboard_repeat_reply( const struct set_keyboard_repeat_reply *req )
+ {
+     fprintf( stderr, " enable=%d", req->enable );
+ }
+ 
 +static void dump_get_fast_alert_event_reply( const struct get_fast_alert_event_reply *req )
 +{
 +    fprintf( stderr, " handle=%04x", req->handle );
@@ -4240,10 +4215,11 @@ index d76d131..a361a7e 100644
  static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
      (dump_func)dump_new_process_request,
      (dump_func)dump_get_new_process_info_request,
-@@ -4889,6 +4930,11 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
+@@ -4889,7 +4930,12 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
      (dump_func)dump_suspend_process_request,
      (dump_func)dump_resume_process_request,
      (dump_func)dump_get_next_thread_request,
+     (dump_func)dump_set_keyboard_repeat_request,
 +    (dump_func)dump_get_linux_sync_device_request,
 +    (dump_func)dump_get_linux_sync_obj_request,
 +    (dump_func)dump_fast_select_queue_request,
@@ -4252,19 +4228,20 @@ index d76d131..a361a7e 100644
  };
  
  static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
-@@ -5177,6 +5223,11 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
+@@ -5177,7 +5223,12 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
      NULL,
      NULL,
      (dump_func)dump_get_next_thread_reply,
 +    (dump_func)dump_get_linux_sync_device_reply,
 +    (dump_func)dump_get_linux_sync_obj_reply,
 +    NULL,
+     (dump_func)dump_set_keyboard_repeat_reply,
 +    NULL,
 +    (dump_func)dump_get_fast_alert_event_reply,
  };
  
  static const char * const req_names[REQ_NB_REQUESTS] = {
-@@ -5465,6 +5516,11 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
+@@ -5465,7 +5516,12 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
      "suspend_process",
      "resume_process",
      "get_next_thread",
@@ -4272,6 +4249,7 @@ index d76d131..a361a7e 100644
 +    "get_linux_sync_obj",
 +    "fast_select_queue",
 +    "fast_unselect_queue",
+     "set_keyboard_repeat",
 +    "get_fast_alert_event",
  };
  
@@ -4308,3 +4286,84 @@ index 80126ad..8aab32d 100644
      desktop_close_handle,         /* close_handle */
      desktop_destroy               /* destroy */
  };
+From a0534129d9131289457d2967e557992c59d2e0de Mon Sep 17 00:00:00 2001
+From: Kirill Artemev <artewar6767@gmail.com>
+Date: Thu, 4 Jul 2024 11:00:19 +0500
+Subject: [PATCH] ntsync5: rebase
+
+Signed-off-by: Kirill Artemev <artewar6767@gmail.com>
+---
+ server/queue.c | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 58 insertions(+)
+
+diff --git a/server/queue.c b/server/queue.c
+index 4f58b795b7e..2185bf72964 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -4015,6 +4015,64 @@ DECL_HANDLER(update_rawinput_devices)
+     }
+ }
+ 
++DECL_HANDLER(fast_select_queue)
++{
++    struct msg_queue *queue;
++    const queue_shm_t *queue_shm;
++
++    if (!(queue = (struct msg_queue *)get_handle_obj( current->process, req->handle,
++                                                      SYNCHRONIZE, &msg_queue_ops )))
++        return;
++
++    queue_shm = queue->shared;
++    /* a thread can only wait on its own queue */
++    if (current->queue != queue || queue->in_fast_wait)
++    {
++       set_error( STATUS_ACCESS_DENIED );
++    }
++    else
++    {
++        if (current->process->idle_event && !(queue_shm->wake_mask & QS_SMRESULT))
++            set_event( current->process->idle_event );
++
++        if (queue->fd)
++            set_fd_events( queue->fd, POLLIN );
++
++        queue->in_fast_wait = 1;
++    }
++
++    release_object( queue );
++}
++
++DECL_HANDLER(fast_unselect_queue)
++{
++    struct msg_queue *queue;
++    const queue_shm_t *queue_shm;
++
++    if (!(queue = (struct msg_queue *)get_handle_obj( current->process, req->handle,
++                                                      SYNCHRONIZE, &msg_queue_ops )))
++        return;
++
++    queue_shm = queue->shared;
++
++    if (current->queue != queue || !queue->in_fast_wait)
++    {
++        set_error( STATUS_ACCESS_DENIED );
++    }
++    else
++    {
++        if (queue->fd)
++            set_fd_events( queue->fd, 0 );
++
++        if (req->signaled)
++            msg_queue_satisfied( &queue->obj, NULL );
++
++        queue->in_fast_wait = 0;
++    }
++
++    release_object( queue );
++}
++
+ DECL_HANDLER(set_keyboard_repeat)
+ {
+     struct desktop *desktop;
+-- 
+2.45.2
