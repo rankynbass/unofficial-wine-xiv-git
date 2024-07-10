@@ -1,18 +1,21 @@
-From 5082f3875a6afe8cfad2f3a427a7cabef1981377 Mon Sep 17 00:00:00 2001
+From 29c6194da2de8fa9b4dea3e82cf7c6af27b215dc Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Thu, 29 Feb 2024 00:33:20 +0200
-Subject: [PATCH] fshack: AMD FSR complete
+Subject: [PATCH] fshack: Implement AMD FSR upscaler for fullscreen hack
 
+Co-authored-by: Georg Lehmann <dadschoorse@gmail.com>
+Co-authored-by: GloriousEggroll <gloriouseggroll@gmail.com>
+Co-authored-by: Ph42oN <julle.ys.57@gmail.com>
 ---
  dlls/winevulkan/Makefile.in      |   2 +-
  dlls/winevulkan/fsr_spv.h        | 744 +++++++++++++++++++++++++++++++
  dlls/winevulkan/make_vulkan      |   2 +-
- dlls/winevulkan/vulkan.c         | 546 ++++++++++++++++++-----
+ dlls/winevulkan/vulkan.c         | 544 +++++++++++++++++-----
  dlls/winevulkan/vulkan_private.h |  23 +-
  dlls/winex11.drv/fs.c            | 204 ++++++++-
  dlls/winex11.drv/vulkan.c        |   8 +-
  dlls/winex11.drv/x11drv.h        |   1 +
- 8 files changed, 1416 insertions(+), 114 deletions(-)
+ 8 files changed, 1416 insertions(+), 112 deletions(-)
  create mode 100644 dlls/winevulkan/fsr_spv.h
 
 diff --git a/dlls/winevulkan/Makefile.in b/dlls/winevulkan/Makefile.in
@@ -779,10 +782,10 @@ index 00000000000..cc4d3dea877
 +
 +#endif /* __FSR_SPV_H */
 diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
-index f8ac5976efe..88065b73c82 100755
+index 4194df3a3dd..6f5e63ce528 100755
 --- a/dlls/winevulkan/make_vulkan
 +++ b/dlls/winevulkan/make_vulkan
-@@ -3292,7 +3292,7 @@ class VkGenerator(object):
+@@ -3293,7 +3293,7 @@ class VkGenerator(object):
          f.write("     * resolution; user_sz will contain the app's requested mode; and dst_blit\n")
          f.write("     * will contain the area to blit the user image to in real coordinates.\n")
          f.write("     * All parameters are optional. */\n")
@@ -792,7 +795,7 @@ index f8ac5976efe..88065b73c82 100755
  
          f.write("static inline void *get_vulkan_driver_device_proc_addr(\n")
 diff --git a/dlls/winevulkan/vulkan.c b/dlls/winevulkan/vulkan.c
-index 27cf80ee907..0fcfee82c9a 100644
+index c40309ee468..9439e6b5ec2 100644
 --- a/dlls/winevulkan/vulkan.c
 +++ b/dlls/winevulkan/vulkan.c
 @@ -47,6 +47,8 @@
@@ -803,8 +806,8 @@ index 27cf80ee907..0fcfee82c9a 100644
 +
  WINE_DEFAULT_DEBUG_CHANNEL(vulkan);
  
- static int debug_level;
-@@ -1994,29 +1996,80 @@ const uint32_t blit_comp_spv[] = {
+ static void set_memory_being_allocated(struct wine_instance *instance, struct wine_device_memory *memory)
+@@ -2063,29 +2065,80 @@ const uint32_t blit_comp_spv[] = {
      0x0000005b,0x00000021,0x00040063,0x00000056,0x0000005a,0x0000005b,0x000100fd,0x00010038
  };
  
@@ -890,7 +893,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  }
  
  static VkResult create_descriptor_set(struct wine_device *device, struct wine_swapchain *swapchain,
-@@ -2044,7 +2097,7 @@ static VkResult create_descriptor_set(struct wine_device *device, struct wine_sw
+@@ -2113,7 +2166,7 @@ static VkResult create_descriptor_set(struct wine_device *device, struct wine_sw
      userDescriptorImageInfo.sampler = swapchain->sampler;
  
      realDescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -899,7 +902,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  
      descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
      descriptorWrites[0].dstSet = hack->descriptor_set;
-@@ -2064,10 +2117,47 @@ static VkResult create_descriptor_set(struct wine_device *device, struct wine_sw
+@@ -2133,10 +2186,47 @@ static VkResult create_descriptor_set(struct wine_device *device, struct wine_sw
  
      device->funcs.p_vkUpdateDescriptorSets(device->host_device, 2, descriptorWrites, 0, NULL);
  
@@ -948,7 +951,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  {
      VkResult res;
      VkSamplerCreateInfo samplerInfo = {0};
-@@ -2075,19 +2165,21 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
+@@ -2144,19 +2234,21 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
      VkDescriptorPoolCreateInfo poolInfo = {0};
      VkDescriptorSetLayoutBinding layoutBindings[2] = {{0}, {0}};
      VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo = {0};
@@ -977,7 +980,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      samplerInfo.anisotropyEnable = VK_FALSE;
      samplerInfo.maxAnisotropy = 1;
      samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-@@ -2116,6 +2208,13 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
+@@ -2185,6 +2277,13 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
      poolInfo.pPoolSizes = poolSizes;
      poolInfo.maxSets = swapchain->n_images;
  
@@ -991,7 +994,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      res = device->funcs.p_vkCreateDescriptorPool(device->host_device, &poolInfo, NULL, &swapchain->descriptor_pool);
      if (res != VK_SUCCESS)
      {
-@@ -2147,40 +2246,131 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
+@@ -2216,40 +2315,131 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
          goto fail;
      }
  
@@ -1151,7 +1154,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  
      /* create imageviews */
      for (i = 0; i < swapchain->n_images; ++i)
-@@ -2190,14 +2380,14 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
+@@ -2259,14 +2449,14 @@ static VkResult init_blit_images(struct wine_device *device, struct wine_swapcha
          viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
          viewInfo.image = hack->swapchain_image;
          viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -1168,7 +1171,7 @@ index 27cf80ee907..0fcfee82c9a 100644
          if (res != VK_SUCCESS)
          {
              ERR("vkCreateImageView(blit): %d\n", res);
-@@ -2216,17 +2406,19 @@ fail:
+@@ -2285,17 +2475,19 @@ fail:
      {
          struct fs_hack_image *hack = &swapchain->fs_hack_images[i];
  
@@ -1196,7 +1199,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  
      device->funcs.p_vkDestroyDescriptorSetLayout(device->host_device, swapchain->descriptor_set_layout, NULL);
      swapchain->descriptor_set_layout = VK_NULL_HANDLE;
-@@ -2234,6 +2426,9 @@ fail:
+@@ -2303,6 +2495,9 @@ fail:
      device->funcs.p_vkDestroyDescriptorPool(device->host_device, swapchain->descriptor_pool, NULL);
      swapchain->descriptor_pool = VK_NULL_HANDLE;
  
@@ -1206,7 +1209,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      device->funcs.p_vkDestroySampler(device->host_device, swapchain->sampler, NULL);
      swapchain->sampler = VK_NULL_HANDLE;
  
-@@ -2244,8 +2439,10 @@ static void destroy_fs_hack_image(struct wine_device *device, struct wine_swapch
+@@ -2313,8 +2508,10 @@ static void destroy_fs_hack_image(struct wine_device *device, struct wine_swapch
                                    struct fs_hack_image *hack)
  {
      device->funcs.p_vkDestroyImageView(device->host_device, hack->user_view, NULL);
@@ -1218,7 +1221,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      if (hack->cmd)
          device->funcs.p_vkFreeCommandBuffers(device->host_device, swapchain->cmd_pools[hack->cmd_queue_idx],
                                               1, &hack->cmd);
-@@ -2317,10 +2514,11 @@ static VkResult init_fs_hack_images(struct wine_device *device, struct wine_swap
+@@ -2386,6 +2583,9 @@ static VkResult init_fs_hack_images(struct wine_device *device, struct wine_swap
          imageInfo.queueFamilyIndexCount = createinfo->queueFamilyIndexCount;
          imageInfo.pQueueFamilyIndices = createinfo->pQueueFamilyIndices;
  
@@ -1227,12 +1230,8 @@ index 27cf80ee907..0fcfee82c9a 100644
 +
          if (createinfo->flags & VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR)
              imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
--        else if (createinfo->imageFormat != VK_FORMAT_B8G8R8A8_SRGB)
--            imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
- 
-         res = device->funcs.p_vkCreateImage(device->host_device, &imageInfo, NULL, &hack->user_image);
-         if (res != VK_SUCCESS)
-@@ -2397,7 +2595,7 @@ static VkResult init_fs_hack_images(struct wine_device *device, struct wine_swap
+         else if (createinfo->imageFormat != VK_FORMAT_B8G8R8A8_SRGB)
+@@ -2466,7 +2666,7 @@ static VkResult init_fs_hack_images(struct wine_device *device, struct wine_swap
          viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
          viewInfo.image = swapchain->fs_hack_images[i].user_image;
          viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -1241,7 +1240,7 @@ index 27cf80ee907..0fcfee82c9a 100644
          viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
          viewInfo.subresourceRange.baseMipLevel = 0;
          viewInfo.subresourceRange.levelCount = 1;
-@@ -2447,7 +2645,7 @@ VkResult wine_vkCreateSwapchainKHR(VkDevice device_handle, const VkSwapchainCrea
+@@ -2516,7 +2716,7 @@ VkResult wine_vkCreateSwapchainKHR(VkDevice device_handle, const VkSwapchainCrea
  
      if (vk_funcs->query_fs_hack &&
              vk_funcs->query_fs_hack(create_info_host.surface, &object->real_extent, &user_sz,
@@ -1250,7 +1249,7 @@ index 27cf80ee907..0fcfee82c9a 100644
              create_info_host.imageExtent.width == user_sz.width &&
              create_info_host.imageExtent.height == user_sz.height)
      {
-@@ -2472,9 +2670,17 @@ VkResult wine_vkCreateSwapchainKHR(VkDevice device_handle, const VkSwapchainCrea
+@@ -2541,9 +2741,17 @@ VkResult wine_vkCreateSwapchainKHR(VkDevice device_handle, const VkSwapchainCrea
              FIXME("Swapchain does not support required VK_IMAGE_USAGE_STORAGE_BIT\n");
  
          create_info_host.imageExtent = object->real_extent;
@@ -1269,7 +1268,7 @@ index 27cf80ee907..0fcfee82c9a 100644
          if (info->imageFormat != VK_FORMAT_B8G8R8A8_UNORM && info->imageFormat != VK_FORMAT_B8G8R8A8_SRGB)
              FIXME("swapchain image format is not BGRA8 UNORM/SRGB. Things may go badly. %d\n", create_info_host.imageFormat);
  
-@@ -2503,7 +2709,7 @@ VkResult wine_vkCreateSwapchainKHR(VkDevice device_handle, const VkSwapchainCrea
+@@ -2572,7 +2780,7 @@ VkResult wine_vkCreateSwapchainKHR(VkDevice device_handle, const VkSwapchainCrea
              return res;
          }
  
@@ -1278,7 +1277,7 @@ index 27cf80ee907..0fcfee82c9a 100644
          if (res != VK_SUCCESS)
          {
              ERR("creating blit images failed: %d\n", res);
-@@ -3443,7 +3649,7 @@ VkResult wine_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice handle,
+@@ -3513,7 +3721,7 @@ VkResult wine_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice handle,
          adjust_max_image_count(phys_dev, capabilities);
  
      if (res == VK_SUCCESS && vk_funcs->query_fs_hack &&
@@ -1287,7 +1286,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      {
          capabilities->currentExtent = user_res;
          capabilities->minImageExtent = user_res;
-@@ -3473,7 +3679,7 @@ VkResult wine_vkGetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysicalDevice handle
+@@ -3543,7 +3751,7 @@ VkResult wine_vkGetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysicalDevice handle
          adjust_max_image_count(phys_dev, &capabilities->surfaceCapabilities);
  
      if (res == VK_SUCCESS && vk_funcs->query_fs_hack &&
@@ -1296,7 +1295,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      {
          capabilities->surfaceCapabilities.currentExtent = user_res;
          capabilities->surfaceCapabilities.minImageExtent = user_res;
-@@ -3617,12 +3823,14 @@ void wine_vkDestroySwapchainKHR(VkDevice device_handle, VkSwapchainKHR handle, c
+@@ -3687,12 +3895,14 @@ void wine_vkDestroySwapchainKHR(VkDevice device_handle, VkSwapchainKHR handle, c
              if (swapchain->cmd_pools[i])
                  device->funcs.p_vkDestroyCommandPool(device->host_device, swapchain->cmd_pools[i], NULL);
  
@@ -1313,7 +1312,7 @@ index 27cf80ee907..0fcfee82c9a 100644
          free(swapchain->cmd_pools);
          free(swapchain->fs_hack_images);
      }
-@@ -3689,6 +3897,30 @@ static VkCommandBuffer create_hack_cmd(struct wine_queue *queue, struct wine_swa
+@@ -3759,6 +3969,30 @@ static VkCommandBuffer create_hack_cmd(struct wine_queue *queue, struct wine_swa
      return cmd;
  }
  
@@ -1344,7 +1343,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapchain *swapchain,
                                     struct fs_hack_image *hack)
  {
-@@ -3699,6 +3931,9 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
+@@ -3769,6 +4003,9 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
  
      TRACE("recording compute command\n");
  
@@ -1354,7 +1353,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
  
-@@ -3706,33 +3941,17 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
+@@ -3776,33 +4013,17 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
  
      /* for the cs we run... */
      /* transition user image from PRESENT_SRC to SHADER_READ */
@@ -1388,7 +1387,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      barriers[1].srcAccessMask = 0;
      barriers[1].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
  
-@@ -3740,10 +3959,6 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
+@@ -3810,10 +4031,6 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
                                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 2, barriers);
  
      /* perform blit shader */
@@ -1399,13 +1398,13 @@ index 27cf80ee907..0fcfee82c9a 100644
  
      /* vec2: blit dst offset in real coords */
      constants[0] = swapchain->blit_dst.offset.x;
-@@ -3756,40 +3971,24 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
+@@ -3826,40 +4043,24 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
      /* vec2: blit dst extents in real coords */
      constants[2] = swapchain->blit_dst.extent.width;
      constants[3] = swapchain->blit_dst.extent.height;
 -    device->funcs.p_vkCmdPushConstants(hack->cmd, swapchain->pipeline_layout,
 -                                       VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(constants), constants);
-+    
++
 +    bind_pipeline(device, hack->cmd, &swapchain->blit_pipeline, hack->descriptor_set, constants);
  
      /* local sizes in shader are 8 */
@@ -1442,7 +1441,7 @@ index 27cf80ee907..0fcfee82c9a 100644
      barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
      barriers[1].dstAccessMask = 0;
  
-@@ -3806,6 +4005,149 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
+@@ -3876,6 +4077,149 @@ static VkResult record_compute_cmd(struct wine_device *device, struct wine_swapc
      return VK_SUCCESS;
  }
  
@@ -1592,7 +1591,7 @@ index 27cf80ee907..0fcfee82c9a 100644
  VkResult fshack_vk_queue_present(VkQueue queue_handle, const VkPresentInfoKHR *pPresentInfo)
  {
      struct wine_queue *queue = wine_queue_from_handle(queue_handle);
-@@ -3854,7 +4196,7 @@ VkResult fshack_vk_queue_present(VkQueue queue_handle, const VkPresentInfoKHR *p
+@@ -3924,7 +4268,7 @@ VkResult fshack_vk_queue_present(VkQueue queue_handle, const VkPresentInfoKHR *p
                  }
  
                  if (queue->device->queue_props[queue_idx].queueFlags & VK_QUEUE_COMPUTE_BIT) /* TODO */
@@ -1602,7 +1601,7 @@ index 27cf80ee907..0fcfee82c9a 100644
                  {
                      ERR("Present queue does not support compute!\n");
 diff --git a/dlls/winevulkan/vulkan_private.h b/dlls/winevulkan/vulkan_private.h
-index ffae94adbe4..e5405486c44 100644
+index ecd148ea48a..3a439a6e760 100644
 --- a/dlls/winevulkan/vulkan_private.h
 +++ b/dlls/winevulkan/vulkan_private.h
 @@ -111,10 +111,18 @@ struct fs_hack_image
@@ -1651,7 +1650,7 @@ index ffae94adbe4..e5405486c44 100644
      struct wine_vk_mapping mapping;
  };
 diff --git a/dlls/winex11.drv/fs.c b/dlls/winex11.drv/fs.c
-index bda79419c69..6a1cd03b5ae 100644
+index 73824021060..d079a374376 100644
 --- a/dlls/winex11.drv/fs.c
 +++ b/dlls/winex11.drv/fs.c
 @@ -42,12 +42,12 @@ static struct x11drv_settings_handler real_settings_handler;
@@ -1666,7 +1665,7 @@ index bda79419c69..6a1cd03b5ae 100644
 -}
 -fs_monitor_sizes[] =
 +};
-+static struct fs_monitor_size fs_monitor_sizes_base[] =
++static const struct fs_monitor_size fs_monitor_sizes_base[] =
  {
      {{640, 480}},   /*  4:3 */
      {{800, 600}},   /*  4:3 */
@@ -1683,7 +1682,7 @@ index bda79419c69..6a1cd03b5ae 100644
  };
  
 +/* The order should be in sync with the values in 'fs_hack_is_fsr_single_mode'*/
-+static float fsr_ratios[] = {
++static const float fsr_ratios[] = {
 +    2.0f, /* FSR Performance */
 +    1.7f, /* FSR Balanced */
 +    1.5f, /* FSR Quality */
@@ -1864,7 +1863,7 @@ index bda79419c69..6a1cd03b5ae 100644
 +    memcpy(fs_monitor_sizes+fs_monitor_sizes_count, fs_monitor_sizes_base, sizeof(fs_monitor_sizes_base));
 +    fs_monitor_sizes_count += ARRAY_SIZE(fs_monitor_sizes_base);
 +
-     max_count = ARRAY_SIZE(fs_monitor_sizes) * DEPTH_COUNT + real_mode_count;
+     max_count = ARRAY_SIZE(fs_monitor_sizes) * DEPTH_COUNT + real_mode_count + 1;
      if (center_modes) max_count += ARRAY_SIZE(fs_monitor_sizes) + real_mode_count;
  
 @@ -328,7 +490,7 @@ static void monitor_get_modes( struct fs_monitor *monitor, DEVMODEW **modes, UIN
@@ -1965,17 +1964,17 @@ index 33761764c74..dba60e0c4e0 100644
      }
  
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 9d3f742cbad..a56498ef613 100644
+index 2868325055b..4e0f185f0c8 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
-@@ -706,6 +706,7 @@ extern void *uri_list_to_drop_files( const void *data, size_t size, size_t *ret_
+@@ -708,6 +708,7 @@ extern void *uri_list_to_drop_files( const void *data, size_t size, size_t *ret_
  extern BOOL fs_hack_enabled( HMONITOR monitor );
  extern BOOL fs_hack_mapping_required( HMONITOR monitor );
  extern BOOL fs_hack_is_integer(void);
 +extern BOOL fs_hack_is_fsr(float *sharpness);
  extern HMONITOR fs_hack_monitor_from_hwnd( HWND hwnd );
  extern HMONITOR fs_hack_monitor_from_rect( const RECT *rect );
- extern BOOL fs_hack_matches_current_mode( HMONITOR monitor, INT width, INT height );
+ extern BOOL fs_hack_is_window_rect_fullscreen( HMONITOR monitor, const RECT *rect );
 -- 
-2.44.0
+2.45.2
 
