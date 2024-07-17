@@ -28,7 +28,7 @@
   git reset --hard HEAD
   git clean -xdf
   git pull origin master
-  #git checkout a77521c
+  git checkout c947731
   cd ..
 
   if [ "$_build_faudio" = "true" ]; then
@@ -47,9 +47,9 @@
 
   rm -rf "$_nowhere"/Proton/build/gst*
 
-  unset CFLAGS
+  export CFLAGS="-Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types"
   unset CPPFLAGS
-  unset CXXFLAGS
+  export CXXFLAGS="-Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types"
   unset LDFLAGS
 
   ##### 64
@@ -92,7 +92,7 @@
 		--enable-decoder=aac \
 		--enable-demuxer=xwma
 
-	make && make install
+	make -j$(nproc) && make install
   fi
 
   cd "$_nowhere"/Proton/gstreamer
@@ -242,7 +242,7 @@
     -D gst-editing-services:validate=disabled
   )
 
-  meson "$_nowhere"/Proton/build/gst64 --prefix="$_nowhere/gst" --libdir="lib64" --buildtype=release -Dpkg_config_path="$_nowhere/gst/lib64/pkgconfig" "${meson_options[@]}"
+  meson setup "$_nowhere"/Proton/build/gst64 --prefix="$_nowhere/gst" --libdir="lib64" --buildtype=release -Dpkg_config_path="$_nowhere/gst/lib64/pkgconfig" "${meson_options[@]}"
   meson compile -C "$_nowhere"/Proton/build/gst64
   meson install -C "$_nowhere"/Proton/build/gst64
 
@@ -257,7 +257,7 @@
         -DCMAKE_INSTALL_LIBDIR=lib64 \
         -DCMAKE_INSTALL_INCLUDEDIR=include/FAudio \
         -DGSTREAMER=ON
-    make && make install
+    make -j$(nproc) && make install
   fi
 
   strip --strip-unneeded "$_nowhere"/gst/lib64/*.so
@@ -306,7 +306,7 @@
 			--enable-decoder=aac \
 			--enable-demuxer=xwma
 
-		make && make install
+		make -j$(nproc) && make install
     fi
 
     cd "$_nowhere"/Proton/gstreamer
@@ -422,6 +422,7 @@
 	-D gst-plugins-good:wavenc=disabled
 	-D gst-plugins-good:ximagesrc=disabled
 	-D gst-plugins-good:y4m=disabled
+	-D gst-plugins-bad:codec2json=disabled
     -D gst-plugins-bad:dc1394=disabled
     -D gst-plugins-bad:directfb=disabled
     -D gst-plugins-bad:flite=disabled
@@ -473,7 +474,6 @@
 	-D gst-plugins-bad:msdk=disabled
 	-D gst-plugins-bad:chromaprint=disabled
 	-D gst-plugins-bad:avtp=disabled
-	-D gst-plugins-bad:kate=disabled
 	-D gst-plugins-bad:openexr=disabled
 	-D gst-plugins-bad:soundtouch=disabled
 	-D gst-plugins-bad:svtav1=disabled
@@ -488,10 +488,13 @@
 	-D gst-plugins-bad:spandsp=disabled
 	-D gst-plugins-bad:svthevcenc=disabled
 	-D gst-plugins-bad:srtp=disabled
+	-D gst-plugins-bad:sctp=disabled
+	-D gst-plugins-bad:dtls=disabled
 	-D gst-plugins-bad:wildmidi=disabled
 	-D gst-plugins-bad:zbar=disabled
 	-D gst-plugins-bad:zxing=disabled
 	-D gst-plugins-bad:webrtc=disabled
+	-D webrtc=disabled
 	-D gst-plugins-bad:webrtcdsp=disabled
 	-D gst-plugins-bad:openmpt=disabled
 	-D gst-plugins-bad:bluez=disabled
@@ -509,7 +512,7 @@
       meson32_options+=(-D gst-plugins-ugly:mpeg2dec=disabled -D gst-plugins-ugly:x264=disabled)
     fi
 
-    meson "$_nowhere"/Proton/build/gst32 --prefix="$_nowhere/gst" --libdir="lib" --buildtype=release "${meson32_options[@]}"
+    meson setup "$_nowhere"/Proton/build/gst32 --prefix="$_nowhere/gst" --libdir="lib" --buildtype=release "${meson32_options[@]}"
     meson compile -C "$_nowhere"/Proton/build/gst32
     meson install -C "$_nowhere"/Proton/build/gst32
 
@@ -523,7 +526,7 @@
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_INSTALL_INCLUDEDIR=include/FAudio \
         -DGSTREAMER=ON
-      make && make install
+      make -j$(nproc) && make install
     fi
 
     strip --strip-unneeded "$_nowhere"/gst/lib/*.so

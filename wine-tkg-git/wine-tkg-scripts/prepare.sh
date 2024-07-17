@@ -151,25 +151,25 @@ update_configure() {
 }
 
 _init() {
-msg2 '       .---.`               `.---.'
-msg2 '    `/syhhhyso-           -osyhhhys/`'
-msg2 '   .syNMdhNNhss/``.---.``/sshNNhdMNys.'
-msg2 '   +sdMh.`+MNsssssssssssssssNM+`.hMds+'
-msg2 '   :syNNdhNNhssssssssssssssshNNhdNNys:'
-msg2 '    /ssyhhhysssssssssssssssssyhhhyss/'
-msg2 '    .ossssssssssssssssssssssssssssso.'
-msg2 '   :sssssssssssssssssssssssssssssssss:'
-msg2 '  /sssssssssssssssssssssssssssssssssss/'
-msg2 ' :sssssssssssssoosssssssoosssssssssssss:'
-msg2 ' osssssssssssssoosssssssoossssssssssssso'
-msg2 ' osssssssssssyyyyhhhhhhhyyyyssssssssssso'
-msg2 ' /yyyyyyhhdmmmmNNNNNNNNNNNmmmmdhhyyyyyy/'
-msg2 '  smmmNNNNNNNNNNNNNNNNNNNNNNNNNNNNNmmms'
-msg2 '   /dNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNd/'
-msg2 '    `:sdNNNNNNNNNNNNNNNNNNNNNNNNNds:`'
-msg2 '       `-+shdNNNNNNNNNNNNNNNdhs+-`'
-msg2 '             `.-:///////:-.`'
-msg2 ''
+  msg2 '       .---.`               `.---.'
+  msg2 '    `/syhhhyso-           -osyhhhys/`'
+  msg2 '   .syNMdhNNhss/``.---.``/sshNNhdMNys.'
+  msg2 '   +sdMh.`+MNsssssssssssssssNM+`.hMds+'
+  msg2 '   :syNNdhNNhssssssssssssssshNNhdNNys:'
+  msg2 '    /ssyhhhysssssssssssssssssyhhhyss/'
+  msg2 '    .ossssssssssssssssssssssssssssso.'
+  msg2 '   :sssssssssssssssssssssssssssssssss:'
+  msg2 '  /sssssssssssssssssssssssssssssssssss/'
+  msg2 ' :sssssssssssssoosssssssoosssssssssssss:'
+  msg2 ' osssssssssssssoosssssssoossssssssssssso'
+  msg2 ' osssssssssssyyyyhhhhhhhyyyyssssssssssso'
+  msg2 ' /yyyyyyhhdmmmmNNNNNNNNNNNmmmmdhhyyyyyy/'
+  msg2 '  smmmNNNNNNNNNNNNNNNNNNNNNNNNNNNNNmmms'
+  msg2 '   /dNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNd/'
+  msg2 '    `:sdNNNNNNNNNNNNNNNNNNNNNNNNNds:`'
+  msg2 '       `-+shdNNNNNNNNNNNNNNNdhs+-`'
+  msg2 '             `.-:///////:-.`'
+  msg2 ''
 
   # load default configuration from files
   if [ -e "$_where"/proton_tkg_token ]; then
@@ -257,7 +257,7 @@ msg2 ''
     if [ -z "$_LOCAL_PRESET" ]; then
       msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base:"
       warning "With Valve trees, most wine-specific customization options will be ignored such as game-specific patches, esync/fsync/fastsync or Proton-specific features support. Those patches and features are for the most part already in, but some bits deemed useful such as FSR support for Proton's fshack are made available through community patches. Staging and GE patches are available through regular .cfg options."
-      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (The most experimental)\n    choice[1-4?]: '`" CONDITION;
+      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (Expect breakage)\n    choice[1-4?]: '`" CONDITION;
       if [ "$CONDITION" = "2" ]; then
         _LOCAL_PRESET="valve-exp"
       elif [ "$CONDITION" = "3" ]; then
@@ -279,16 +279,11 @@ msg2 ''
     _EXTERNAL_INSTALL="proton"
     _EXTERNAL_NOVER="false"
     _nomakepkg_nover="true"
-    if [[ "$_LOCAL_PRESET" = valve* ]]; then
+    if [ "$_NOLIB32" = "true" ]; then
+      warning '_NOLIB32="true" is not compatible with Proton builds and was set to "false" as a fallback'
       _NOLIB32="false"
-      _NOLIB64="false"
-    else
-      if [ "$_NOLIB32" = "true" ]; then
-        warning '_NOLIB32="true" is not compatible with Proton builds and was set to "false" as a fallback'
-        _NOLIB32="false"
-      fi
-      _NOLIB64="false"
     fi
+    _NOLIB64="false"
     _esync_version=""
     _use_faudio="true"
     _highcorecount_fix="true"
@@ -397,7 +392,7 @@ msg2 ''
     _use_esync="false"
     _use_fsync="false"
     _use_fastsync="false"
-#    _use_staging="false"
+    #_use_staging="false"
     _proton_fs_hack="false"
     _proton_rawinput="false"
     _large_address_aware="false"
@@ -941,7 +936,7 @@ _prepare() {
 	fi
 
 	# Manual staging patches application on top of proton valve trees
-	if [[ "$_custom_wine_source" = *"ValveSoftware"* ]] && [ "$_use_staging" = "true" ]; then
+	if [[ "$_custom_wine_source" = *"ValveSoftware"* ]] && [ "$_NUKR" != "debug" ] && [ "$_use_staging" = "true" ]; then
 	  _proton_staging
 	  if [ "$_use_GE_patches" = "true" ]; then
 	    _GE

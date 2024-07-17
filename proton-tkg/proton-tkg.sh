@@ -21,6 +21,7 @@ function resources_cleanup {
   # The symlinks switch doesn't need the recursive flag, but we'll use it temporarily
   # as a smoother transition for existing users with dirty trees
   rm -rf "${_nowhere}"/{Proton,vkd3d-proton,dxvk-tools,dxvk,liberation-fonts,mono,gecko,steam-runtime,openvr}
+  rm -rf /tmp/steam-runtime
 }
 
 trap resources_cleanup EXIT
@@ -102,6 +103,14 @@ function new_lib_path_check {
     _i386_unix_path="$_nowhere/proton_dist_tmp/$_lib32name/wine/i386-unix/"
     _i386_windows_path="$_nowhere/proton_dist_tmp/$_lib32name/wine/"
     _i386_windows_tail="/$_lib32name/wine"
+  # wow64
+  elif [ ! -d "$_nowhere/proton_dist_tmp/$_lib32name/wine/i386-unix" ] && [ -d "$_nowhere/proton_dist_tmp/$_lib64name/wine/i386-windows" ]; then
+    _new_lib_paths="true"
+    _new_lib_paths_69="true"
+    _wow64_paths="true"
+    _i386_unix_path=
+    _i386_windows_path="$_nowhere/proton_dist_tmp/$_lib64name/wine/i386-windows/"
+    _i386_windows_tail="/$_lib64name/wine/i386-windows"
   elif [ ! -d "$_nowhere/proton_dist_tmp/$_lib32name/wine/i386-unix" ] && [ -d "$_nowhere/proton_dist_tmp/$_lib32name/wine/i386-windows" ] && [ ! -e "$_nowhere"/proton_dist_tmp/$_lib32name/libwine.* ]; then
     _new_lib_paths="true"
     _new_lib_paths_69="false"
@@ -167,18 +176,20 @@ function build_vrclient {
   #cd ..
 
   export WINEMAKERFLAGS="--nosource-fix --nolower-include --nodlls --nomsvcrt --dll -I$_nowhere/proton_dist_tmp/include/wine/windows/ -I$_nowhere/proton_dist_tmp/include/ -I$_nowhere/proton_dist_tmp/include/wine/"
-  export CFLAGS="-O2 -g"
+  export CFLAGS="-O2 -g -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types"
   export CXXFLAGS="-Wno-attributes -std=c++0x -O2 -g"
   PATH="$_nowhere"/proton_dist_tmp/bin:$PATH
-  if [[ "$_proton_branch" = *6.* ]] || [[ "$_proton_branch" = *7.* ]] || [[ "$_proton_branch" = *8.* ]]; then
-    WINEMAKERFLAGS+=" -ldl"
-  elif [ "$_standard_dlopen" = "true" ] && [[ "$_proton_branch" != *5.13 ]]; then
-    patch -Np1 < "$_nowhere/proton_template/vrclient-remove-library.h-dep.patch" || exit 1
-    patch -Np1 < "$_nowhere/proton_template/vrclient-use_standard_dlopen_instead_of_the_libwine_wrappers.patch" || exit 1
-    WINEMAKERFLAGS+=" -ldl"
-  elif [[ "$_proton_branch" = *5.13 ]]; then
-    patch -Np1 < "$_nowhere/proton_template/vrclient-remove-library.h-dep.patch" || exit 1
-    WINEMAKERFLAGS+=" -ldl"
+  if [[ "$_proton_branch" != *3.* ]] && [[ "$_proton_branch" != *4.* ]]; then
+    if [[ "$_proton_branch" = *5.0 ]] && [ "$_standard_dlopen" = "true" ]; then
+      patch -Np1 < "$_nowhere/proton_template/vrclient-remove-library.h-dep.patch" || exit 1
+      patch -Np1 < "$_nowhere/proton_template/vrclient-use_standard_dlopen_instead_of_the_libwine_wrappers.patch" || exit 1
+      WINEMAKERFLAGS+=" -ldl"
+    elif [[ "$_proton_branch" = *5.13 ]]; then
+      patch -Np1 < "$_nowhere/proton_template/vrclient-remove-library.h-dep.patch" || exit 1
+      WINEMAKERFLAGS+=" -ldl"
+    else
+      WINEMAKERFLAGS+=" -ldl"
+    fi
   fi
 
   new_lib_path_check
@@ -219,7 +230,11 @@ function build_vrclient {
   cp -v "${_nowhere}"/openvr/bin/win32/openvr_api.dll proton_dist_tmp/lib/wine/dxvk/openvr_api_dxvk.dll
   cp -v "${_nowhere}"/openvr/bin/win64/openvr_api.dll proton_dist_tmp/lib64/wine/dxvk/openvr_api_dxvk.dll
 
-  if [ "$_new_lib_paths" = "true" ]; then
+  if [ "$_wow64_paths" = "true" ]; then
+    cp -v "${_nowhere}"/openvr/build/vrclient.win64/vrclient_x64/vrclient_x64.dll.so proton_dist_tmp/$_lib64name/wine/x86_64-unix/
+    cp -v "${_nowhere}"/openvr/build/vrclient.win64/vrclient_x64.dll.fake proton_dist_tmp/$_lib64name/wine/x86_64-windows/vrclient_x64.dll
+    cp -v "${_nowhere}"/openvr/build/vrclient.win32/vrclient.dll.fake proton_dist_tmp/$_lib64name/wine/i386-windows/vrclient.dll
+  elif [ "$_new_lib_paths" = "true" ]; then
     if [ "$_new_lib_paths_69" = "true" ] && [ -d proton_dist_tmp/$_lib32name/wine/i386-windows ] && [ -d proton_dist_tmp/$_lib64name/wine/x86_64-windows ]; then
       cp -v "${_nowhere}"/openvr/build/vrclient.win64/vrclient_x64/vrclient_x64.dll.so proton_dist_tmp/$_lib64name/wine/x86_64-unix/ && cp -v "${_nowhere}"/openvr/build/vrclient.win64/vrclient_x64.dll.fake proton_dist_tmp/$_lib64name/wine/x86_64-windows/vrclient_x64.dll
       if [ "$_NOLIB32" != "true" ]; then
@@ -287,7 +302,11 @@ function build_lsteamclient {
   cd "$_nowhere"
 
   # Inject lsteamclient libs in our wine-tkg-git build
-  if [ "$_new_lib_paths" = "true" ]; then
+  if [ "$_wow64_paths" = "true" ]; then
+    cp -v Proton/build/lsteamclient.win64/lsteamclient.dll.so proton_dist_tmp/$_lib64name/wine/x86_64-unix/
+    cp -v Proton/build/lsteamclient.win64/lsteamclient.dll.fake proton_dist_tmp/$_lib64name/wine/x86_64-windows/lsteamclient.dll
+    cp -v Proton/build/lsteamclient.win32/lsteamclient.dll.fake proton_dist_tmp/$_lib64name/wine/i386-windows/lsteamclient.dll
+  elif [ "$_new_lib_paths" = "true" ]; then
     if [ "$_new_lib_paths_69" = "true" ]; then
       cp -v Proton/build/lsteamclient.win64/lsteamclient.dll.so proton_dist_tmp/$_lib64name/wine/x86_64-unix/
       if [ "$_NOLIB32" != "true" ]; then
@@ -522,7 +541,12 @@ function build_steamhelper {
 
     cd "$_nowhere"
 
-    if [ "$_new_lib_paths" = "true" ]; then
+    if [ "$_wow64_paths" = "true" ]; then
+      cp -v Proton/build/steam.win32/steam.exe.fake proton_dist_tmp/$_lib64name/wine/i386-windows/steam.exe
+      cp -v Proton/build/steam.win64/steam.exe.fake proton_dist_tmp/$_lib64name/wine/x86_64-windows/steam.exe
+      cp -v Proton/build/steam.win64/steam.exe.so proton_dist_tmp/$_lib64name/wine/x86_64-unix/
+      cp -v Proton/build/steam.win64/64/libsteam_api.so proton_dist_tmp/$_lib64name/
+    elif [ "$_new_lib_paths" = "true" ]; then
       # .exe 32 - always there
       cp -v Proton/build/steam.win32/steam.exe.fake proton_dist_tmp/$_lib32name/wine/i386-windows/steam.exe
       # .exe 64
@@ -942,7 +966,7 @@ else
     fi
 
     # Tooling compilation needs an update for latest BE - Use slightly older tooling for now
-    if [ -n "$_bleeding_tag" ] || [[ "$_proton_branch" = experimental_8* ]]; then
+    if [ -n "$_bleeding_tag" ] || [[ "$_proton_branch" = experimental_8* ]] || [[ "$_proton_branch" = *9* ]]; then
       git checkout f5e9c76903e4e18e0416e719a6d42d0cb00998aa
     fi
 
@@ -1037,11 +1061,11 @@ else
       chmod -R 755 "$_nowhere"/dxvk
       # Remove d3d10.dll and d3d10_1.dll when using a 5.3 base or newer - https://github.com/doitsujin/dxvk/releases/tag/v1.6
       if [ "$_dxvk_minimald3d10" = "true" ]; then
-        cp -v dxvk/x64/{d3d10core.dll,d3d11.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path64
-        cp -v dxvk/x32/{d3d10core.dll,d3d11.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path32
+        cp -v dxvk/x64/{d3d10core.dll,d3d11.dll,d3d8.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path64
+        cp -v dxvk/x32/{d3d10core.dll,d3d11.dll,d3d8.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path32
       else
-        cp -v dxvk/x64/{d3d10.dll,d3d10_1.dll,d3d10core.dll,d3d11.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path64
-        cp -v dxvk/x32/{d3d10.dll,d3d10_1.dll,d3d10core.dll,d3d11.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path32
+        cp -v dxvk/x64/{d3d10.dll,d3d10_1.dll,d3d10core.dll,d3d11.dll,d3d8.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path64
+        cp -v dxvk/x32/{d3d10.dll,d3d10_1.dll,d3d10core.dll,d3d11.dll,d3d8.dll,d3d9.dll,dxgi.dll} $_proton_dxvk_path32
       fi
       if [ -e dxvk/x64/dxvk_config.dll ]; then
         cp -v dxvk/x64/dxvk_config.dll $_proton_dxvk_path64
@@ -1169,7 +1193,11 @@ else
 
     if [ "$_new_lib_paths" = "true" ]; then
       cd "$_nowhere/proton_tkg_$_protontkg_version"
-      _patchname="new_lib_paths.patch"
+      if [ "$_wow64_paths" = "true" ]; then
+        _patchname="wow64_paths.patch"
+      else
+        _patchname="new_lib_paths.patch"
+      fi
       echo -e "\nApplying $_patchname"
       patch -Np1 < "$_nowhere/proton_template/$_patchname" || exit 1
       cd "$_nowhere"

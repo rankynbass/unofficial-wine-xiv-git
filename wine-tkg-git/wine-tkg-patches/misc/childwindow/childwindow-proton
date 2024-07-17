@@ -2,8 +2,26 @@
 
 	# Standalone child window support for vk - Fixes World of Final Fantasy and others - https://bugs.winehq.org/show_bug.cgi?id=45277 - legacy patchset for older trees applied at an earlier stage in the script
 	if ( [ "$_childwindow_fix" = "true" ] && [ "$_proton_fs_hack" != "true" ] && [ "$_use_staging" = "true" ] ); then
-	  if git merge-base --is-ancestor eb5993a7c6fbc1cd9deac0dceabc8f1c76e14ba8 HEAD; then
+	  if git merge-base --is-ancestor e9ca13a6f736ff54d80805a050f174f2fce835a0 HEAD; then
 	    _patchname='childwindow-proton.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 2a2637743b82031d0039698e116a0d1daf18dc1d HEAD; then
+	    _patchname='childwindow-proton-e9ca13a6.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 8ba51a6f711c5466e060a5958cc15c31b2b2ac7d HEAD; then
+	    _patchname='childwindow-proton-2a263774.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 9e9d2d43c1d1931fd3450543b4913d339687d24c HEAD; then
+	    _patchname='childwindow-proton-8ba51a6.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 64639c93c8cf03dc232b19365c1d0bc43969037c HEAD; then
+	    _patchname='childwindow-proton-9e9d2d43.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 5481415d438d41ac2b9fe42beb669d19af3af974 HEAD; then
+	    _patchname='childwindow-proton-64639c9.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 28873ce8c426f696ceb16e3f5d98d5f5c5ed3b79 HEAD; then
+	    _patchname='childwindow-proton-5481415.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor e3e628247df00091e2c60746a63b89e3a068ca5a HEAD; then
+	    _patchname='childwindow-proton-28873ce.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor 0d969b1764b08dccf8cc87e1b742ba983feac634 HEAD; then
+	    _patchname='childwindow-proton-e3e6282.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
+	  elif git merge-base --is-ancestor eb5993a7c6fbc1cd9deac0dceabc8f1c76e14ba8 HEAD; then
+	    _patchname='childwindow-proton-0d969b1.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
 	  elif git merge-base --is-ancestor c0042af5cc2f6d03e3875f4cd4a7c97315dd0ab2 HEAD; then
 	    _patchname='childwindow-proton-eb5993a.patch' && _patchmsg="Applied child window for vk patch" && nonuser_patcher
 	  elif git merge-base --is-ancestor c14de4c85e79563f5e859765d0015892ae925cd6 HEAD; then
@@ -32,8 +50,26 @@
 	fi
 
 	if ( [ "$_childwindow_fix" = "true" ] && [ "$_proton_fs_hack" != "true" ] && [ "$_use_staging" != "true" ] ); then
-	  if git merge-base --is-ancestor c0042af5cc2f6d03e3875f4cd4a7c97315dd0ab2 HEAD; then
+	  if git merge-base --is-ancestor e9ca13a6f736ff54d80805a050f174f2fce835a0 HEAD; then
             _patchname='childwindow-proton-mainline.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 2a2637743b82031d0039698e116a0d1daf18dc1d HEAD; then
+            _patchname='childwindow-proton-mainline-e9ca13a6.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 8ba51a6f711c5466e060a5958cc15c31b2b2ac7d HEAD; then
+            _patchname='childwindow-proton-mainline-2a263774.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 9e9d2d43c1d1931fd3450543b4913d339687d24c HEAD; then
+            _patchname='childwindow-proton-mainline-8ba51a6.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 64639c93c8cf03dc232b19365c1d0bc43969037c HEAD; then
+            _patchname='childwindow-proton-mainline-9e9d2d43.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 5481415d438d41ac2b9fe42beb669d19af3af974 HEAD; then
+            _patchname='childwindow-proton-mainline-64639c9.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 28873ce8c426f696ceb16e3f5d98d5f5c5ed3b79 HEAD; then
+            _patchname='childwindow-proton-mainline-5481415.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor e3e628247df00091e2c60746a63b89e3a068ca5a HEAD; then
+            _patchname='childwindow-proton-mainline-28873ce.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor 0d969b1764b08dccf8cc87e1b742ba983feac634 HEAD; then
+            _patchname='childwindow-proton-mainline-e3e6282.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
+	  elif git merge-base --is-ancestor c0042af5cc2f6d03e3875f4cd4a7c97315dd0ab2 HEAD; then
+            _patchname='childwindow-proton-mainline-0d969b1.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
 	  elif git merge-base --is-ancestor c14de4c85e79563f5e859765d0015892ae925cd6 HEAD; then
             _patchname='childwindow-proton-mainline-c0042af.patch' && _patchmsg="Applied child window for vk patch (mainline)" && nonuser_patcher
 	  elif git merge-base --is-ancestor a6bc5f34b87393e04ff46659f518f2e7094cc7e4 HEAD; then
@@ -44,8 +80,12 @@
 	fi
 
 	if ( [ "$_childwindow_fix" = "true" ] && [ "$_proton_fs_hack" != "true" ] && [ "$_use_staging" = "true" ] && [ "$_protonify" = "true" ] ); then
-	  if git merge-base --is-ancestor c14de4c85e79563f5e859765d0015892ae925cd6 HEAD; then
+	  if git merge-base --is-ancestor 28873ce8c426f696ceb16e3f5d98d5f5c5ed3b79 HEAD; then
+	       warning "Skipping OPWR-proton on current childwindow patchset"
+	  elif git merge-base --is-ancestor 0d969b1764b08dccf8cc87e1b742ba983feac634 HEAD; then
 	       _patchname='OPWR-proton.patch' && _patchmsg="Applied other process window Vulkan rendering patchset" && nonuser_patcher
+	  elif git merge-base --is-ancestor c14de4c85e79563f5e859765d0015892ae925cd6 HEAD; then
+	       _patchname='OPWR-proton-0d969b1.patch' && _patchmsg="Applied other process window Vulkan rendering patchset" && nonuser_patcher
 	  elif git merge-base --is-ancestor 4390b0117633716b6e5477a35c13f6eb0fd52eff HEAD; then
 	       _patchname='OPWR-proton-c14de4c.patch' && _patchmsg="Applied other process window Vulkan rendering patchset" && nonuser_patcher
 	  elif git merge-base --is-ancestor c86955d3806879fc97b127730e9fb90e232710a7 HEAD; then

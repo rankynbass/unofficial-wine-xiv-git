@@ -421,6 +421,8 @@ class Proton:
         self.default_pfx_dir = self.path("files/share/default_pfx/")
         self.user_settings_file = self.path("user_settings.py")
         self.wine_bin = self.bin_dir + "wine"
+        # winetricks
+        os.environ["WINE"] = self.bin_dir + "wine"
         self.wine64_bin = self.bin_dir + "wine64"
         self.wineserver_bin = self.bin_dir + "wineserver"
         self.winetricks_bin = self.base_dir + "/files/share/winetricks/winetricks_runner"
@@ -1060,9 +1062,9 @@ class CompatData:
 
                 if use_wined3d:
                     dxvkfiles = []
-                    wined3dfiles = ["d3d11", "d3d10", "d3d10core", "d3d10_1", "d3d9"]
+                    wined3dfiles = ["d3d11", "d3d10", "d3d10core", "d3d10_1", "d3d9", "d3d8"]
                 else:
-                    dxvkfiles = ["d3d11", "d3d10", "d3d10core", "d3d10_1", "d3d9"]
+                    dxvkfiles = ["d3d11", "d3d10", "d3d10core", "d3d10_1", "d3d9", "d3d8"]
                     wined3dfiles = []
 
                 #if the user asked for dxvk's dxgi (dxgi=n), then copy it into place
