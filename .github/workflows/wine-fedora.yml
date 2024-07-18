@@ -2,21 +2,21 @@ name: Wine Fedora CI
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:latest
+    container: fedora:39
+    
     steps:
 
       - uses: actions/checkout@v4
       - name: Compilation
         run: |
           sudo dnf -y -q upgrade --refresh
-          cd wine-tkg-git 
-          sed -i 's/distro=""/distro="fedora"/' customization.cfg
-          sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
+          cd wine-tkg-git
+          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh 
+          echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
       - name: Archive the artifacts

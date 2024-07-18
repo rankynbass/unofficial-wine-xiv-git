@@ -2,23 +2,22 @@ name: Wine Ubuntu CI
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container: ubuntu:20.04
 
     steps:
 
       - uses: actions/checkout@v4
       - name: Compilation
         run: |
-          sudo dpkg --add-architecture i386 && sudo apt update
-          sudo apt install aptitude
-          sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
-          cd wine-tkg-git 
-          sed -i 's/distro=""/distro="debuntu"/' customization.cfg
-          sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
+          dpkg --add-architecture i386 && apt update
+          DEBIAN_FRONTEND=noninteractive apt install -y aptitude git
+          aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
+          cd wine-tkg-git
+          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
