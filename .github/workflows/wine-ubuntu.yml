@@ -14,8 +14,9 @@ jobs:
       - name: Compilation
         run: |
           dpkg --add-architecture i386 && apt update
-          DEBIAN_FRONTEND=noninteractive apt install -y aptitude git
-          aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
+          ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
+          DEBIAN_FRONTEND=noninteractive apt install -y tzdata aptitude git sudo
+          dpkg-reconfigure --frontend noninteractive tzdata
           cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
           echo '_ci_build="true"' >> customization.cfg
@@ -24,5 +25,5 @@ jobs:
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-tkg-build
+          name: wine-xiv-ubuntu
           path: wine-tkg-git/non-makepkg-builds
