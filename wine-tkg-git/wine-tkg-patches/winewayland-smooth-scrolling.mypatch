@@ -1,0 +1,404 @@
+diff --git a/dlls/winewayland.drv/wayland_pointer.c b/dlls/winewayland.drv/wayland_pointer.c
+index 1d8acaeabd2..951795bdda5 100644
+--- a/dlls/winewayland.drv/wayland_pointer.c
++++ b/dlls/winewayland.drv/wayland_pointer.c
+@@ -26,12 +26,19 @@
+ 
+ #include <linux/input.h>
+ #undef SW_MAX /* Also defined in winuser.rh */
++#include <float.h>
+ #include <math.h>
+ #include <stdlib.h>
++#include <unistd.h>
++
++#include <wayland-client-core.h>
+ 
+ #include "waylanddrv.h"
+ #include "wine/debug.h"
+ 
++#define SCROLL_PIXELS_PER_LINE 18
++#define SCROLL_DECAY_PER_MS 0.005
++
+ WINE_DEFAULT_DEBUG_CHANNEL(waylanddrv);
+ 
+ static HWND wayland_pointer_get_focused_hwnd(void)
+@@ -131,6 +138,207 @@ static void pointer_handle_enter(void *data, struct wl_pointer *wl_pointer,
+     pointer_handle_motion_internal(sx, sy);
+ }
+ 
++static void clear_scroll_metrics(struct wayland_scroll_metrics *scroll_metrics)
++{
++    scroll_metrics->total_pixels_swiped = 0;
++    scroll_metrics->pixels_swiped_in_frame = 0;
++    scroll_metrics->pixels_per_ms = 0;
++    scroll_metrics->start_time = 0;
++    scroll_metrics->latest_time = 0;
++    scroll_metrics->stop_time = 0;
++    scroll_metrics->number_of_smooth_events = 0;
++    scroll_metrics->number_of_discrete_events = 0;
++}
++
++static bool dispatch_smooth_scroll_events(void)
++{
++    HWND hwnd;
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    INPUT input = {0};
++    bool invert = false;
++    bool should_stop_axis[2] = { false, false };
++
++    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return false;
++
++    input.type = INPUT_MOUSE;
++
++    pthread_mutex_lock(&pointer->mutex);
++    for (uint32_t axis = WL_POINTER_AXIS_VERTICAL_SCROLL;
++         axis < WL_POINTER_AXIS_HORIZONTAL_SCROLL;
++         axis++)
++    {
++        struct wayland_scroll_metrics *scroll_metrics = &pointer->scroll_metrics[axis];
++        double pixels_to_scroll = 0.0;
++        double lines_to_scroll = 0.0;
++
++        /* If the user stopped scrolling but we still have some speed, we'll use an
++         * exponential decay model to scroll a little bit more. The amount to scroll is determined
++         * by
++         * (pixels_per_ms / decay_per_ms) * (1 - exp(-decay_per_ms * milliseconds_passed))
++         */
++        if (scroll_metrics->stop_time > scroll_metrics->start_time && scroll_metrics->latest_time > scroll_metrics->stop_time)
++        {
++            double milliseconds_passed = scroll_metrics->latest_time - scroll_metrics->stop_time;
++
++            pixels_to_scroll = (scroll_metrics->pixels_per_ms / SCROLL_DECAY_PER_MS) * exp(-SCROLL_DECAY_PER_MS * milliseconds_passed);
++
++            if (fabs(pixels_to_scroll) < SCROLL_PIXELS_PER_LINE)
++            {
++                clear_scroll_metrics(scroll_metrics);
++                continue;
++            }
++        }
++        else
++        {
++            pixels_to_scroll = scroll_metrics->pixels_swiped_in_frame;
++            scroll_metrics->pixels_swiped_in_frame = 0;
++        }
++
++        switch (axis)
++        {
++        case WL_POINTER_AXIS_VERTICAL_SCROLL:
++            input.mi.dwFlags = MOUSEEVENTF_WHEEL;
++            invert = true;
++            break;
++        case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
++            input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
++            break;
++        default: break;
++        }
++
++        lines_to_scroll = pixels_to_scroll / SCROLL_PIXELS_PER_LINE;
++
++        input.mi.mouseData = lines_to_scroll * WHEEL_DELTA;
++
++        if (invert)
++            input.mi.mouseData *= -1;
++
++        __wine_send_input(hwnd, &input, NULL);
++    }
++
++    pthread_mutex_unlock(&pointer->mutex);
++
++    if (should_stop_axis[WL_POINTER_AXIS_VERTICAL_SCROLL] &&
++        should_stop_axis[WL_POINTER_AXIS_HORIZONTAL_SCROLL]) return false;
++
++    return true;
++}
++
++static void dispatch_discrete_scroll_events(void)
++{
++    HWND hwnd;
++    INPUT input = {0};
++    bool invert = false;
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++
++    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
++
++    input.type = INPUT_MOUSE;
++
++    pthread_mutex_lock(&pointer->mutex);
++    for (uint32_t axis = WL_POINTER_AXIS_VERTICAL_SCROLL;
++         axis < WL_POINTER_AXIS_HORIZONTAL_SCROLL;
++         axis++)
++    {
++        struct wayland_scroll_metrics *scroll_metrics = &pointer->scroll_metrics[axis];
++
++        switch (axis)
++        {
++        case WL_POINTER_AXIS_VERTICAL_SCROLL:
++            input.mi.dwFlags = MOUSEEVENTF_WHEEL;
++            invert = true;
++            break;
++        case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
++            input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
++            break;
++        default: break;
++        }
++
++        input.mi.mouseData = WHEEL_DELTA * scroll_metrics->number_of_discrete_events;
++
++        if (invert)
++            input.mi.mouseData *= -1;
++
++        __wine_send_input(hwnd, &input, NULL);
++        scroll_metrics->number_of_discrete_events = 0;
++    }
++    pthread_mutex_unlock(&pointer->mutex);
++}
++
++static void clear_graphics_update_callback(void)
++{
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++
++    if (!pointer->graphics_update_callback) return;
++
++    wl_callback_destroy(pointer->graphics_update_callback);
++    pointer->graphics_update_callback = NULL;
++}
++
++static void reset_graphics_update_callback(void);
++
++static void graphics_update_callback_handler(void *data, struct wl_callback *wl_callback, uint32_t time)
++{
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    bool should_continue;
++
++    pthread_mutex_lock(&pointer->mutex);
++    for (uint32_t axis = WL_POINTER_AXIS_VERTICAL_SCROLL;
++         axis < WL_POINTER_AXIS_HORIZONTAL_SCROLL;
++         axis++)
++    {
++        struct wayland_scroll_metrics *scroll_metrics = &pointer->scroll_metrics[axis];
++        scroll_metrics->latest_time = time;
++    }
++
++    pthread_mutex_unlock(&pointer->mutex);
++
++    should_continue = dispatch_smooth_scroll_events();
++
++    pthread_mutex_lock(&pointer->mutex);
++    clear_graphics_update_callback ();
++    pthread_mutex_unlock(&pointer->mutex);
++
++    if (should_continue) reset_graphics_update_callback();
++}
++
++static const struct wl_callback_listener graphics_update_listener =
++{
++    graphics_update_callback_handler
++};
++
++static void reset_graphics_update_callback(void)
++{
++    HWND hwnd;
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    struct wayland_surface *surface = NULL;
++
++    if (pointer->graphics_update_callback) return;
++    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
++
++    surface = wayland_surface_lock_hwnd(hwnd);
++
++    if (!surface) return;
++
++    pthread_mutex_lock(&pointer->mutex);
++
++    pointer->graphics_update_callback = wl_surface_frame(surface->wl_surface);
++    pthread_mutex_unlock(&surface->mutex);
++    surface = NULL;
++
++    wl_callback_add_listener(pointer->graphics_update_callback, &graphics_update_listener, NULL);
++    pthread_mutex_unlock(&pointer->mutex);
++}
++
++static void clear_scroll_state (void)
++{
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++
++    clear_scroll_metrics(&pointer->scroll_metrics[WL_POINTER_AXIS_VERTICAL_SCROLL]);
++    clear_scroll_metrics(&pointer->scroll_metrics[WL_POINTER_AXIS_HORIZONTAL_SCROLL]);
++    clear_graphics_update_callback();
++}
++
+ static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
+                                  uint32_t serial, struct wl_surface *wl_surface)
+ {
+@@ -143,6 +351,7 @@ static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
+     pthread_mutex_lock(&pointer->mutex);
+     pointer->focused_hwnd = NULL;
+     pointer->enter_serial = 0;
++    clear_scroll_state ();
+     pthread_mutex_unlock(&pointer->mutex);
+ }
+ 
+@@ -191,10 +400,54 @@ static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
+ static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
+                                 uint32_t time, uint32_t axis, wl_fixed_t value)
+ {
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    struct wayland_scroll_metrics *scroll_metrics = NULL;
++    HWND hwnd;
++    double pixels_swiped;
++
++    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
++
++    pthread_mutex_lock(&pointer->mutex);
++
++    scroll_metrics = &pointer->scroll_metrics[axis];
++    if (scroll_metrics->number_of_smooth_events == 0)
++    {
++        scroll_metrics->total_pixels_swiped = 0;
++        scroll_metrics->pixels_swiped_in_frame = 0;
++        scroll_metrics->start_time = time;
++    }
++
++    pixels_swiped = wl_fixed_to_double(value);
++
++    scroll_metrics->total_pixels_swiped += pixels_swiped;
++    scroll_metrics->pixels_swiped_in_frame += pixels_swiped;
++
++    scroll_metrics->latest_time = time;
++    scroll_metrics->number_of_smooth_events++;
++
++    pthread_mutex_unlock(&pointer->mutex);
+ }
+ 
+ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
+ {
++    HWND hwnd;
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    bool has_discrete_events = false;
++    bool has_smooth_events = false;
++
++    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
++
++    pthread_mutex_lock(&pointer->mutex);
++
++    if (pointer->scroll_metrics[WL_POINTER_AXIS_VERTICAL_SCROLL].number_of_discrete_events != 0 ||
++        pointer->scroll_metrics[WL_POINTER_AXIS_HORIZONTAL_SCROLL].number_of_discrete_events != 0) has_discrete_events = true;
++    if (pointer->scroll_metrics[WL_POINTER_AXIS_VERTICAL_SCROLL].number_of_smooth_events > 0 ||
++        pointer->scroll_metrics[WL_POINTER_AXIS_HORIZONTAL_SCROLL].number_of_smooth_events > 0) has_smooth_events = true;
++
++    pthread_mutex_unlock(&pointer->mutex);
++
++    if (has_discrete_events) dispatch_discrete_scroll_events ();
++    else if (has_smooth_events) dispatch_smooth_scroll_events ();
+ }
+ 
+ static void pointer_handle_axis_source(void *data, struct wl_pointer *wl_pointer,
+@@ -205,17 +458,45 @@ static void pointer_handle_axis_source(void *data, struct wl_pointer *wl_pointer
+ static void pointer_handle_axis_stop(void *data, struct wl_pointer *wl_pointer,
+                                      uint32_t time, uint32_t axis)
+ {
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    struct wayland_scroll_metrics *scroll_metrics = NULL;
++    bool has_momentum = false;
++    double milliseconds_passed = 0.0;
++
++    pthread_mutex_lock(&pointer->mutex);
++
++    scroll_metrics = &pointer->scroll_metrics[axis];
++
++    scroll_metrics->pixels_per_ms = 0;
++    if (scroll_metrics->number_of_smooth_events > 0)
++    {
++        if (time - scroll_metrics->start_time != 0)
++        {
++            milliseconds_passed = time - scroll_metrics->start_time;
++            scroll_metrics->pixels_per_ms = scroll_metrics->total_pixels_swiped / milliseconds_passed;
++            scroll_metrics->total_pixels_swiped = 0;
++            scroll_metrics->stop_time = time;
++
++            if (fabs(scroll_metrics->pixels_per_ms) > DBL_EPSILON) has_momentum = true;
++        }
++    }
++
++    if (!has_momentum) clear_scroll_metrics(&pointer->scroll_metrics[axis]);
++    pthread_mutex_unlock(&pointer->mutex);
++
++    if (has_momentum) reset_graphics_update_callback();
+ }
+ 
+ static void pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_pointer,
+                                          uint32_t axis, int32_t discrete)
+ {
+-    INPUT input = {0};
+-    HWND hwnd;
++    struct wayland_pointer *pointer = &process_wayland.pointer;
++    struct wayland_scroll_metrics *scroll_metrics = NULL;
+ 
+-    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
++    pthread_mutex_lock(&pointer->mutex);
+ 
+-    input.type = INPUT_MOUSE;
++    scroll_metrics = &pointer->scroll_metrics[axis];
++    scroll_metrics->number_of_discrete_events += discrete;
+ 
+     switch (axis)
+     {
+@@ -233,6 +514,7 @@ static void pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_point
+     TRACE("hwnd=%p axis=%u discrete=%d\n", hwnd, axis, discrete);
+ 
+     NtUserSendHardwareInput(hwnd, 0, &input, 0);
++    pthread_mutex_unlock(&pointer->mutex);
+ }
+ 
+ static const struct wl_pointer_listener pointer_listener =
+@@ -333,6 +615,7 @@ void wayland_pointer_init(struct wl_pointer *wl_pointer)
+     pointer->wl_pointer = wl_pointer;
+     pointer->focused_hwnd = NULL;
+     pointer->enter_serial = 0;
++    clear_scroll_state ();
+     pthread_mutex_unlock(&pointer->mutex);
+     wl_pointer_add_listener(pointer->wl_pointer, &pointer_listener, NULL);
+ }
+@@ -361,6 +644,7 @@ void wayland_pointer_deinit(void)
+     pointer->wl_pointer = NULL;
+     pointer->focused_hwnd = NULL;
+     pointer->enter_serial = 0;
++    clear_scroll_state ();
+     pthread_mutex_unlock(&pointer->mutex);
+ }
+ 
+diff --git a/dlls/winewayland.drv/waylanddrv.h b/dlls/winewayland.drv/waylanddrv.h
+index efb13821696..dc890864a8b 100644
+--- a/dlls/winewayland.drv/waylanddrv.h
++++ b/dlls/winewayland.drv/waylanddrv.h
+@@ -90,6 +90,21 @@ struct wayland_cursor
+     int hotspot_x, hotspot_y;
+ };
+ 
++struct wayland_scroll_metrics
++{
++    double total_pixels_swiped;
++    double pixels_swiped_in_frame;
++    double pixels_per_ms;
++    uint32_t start_time;
++    uint32_t latest_time;
++    uint32_t stop_time;
++
++    uint32_t number_of_smooth_events;
++
++    /* negative means scrolling backward, 0 means smooth motion */
++    int32_t number_of_discrete_events;
++};
++
+ struct wayland_pointer
+ {
+     struct wl_pointer *wl_pointer;
+@@ -100,6 +115,8 @@ struct wayland_pointer
+     HWND constraint_hwnd;
+     uint32_t enter_serial;
+     uint32_t button_serial;
++    struct wayland_scroll_metrics scroll_metrics[2];
++    struct wl_callback *graphics_update_callback;
+     struct wayland_cursor cursor;
+     pthread_mutex_t mutex;
+ };
