@@ -77,6 +77,9 @@ if [ "$_use_staging" = "true" ]; then
                     -W ntdll-CriticalSection \
                     -W ntdll-Exception \
                     -W ntdll-Hide_Wine_Exports \
+                    -W ntdll-NtSetLdtEntries \
+                    -W ntdll-NtQuerySection \
+                    -W ntdll-ProcessQuotaLimits \
                     -W ntdll-Serial_Port_Detection \
                     -W server-default_integrity \
                     -W user32-rawinput-mouse \
@@ -84,6 +87,7 @@ if [ "$_use_staging" = "true" ]; then
                     -W user32-recursive-activation \
                     -W windows.networking.connectivity-new-dll \
                     -W wineboot-ProxySettings \
+                    -W winedevice-Default_Drivers
                     -W winex11-UpdateLayeredWindow \
                     -W winex11-Vulkan_support \
                     -W wintab32-improvements \
@@ -120,6 +124,7 @@ if [ "$_use_staging" = "true" ]; then
                     -W user32-Mouse_Message_Hwnd \
                     -W winepulse-PulseAudio_Support \
                     -W d3dx9_36-D3DXStubs \
+                    -W d3dx9_36-DDS \
                     -W shell32-registry-lookup-app \
                     -W ntdll-ext4-case-folder)
   elif [[ "$_plain_version" = *_8.0 ]]; then

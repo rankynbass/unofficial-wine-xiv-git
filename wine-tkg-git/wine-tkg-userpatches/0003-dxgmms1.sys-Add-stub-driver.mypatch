@@ -1,0 +1,95 @@
+From c1cdbc7937f2f09fd7356500e519cd7b8259ec12 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 8 Jun 2017 23:42:32 +0200
+Subject: [PATCH] dxgmms1.sys: Add stub driver.
+
+---
+ configure.ac                      |  1 +
+ dlls/dxgmms1.sys/Makefile.in      |  6 +++++
+ dlls/dxgmms1.sys/dxgmms1.sys.spec |  2 ++
+ dlls/dxgmms1.sys/main.c           | 39 +++++++++++++++++++++++++++++++
+ 4 files changed, 48 insertions(+)
+ create mode 100644 dlls/dxgmms1.sys/Makefile.in
+ create mode 100644 dlls/dxgmms1.sys/dxgmms1.sys.spec
+ create mode 100644 dlls/dxgmms1.sys/main.c
+
+diff --git a/configure.ac b/configure.ac
+index 52c9a69eb59..2971e3e02e9 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2657,6 +2657,7 @@ WINE_CONFIG_MAKEFILE(dlls/dxdiagn/tests)
+ WINE_CONFIG_MAKEFILE(dlls/dxgi)
+ WINE_CONFIG_MAKEFILE(dlls/dxgi/tests)
+ WINE_CONFIG_MAKEFILE(dlls/dxgkrnl.sys)
++WINE_CONFIG_MAKEFILE(dlls/dxgmms1.sys)
+ WINE_CONFIG_MAKEFILE(dlls/dxtrans)
+ WINE_CONFIG_MAKEFILE(dlls/dxva2)
+ WINE_CONFIG_MAKEFILE(dlls/dxva2/tests)
+diff --git a/dlls/dxgmms1.sys/Makefile.in b/dlls/dxgmms1.sys/Makefile.in
+new file mode 100644
+index 00000000000..a548331e0ea
+--- /dev/null
++++ b/dlls/dxgmms1.sys/Makefile.in
+@@ -0,0 +1,6 @@
++MODULE    = dxgmms1.sys
++IMPORTS   = ntoskrnl
++EXTRADLLFLAGS = -mno-cygwin -Wb,--subsystem,native
++
++SOURCES = \
++	main.c
+diff --git a/dlls/dxgmms1.sys/dxgmms1.sys.spec b/dlls/dxgmms1.sys/dxgmms1.sys.spec
+new file mode 100644
+index 00000000000..124b0bf944d
+--- /dev/null
++++ b/dlls/dxgmms1.sys/dxgmms1.sys.spec
+@@ -0,0 +1,2 @@
++@ stub VidMmInterface
++@ stub VidSchInterface
+diff --git a/dlls/dxgmms1.sys/main.c b/dlls/dxgmms1.sys/main.c
+new file mode 100644
+index 00000000000..686493d3296
+--- /dev/null
++++ b/dlls/dxgmms1.sys/main.c
+@@ -0,0 +1,39 @@
++/*
++ * dxgmms1.sys driver
++ *
++ * Copyright 2017 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++
++#define NONAMELESSUNION
++
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "windef.h"
++#include "winbase.h"
++#include "winternl.h"
++#include "ddk/wdm.h"
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(dxgmms1);
++
++NTSTATUS WINAPI DriverEntry( DRIVER_OBJECT *driver, UNICODE_STRING *path )
++{
++    TRACE( "(%p, %s)\n", driver, debugstr_w(path->Buffer) );
++    return STATUS_SUCCESS;
++}
+-- 
+2.43.0
+
