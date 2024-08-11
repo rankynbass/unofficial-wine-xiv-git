@@ -1,0 +1,13 @@
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 4b23d9954df..92fc8a926f2 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -3849,6 +3849,8 @@ NTSTATUS virtual_alloc_thread_stack( INITIAL_TEB *stack, ULONG_PTR limit_low, UL
+     if (!reserve_size) reserve_size = main_image_info.MaximumStackSize;
+     if (!commit_size) commit_size = main_image_info.CommittedStackSize;
+ 
++    reserve_size = 2 * reserve_size;
++
+     size = max( reserve_size, commit_size );
+     if (size < 1024 * 1024) size = 1024 * 1024;  /* Xlib needs a large stack */
+     size = (size + 0xffff) & ~0xffff;  /* round to 64K boundary */
