@@ -1,0 +1,25 @@
+From a19a641e58d207a932fd6c2371cc41e82c39de26 Mon Sep 17 00:00:00 2001
+From: marzent <marc_aurel@me.com>
+Date: Wed, 20 Apr 2022 12:29:15 +0200
+Subject: [PATCH] make HideWineExports opt-out
+
+---
+ dlls/ntdll/loader.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index e9ddbd517d4..0f2b17dc83a 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -106,7 +106,7 @@ struct dll_dir_entry
+ 
+ static struct list dll_dir_list = LIST_INIT( dll_dir_list );  /* extra dirs from LdrAddDllDirectory */
+ 
+-static BOOL hide_wine_exports = FALSE;  /* try to hide ntdll wine exports from applications */
++static BOOL hide_wine_exports = TRUE;  /* try to hide ntdll wine exports from applications */
+ 
+ struct ldr_notification
+ {
+-- 
+2.32.0 (Apple Git-132)
+
