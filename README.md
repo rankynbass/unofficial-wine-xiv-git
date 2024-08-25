@@ -1,6 +1,6 @@
 # Wine to rule Eorzea !
 
-Nightly builds | [Arch Linux](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-ubuntu.yml) |
+Build Scripts | [Arch Linux](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-ubuntu.yml) |
 -------------|--------|--------|-------|
 
 ## PLEASE DO NOT REPORT BUGS ENCOUNTERED WITH THIS AT WINEHQ OR VALVESOFTWARE, REPORT HERE INSTEAD !
