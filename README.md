@@ -1,34 +1,12 @@
-# Wine to rule them all !
+# Wine to rule Eorzea !
 
-You must be logged in to GitHub in order to download Wine or Proton nightly builds.
-
-## Wine nightly builds
-
-- wine-staging patchset applied
-
-Wine | [Arch Linux](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-ubuntu.yml) |
+Nightly builds | [Arch Linux](https://github.com/rankynbass/wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/rankynbass/wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/rankynbass/wine-xiv-git/actions/workflows/wine-ubuntu.yml) |
 -------------|--------|--------|-------|
-
-Valve Wine | [Exp Bleeding Edge Arch Linux](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-valvexbe-pacman.yml) | [Exp Bleeding Edge Other distro](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-valvexbe.yml) |
--------------|--------|--------|
-
-*The Exp Bleeding Edge Other distro and LoL versions are built on Ubuntu latest, which should work fine on most distros not using years old packages*
-
-*! The LoL version should only be used for League of Legends !*
-
-## Proton nightly builds
-
-- wine-staging patchset applied
-- built on Arch current, making glibc 2.36 a requirement
-
-Proton | [Valve Exp Bleeding Edge](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/proton-valvexbe-arch-nopackage.yml) | [Wine Master](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/proton-arch-nopackage.yml) |
--------------|--------|--------|
-
-(drop the extracted folder in `/$HOME/.steam/root/compatibilitytools.d/` or, for Ubuntu/Debian based, the `/$HOME/.steam/compatibilitytools.d/` dir)
 
 ## PLEASE DO NOT REPORT BUGS ENCOUNTERED WITH THIS AT WINEHQ OR VALVESOFTWARE, REPORT HERE INSTEAD !
 
 Wine-tkg is a build-system aiming at easier custom wine builds creation. You can now easily get the "plain wine + pba + steam fix" build you've been dreaming about!
+Wine-xiv is based on wine-tkg and builds wine with several patches to improve the experience of FFXIV on Linux machines.
 
 It can also make custom Proton builds with its wrapping script: https://github.com/Frogging-Family/wine-tkg-git/tree/master/proton-tkg
 
