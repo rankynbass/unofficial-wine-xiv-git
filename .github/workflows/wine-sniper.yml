@@ -1,0 +1,30 @@
+name: Wine Sniper CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: registry.gitlab.steamos.cloud/proton/sniper/sdk
+
+    steps:
+
+      - uses: actions/checkout@v4
+      - name: Compilation
+        run: |
+          dpkg --add-architecture i386 && apt update
+          ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
+          DEBIAN_FRONTEND=noninteractive apt install -y tzdata aptitude git sudo
+          dpkg-reconfigure --frontend noninteractive tzdata
+          cd wine-tkg-git
+          sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
+          sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
+          echo '_ci_build="true"' >> customization.cfg
+          touch tarplz
+          yes|./non-makepkg-build.sh
+      - name: Archive the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-xiv-sniper
+          path: wine-tkg-git/non-makepkg-builds
