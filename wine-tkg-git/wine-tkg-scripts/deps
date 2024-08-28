@@ -61,6 +61,10 @@ _os_name() {
     _os="ubuntu"
   elif [[ "${_os}" == "garuda" ]] || [[ "${_os}" == "endeavouros" ]] || [[ "${_os}" == "cachyos" ]]; then
     _os="arch"
+  elif [[ "${_os}" == "steamrt" ]]; then
+    _os="debian"
+  elif [[ "${_os}" == "almalinux" ]]; then
+    _os="fedora"
   elif [[ "${_os}" != @(debian|ubuntu|redhat|fedora|arch|unknown) ]]; then
     warning "Current OS not explicitly handled by our dep resolver or not detected. Falling back to unknown..."
     _os="unknown"
