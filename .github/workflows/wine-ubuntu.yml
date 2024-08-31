@@ -19,7 +19,7 @@ jobs:
           sudo apt install libxkbregistry-dev
           cd wine-tkg-git 
           sed -i 's/distro=""/distro="debuntu"/' customization.cfg
-          sed -i 's/_wayland_driver="false"/_wayland_driver="true"' customization.cfg
+          sed -i 's/_wayland_driver="false"/_wayland_driver="true"/' customization.cfg
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
