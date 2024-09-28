@@ -1,0 +1,28 @@
+name: Wine Arch Linux CI
+
+on:
+  schedule:
+    - cron:  '45 8,20 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile
+        run: |
+          echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+          pacman -Syu --noconfirm base-devel sudo
+          useradd user -G wheel && echo "user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown user -R . && cd wine-tkg-git
+          sed -i 's/wayland_driver="false"/wayland_driver="true"/' customization.cfg
+          su user -c "yes|PKGDEST=/tmp/wine-tkg makepkg --noconfirm -s"
+
+      - name: Archive the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-tkg-build
+          path: /tmp/wine-tkg

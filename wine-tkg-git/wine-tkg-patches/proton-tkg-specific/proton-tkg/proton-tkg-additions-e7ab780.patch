@@ -109,9 +109,9 @@ index d02163cbaa8..d2ff071a9f2 100644
 +        if (NtGetTickCount() - thread_info->clipping_reset < 1000) return FALSE;
 +        if (!reset && clipping_cursor && thread_info->clipping_cursor) return FALSE;  /* already clipping */
 +    }
-     ctx = set_thread_dpi_awareness_context( NTUSER_DPI_PER_MONITOR_AWARE );
-     monitor_info = monitor_info_from_window( hwnd, MONITOR_DEFAULTTONEAREST );
-     virtual_rect = NtUserGetVirtualScreenRect();
+     if (!(monitor = NtUserMonitorFromWindow( hwnd, MONITOR_DEFAULTTONEAREST ))) return FALSE;
+     if (!NtUserGetMonitorInfo( monitor, &monitor_info )) return FALSE;
+     if (!grab_fullscreen)
 From 24d7f2bda1e98905206476fa3664ea8fa7bd7dd1 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Fri, 11 Jan 2019 11:34:03 -0600
@@ -231,9 +231,9 @@ index 91cb02b902e..9767fdcf681 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -621,6 +621,7 @@ struct x11drv_win_data
+     UINT        skip_taskbar : 1; /* does window should be deleted from taskbar */
      UINT        add_taskbar : 1; /* does window should be added to taskbar regardless of style */
      UINT        net_wm_fullscreen_monitors_set : 1; /* is _NET_WM_FULLSCREEN_MONITORS set */
-     UINT        is_fullscreen : 1; /* is the window visible rect fullscreen */
 +    UINT        pending_fullscreen : 1;
      int         wm_state;       /* current value of the WM_STATE property */
      DWORD       net_wm_state;   /* bit mask of active x11drv_net_wm_state values */
@@ -322,9 +322,9 @@ index 4cd2324bff2..815a6279e59 100644
   *     WindowPosChanged   (X11DRV.@)
   */
 @@ -2707,6 +2708,7 @@
+     struct x11drv_win_data *data;
      UINT new_style = NtUserGetWindowLongW( hwnd, GWL_STYLE );
      struct window_rects old_rects;
-     BOOL was_fullscreen;
 +    HWND prev_window = NULL;
      int event_type;
  
