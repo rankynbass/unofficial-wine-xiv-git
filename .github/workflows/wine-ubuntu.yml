@@ -19,7 +19,7 @@ jobs:
           cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
-          sed -i 's/-W ntdll-NtAlertThreadByThreadId/-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8/' wine-tkg-profiles/advanced-customization.cfg
+          sed -i 's/"-W ntdll-NtAlertThreadByThreadId"/"-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
