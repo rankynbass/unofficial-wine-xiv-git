@@ -1,7 +1,7 @@
-From 3d27fae698c4217fa04292cd043cf4bf8fb97bd9 Mon Sep 17 00:00:00 2001
-From: marzent <marc_aurel@me.com>
-Date: Wed, 20 Apr 2022 00:16:19 +0200
-Subject: [PATCH] implement unix pid maps in winedbg
+From 0145066911a7d23c812a3658ebab3c6303113dab Mon Sep 17 00:00:00 2001
+From: Rankyn Bass <rankyn@proton.me>
+Date: Sat, 6 May 2023 08:56:41 -0700
+Subject: [PATCH 1/4] Proton 8 unix pid maps
 
 ---
  programs/winedbg/dbg.y      |   3 +-
@@ -11,7 +11,7 @@ Subject: [PATCH] implement unix pid maps in winedbg
  4 files changed, 171 insertions(+), 1 deletion(-)
 
 diff --git a/programs/winedbg/dbg.y b/programs/winedbg/dbg.y
-index ad21e3b81c5..b1199c18f03 100644
+index df1e3461032..ed2fa3a1ab8 100644
 --- a/programs/winedbg/dbg.y
 +++ b/programs/winedbg/dbg.y
 @@ -52,7 +52,7 @@ static void parser(const char*);
@@ -23,7 +23,7 @@ index ad21e3b81c5..b1199c18f03 100644
  %token tFRAME tSHARE tMODULE tCOND tDISPLAY tUNDISPLAY tDISASSEMBLE tSYSTEM
  %token tSTEPI tNEXTI tFINISH tSHOW tDIR tWHATIS tSOURCE
  %token <string> tPATH tIDENTIFIER tSTRING tINTVAR
-@@ -284,6 +284,7 @@ info_command:
+@@ -287,6 +287,7 @@ info_command:
      | tINFO '*' tWND            { info_win32_window(NULL, TRUE); }
      | tINFO '*' tWND expr_rvalue { info_win32_window((HWND)(DWORD_PTR)$4, TRUE); }
      | tINFO tPROCESS            { info_win32_processes(); }
@@ -32,10 +32,10 @@ index ad21e3b81c5..b1199c18f03 100644
      | tINFO tFRAME              { info_win32_frame_exceptions(dbg_curr_tid); }
      | tINFO tFRAME expr_rvalue  { info_win32_frame_exceptions($3); }
 diff --git a/programs/winedbg/debug.l b/programs/winedbg/debug.l
-index 280013799c9..68e433a0b2b 100644
+index be528fed986..b4fc53dd218 100644
 --- a/programs/winedbg/debug.l
 +++ b/programs/winedbg/debug.l
-@@ -215,6 +215,7 @@ STRING     \"(\\[^\n]|[^\\"\n])*\"
+@@ -234,6 +234,7 @@ STRING     \"(\\[^\n]|[^\\"\n])*\"
  <INFO_CMD>locals|local|loca|loc		{ return tLOCAL; }
  <INFO_CMD>class|clas|cla                { return tCLASS; }
  <INFO_CMD>process|proces|proce|proc   	{ return tPROCESS; }
@@ -44,10 +44,10 @@ index 280013799c9..68e433a0b2b 100644
  <INFO_CMD>exception|except|exc|ex	{ return tEXCEPTION; }
  <INFO_CMD>registers|regs|reg|re		{ return tREGS; }
 diff --git a/programs/winedbg/debugger.h b/programs/winedbg/debugger.h
-index 1ae2dce4689..e308183793c 100644
+index 61fb055e53f..961e5a12893 100644
 --- a/programs/winedbg/debugger.h
 +++ b/programs/winedbg/debugger.h
-@@ -382,6 +382,7 @@ extern void             info_win32_module(DWORD64 mod);
+@@ -391,6 +391,7 @@ extern void             info_win32_module(DWORD64 mod);
  extern void             info_win32_class(HWND hWnd, const char* clsName);
  extern void             info_win32_window(HWND hWnd, BOOL detailed);
  extern void             info_win32_processes(void);
@@ -56,7 +56,7 @@ index 1ae2dce4689..e308183793c 100644
  extern void             info_win32_frame_exceptions(DWORD tid);
  extern void             info_win32_virtual(DWORD pid);
 diff --git a/programs/winedbg/info.c b/programs/winedbg/info.c
-index bb933aeb455..2b2382c6c11 100644
+index eff3c0948aa..58b34e13b36 100644
 --- a/programs/winedbg/info.c
 +++ b/programs/winedbg/info.c
 @@ -29,6 +29,7 @@
@@ -75,7 +75,7 @@ index bb933aeb455..2b2382c6c11 100644
              "  info reg             Displays values of the general registers at top of stack",
              "  info all-reg         Displays the general and floating point registers",
              "  info segments <pid>  Displays information about all known segments",
-@@ -483,6 +485,81 @@ struct dump_proc
+@@ -487,6 +489,81 @@ struct dump_proc
      unsigned               alloc;
  };
  
@@ -157,18 +157,18 @@ index bb933aeb455..2b2382c6c11 100644
  static unsigned get_parent(const struct dump_proc* dp, unsigned idx)
  {
      unsigned i;
-@@ -517,6 +594,48 @@ static void dump_proc_info(const struct dump_proc* dp, unsigned idx, unsigned de
+@@ -525,6 +602,48 @@ static void dump_proc_info(const struct dump_proc* dp, unsigned idx, unsigned de
      }
  }
  
 +static unsigned int find_unix_pid( struct pid_map *map, unsigned int num_entries, unsigned int pid )
 +{
 +    unsigned int i;
-+    
++
 +    for (i = 0; i < num_entries; i++)
 +        if (map[i].pid == pid)
 +            return map[i].unix_pid;
-+    
++
 +    return 0;
 +}
 +
@@ -177,9 +177,9 @@ index bb933aeb455..2b2382c6c11 100644
 +    struct pid_map *map = NULL;
 +    struct dump_proc_entry* dpe;
 +    unsigned int num_entries = 0;
-+    
++
 +    map = get_pid_map( &num_entries );
-+    
++
 +    for ( ; idx != -1; idx = dp->entries[idx].sibling)
 +    {
 +        assert(idx < dp->count);
@@ -199,14 +199,14 @@ index bb933aeb455..2b2382c6c11 100644
 +        dbg_printf("'%s'\n", dpe->proc.szExeFile);
 +        dump_proc_info_map(dp, dpe->children, depth + 1);
 +    }
-+    
++
 +    HeapFree( GetProcessHeap(), 0, map );
 +}
 +
  void info_win32_processes(void)
  {
      HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-@@ -565,6 +684,54 @@ void info_win32_processes(void)
+@@ -579,6 +698,54 @@ void info_win32_processes(void)
      }
  }
  
@@ -262,4 +262,4 @@ index bb933aeb455..2b2382c6c11 100644
  {
      BOOL   ret = FALSE;
 -- 
-2.32.0 (Apple Git-132)
+2.40.1
