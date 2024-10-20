@@ -39,7 +39,7 @@
 #
 # ===========================================================================================================================================================================
 
-pkgname=unofficial-wine-xiv
+pkgname=unofficial-wine-xiv-valvebe
 _build_in_tmpfs="true"
 _esyncsrcdir='esync'
 _where="$PWD" # Track the base directory as different Arch-based distros are moving srcdir around

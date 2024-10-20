@@ -1,0 +1,26 @@
+name: Wine Valve exp bleeding edge (Centos Build) CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: quay.io/centos/centos:stream9
+
+    steps:
+
+      - uses: actions/checkout@v4
+      - name: Compilation
+        run: |
+          sudo dnf -y -q upgrade --refresh
+          cd wine-tkg-git
+          sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
+          echo '_ci_build="true"' >> customization.cfg
+          touch tarplz
+          yes|./non-makepkg-build.sh
+      - name: Archive the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-xiv-valvebe
+          path: wine-tkg-git/non-makepkg-builds
