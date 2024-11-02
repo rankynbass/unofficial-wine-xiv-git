@@ -11,7 +11,9 @@ jobs:
     steps:
 
       - uses: actions/checkout@v4
-      - name: Compilation
+      - name: Compile
+        env:
+          XDG_CACHE_HOME: /tmp/.cache
         run: |
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel sudo
