@@ -2,6 +2,9 @@ name: Wine Valve exp bleeding edge (Centos Build) CI
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      "valvebe-[0-9]+-[0-9]+"
 
 jobs:
   build:
