@@ -47,32 +47,3 @@ index 8c2688f2a58..6bf4a0a4211 100644
  BOOL use_primary_selection = FALSE;
  BOOL use_system_cursors = TRUE;
  BOOL grab_fullscreen = TRUE;
-From 32821e17a97f4e0afb703eaf17280cadb8030a16 Mon Sep 17 00:00:00 2001
-From: Alexey Prokhin <alexey@prokhin.ru>
-Date: Wed, 17 Oct 2018 19:55:27 +0300
-Subject: [PATCH] winex11.drv: Ignore clip_reset when trying to clip the mouse
- after the desktop has been resized.
-
-This fixes the mouse clipping when the desktop is resized multiple times in a row.
----
- dlls/win32u/input.c | 7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
-
-diff --git a/dlls/win32u/input.c b/dlls/win32u/input.c
-index d02163cbaa8..d2ff071a9f2 100644
---- a/dlls/win32u/input.c
-+++ b/dlls/win32u/input.c
-@@ -2485,9 +2485,10 @@ BOOL clip_fullscreen_window( HWND hwnd, BOOL reset )
-     if (!NtUserGetWindowRect( hwnd, &rect )) return FALSE;
-     if (!NtUserIsWindowRectFullScreen( &rect )) return FALSE;
-     if (is_captured_by_system()) return FALSE;
--    if (NtGetTickCount() - thread_info->clipping_reset < 1000) return FALSE;
--    if (!reset && clipping_cursor && thread_info->clipping_cursor) return FALSE;  /* already clipping */
--
-+    if (!reset) {
-+        if (NtGetTickCount() - thread_info->clipping_reset < 1000) return FALSE;
-+        if (!reset && clipping_cursor && thread_info->clipping_cursor) return FALSE;  /* already clipping */
-+    }
-     ctx = set_thread_dpi_awareness_context( NTUSER_DPI_PER_MONITOR_AWARE );
-     monitor_info = monitor_info_from_window( hwnd, MONITOR_DEFAULTTONEAREST );
-     virtual_rect = NtUserGetVirtualScreenRect();
