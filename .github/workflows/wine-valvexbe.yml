@@ -17,6 +17,7 @@ jobs:
           sudo dpkg --add-architecture i386 && sudo apt update
           sudo apt install aptitude
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
+          sudo apt install libxkbregistry0 libxkbregistry-dev
           cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
           sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
