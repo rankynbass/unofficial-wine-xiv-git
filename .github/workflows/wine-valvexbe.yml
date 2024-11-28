@@ -21,8 +21,8 @@ jobs:
           sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
           sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
-          for f in wine-tkg-userpatches/valvexbe/*.patch; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.wine-patch}).mypatch"; done
-          for f in wine-tkg-userpatches/valvexbe/*.revert; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.wine-patch}).myrevert"; done
+          for f in wine-tkg-userpatches/valvexbe/*.patch; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+          for f in wine-tkg-userpatches/valvexbe/*.revert; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).myrevert"; done
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
