@@ -22,7 +22,7 @@ jobs:
           sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
           for f in wine-tkg-userpatches/valvexbe/*.patch; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
-          for f in wine-tkg-userpatches/valvexbe/*.revert; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).myrevert"; done
+          for f in wine-tkg-userpatches/valvexbe/*.revert; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
