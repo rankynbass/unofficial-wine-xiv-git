@@ -1,0 +1,25 @@
+From 7132b0b5e28ad4d62a8c03e060c148f062fe6075 Mon Sep 17 00:00:00 2001
+From: Marc-Aurel Zent <marc_aurel@me.com>
+Date: Mon, 12 Dec 2022 12:24:42 +0100
+Subject: [PATCH] do not prompt for mono install
+
+---
+ dlls/mscoree/mscoree_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/mscoree/mscoree_main.c b/dlls/mscoree/mscoree_main.c
+index a6134f0226b..df317fa3841 100644
+--- a/dlls/mscoree/mscoree_main.c
++++ b/dlls/mscoree/mscoree_main.c
+@@ -945,7 +945,7 @@ end:
+ 
+ HRESULT WINAPI DllRegisterServer(void)
+ {
+-    install_wine_mono();
++    //install_wine_mono();
+ 
+     return __wine_register_resources();
+ }
+-- 
+2.37.1 (Apple Git-137.1)
+

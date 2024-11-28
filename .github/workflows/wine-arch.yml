@@ -1,8 +1,10 @@
 name: Wine Arch Linux CI
 
 on:
-  push:
   workflow_dispatch:
+  push:
+    tags:
+      ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
   build:
@@ -11,20 +13,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Compile
+      - name: Compilation
         env:
           XDG_CACHE_HOME: /tmp/.cache
         run: |
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel sudo
-          useradd user -G wheel && echo "user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-          chown user -R . && cd wine-tkg-git
-          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' PKGBUILD
-          sed -i 's/wayland_driver="false"/wayland_driver="true"/' customization.cfg
-          su user -c "yes|PKGDEST=/tmp/wine-tkg makepkg --noconfirm -s"
-
+          cd wine-tkg-git
+          sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
+          for f in wine-tkg-userpatches/wine/*.wine-patch; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.wine-patch}).mypatch"; done
+          echo '_ci_build="true"' >> customization.cfg
+          touch tarplz
+          yes|./non-makepkg-build.sh
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-tkg-build
-          path: /tmp/wine-tkg
+          name: wine-xiv-arch
+          path: wine-tkg-git/non-makepkg-builds
