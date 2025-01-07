@@ -1,0 +1,112 @@
+From 407c9eb19c951b6574450348f8733cb86554646c Mon Sep 17 00:00:00 2001
+From: Claire Girka <claire@sitedethib.com>
+Date: Sat, 2 Jul 2022 12:16:34 +0200
+Subject: [PATCH 6/9] [draft] winepulse: Add support for containerId property
+ from sysfs path.
+
+---
+ dlls/winepulse.drv/pulse.c | 74 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 74 insertions(+)
+
+diff --git a/dlls/winepulse.drv/pulse.c b/dlls/winepulse.drv/pulse.c
+index db4289777da..8212b8004a5 100644
+--- a/dlls/winepulse.drv/pulse.c
++++ b/dlls/winepulse.drv/pulse.c
+@@ -45,6 +45,7 @@
+ #include "../mmdevapi/unixlib.h"
+ 
+ #include "mult.h"
++#include "devpkey.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(pulse);
+ 
+@@ -2536,6 +2537,76 @@ static BOOL get_device_path(PhysDevice *dev, struct get_prop_value_params *param
+     return TRUE;
+ }
+ 
++static BOOL get_device_container(PhysDevice *dev, struct get_prop_value_params *params)
++{
++    char buffer[10];
++    char *path, *p;
++    PROPVARIANT *out = params->value;
++
++    if (*params->buffer_size < sizeof(GUID)) {
++      params->result = E_NOT_SUFFICIENT_BUFFER;
++      *params->buffer_size = sizeof(GUID);
++      return FALSE;
++    }
++
++    if (dev->sysfs_path == NULL) {
++      params->result = E_FAIL;
++      return FALSE;
++    }
++
++    path = malloc(strlen(dev->sysfs_path) + strlen("/sys") + strlen("/removable") + 1);
++    path[0] = 0;
++
++    if (strncmp(dev->sysfs_path, "/sys", 4) != 0)
++        strcpy(path, "/sys");
++
++    strcat(path, dev->sysfs_path);
++
++    while ((p = strrchr(path, '/'))) {
++        FILE *f;
++
++        strcpy(p, "/removable");
++        f = fopen(path, "r");
++        *p = 0;
++
++        if (f) {
++            if (fgets(buffer, 10, f)) {
++                if (strcmp(buffer, "fixed") != 0) {
++                    /* It's a potentially removable device, so treat it as a container */
++                    fclose(f);
++                    break;
++                }
++            }
++            fclose(f);
++        }
++    }
++
++    /* Get just the USB bus-devpath part */
++    p = strrchr(path, '/');
++    if (p && (p - path) > 12) {
++        char *guid = (char*) params->buffer;
++        out->puuid = params->buffer;
++
++        memset(out->puuid, 0, sizeof(GUID));
++        out->puuid->Data1 = (dev->vendor_id << 16) | dev->product_id;
++
++        for (int i = 0; p[i]; i++) {
++          guid[4 + i % 12] ^= p[i];
++        }
++
++        out->vt = VT_CLSID;
++        params->result = S_OK;
++
++        free(path);
++        return TRUE;
++    }
++
++    free(path);
++
++    params->result = E_FAIL;
++    return FALSE;
++}
++
+ static NTSTATUS pulse_get_prop_value(void *args)
+ {
+     static const GUID PKEY_AudioEndpoint_GUID = {
+@@ -2554,6 +2625,9 @@ static NTSTATUS pulse_get_prop_value(void *args)
+         if (IsEqualPropertyKey(*params->prop, devicepath_key)) {
+             get_device_path(dev, params);
+             return STATUS_SUCCESS;
++        } else if (IsEqualPropertyKey(*params->prop, DEVPKEY_Device_ContainerId)) {
++            get_device_container(dev, params);
++            return STATUS_SUCCESS;
+         } else if (IsEqualGUID(&params->prop->fmtid, &PKEY_AudioEndpoint_GUID)) {
+             switch (params->prop->pid) {
+             case 0:   /* FormFactor */
+-- 
+2.47.1
+

@@ -1,0 +1,38 @@
+From 5357232357bf12a766be1fdc4080abfc0bd7b0bc Mon Sep 17 00:00:00 2001
+From: Claire Girka <claire@sitedethib.com>
+Date: Fri, 15 Jul 2022 22:09:57 +0200
+Subject: [PATCH 1/9] [pending review] mmdevapi: support VT_CLSID for
+ containerId property in MMDevice_SetPropValue.
+
+CLSID is special-cased to this property because we can't safely differentiate
+an encoded VT_CLSID from an encoded VT_BLOB.
+---
+ dlls/mmdevapi/devenum.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/dlls/mmdevapi/devenum.c b/dlls/mmdevapi/devenum.c
+index daafb4a822e..24f25628831 100644
+--- a/dlls/mmdevapi/devenum.c
++++ b/dlls/mmdevapi/devenum.c
+@@ -227,6 +227,18 @@ static HRESULT MMDevice_SetPropValue(const GUID *devguid, DWORD flow, REFPROPERT
+             ret = RegSetValueExW(regkey, buffer, 0, REG_SZ, (const BYTE*)pv->pwszVal, sizeof(WCHAR)*(1+lstrlenW(pv->pwszVal)));
+             break;
+         }
++        case VT_CLSID:
++        {
++            if (IsEqualPropertyKey(*key, DEVPKEY_Device_ContainerId)) {
++                BYTE value[24] = { VT_CLSID, 0, 0, 0, 1, 0, 0, 0 };
++                memcpy(value + 8, pv->puuid, sizeof(GUID));
++
++                ret = RegSetValueExW(regkey, buffer, 0, REG_BINARY, (const BYTE*)value, 24);
++                break;
++            }
++            /* If it's not containerId, fall through the default unsupported case as we can't
++               ensure it will be decoded as CLSID. */
++        }
+         default:
+             ret = 0;
+             FIXME("Unhandled type %u\n", pv->vt);
+-- 
+2.47.1
+

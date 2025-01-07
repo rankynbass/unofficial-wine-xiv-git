@@ -1,0 +1,39 @@
+From c39a2e52706b6f3cdd23f266484cf3ea4b1ddeaa Mon Sep 17 00:00:00 2001
+From: Claire Girka <claire@sitedethib.com>
+Date: Fri, 15 Jul 2022 22:09:57 +0200
+Subject: [PATCH 2/9] [pending review] mmdevapi: decode ContainerId property to
+ CLSID in MMDevice_GetPropValue.
+
+---
+ dlls/mmdevapi/devenum.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/dlls/mmdevapi/devenum.c b/dlls/mmdevapi/devenum.c
+index 24f25628831..8a427d347d9 100644
+--- a/dlls/mmdevapi/devenum.c
++++ b/dlls/mmdevapi/devenum.c
+@@ -191,6 +191,21 @@ static HRESULT MMDevice_GetPropValue(const GUID *devguid, DWORD flow, REFPROPERT
+             break;
+     }
+     RegCloseKey(regkey);
++
++    /* Special case ContainerID as CLSID */
++    if(pv->vt == VT_BLOB && pv->blob.pBlobData && pv->blob.cbSize == 24 && pv->blob.pBlobData[0] == VT_CLSID && IsEqualPropertyKey(*key, DEVPKEY_Device_ContainerId)) {
++        GUID *guid = CoTaskMemAlloc(sizeof(GUID));
++        if (!guid) {
++            PropVariantClear(pv);
++            hr = E_OUTOFMEMORY;
++        } else {
++            memcpy(guid, pv->blob.pBlobData + 8, sizeof(GUID));
++            CoTaskMemFree(pv->blob.pBlobData);
++            pv->vt = VT_CLSID;
++            pv->puuid = guid;
++        }
++    }
++
+     return hr;
+ }
+ 
+-- 
+2.47.1
+
