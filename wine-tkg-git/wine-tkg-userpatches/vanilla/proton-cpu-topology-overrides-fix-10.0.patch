@@ -1,0 +1,28 @@
+diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
+index ca5dac43bb0..bc6a5451611 100644
+--- a/dlls/ntdll/unix/thread.c
++++ b/dlls/ntdll/unix/thread.c
+@@ -1323,6 +1323,22 @@ ULONG WINAPI NtGetCurrentProcessorNumber(void)
+     __asm__ __volatile__("sidt %[p]" : [p] "=&m"(p));
+     processor = (ULONG)(p.p1 & 0xfff);
+     return processor;
++#elif defined(__linux__) && defined(__NR_getcpu)
++    int res = syscall(__NR_getcpu, &processor, NULL, NULL);
++    if (res != -1)
++    {
++        struct cpu_topology_override *override = get_cpu_topology_override();
++        unsigned int i;
++
++        if (!override)
++            return processor;
++
++        for (i = 0; i < override->cpu_count; ++i)
++            if (override->host_cpu_id[i] == processor)
++                return i;
++
++        WARN("Thread is running on processor which is not in the defined override.\n");
++    }
+ #endif
+ 
+     if (peb->NumberOfProcessors > 1)
+--
