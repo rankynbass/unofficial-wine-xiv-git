@@ -18,9 +18,8 @@ jobs:
         run: |
           sudo dnf -y -q upgrade --refresh
           cd wine-tkg-git
-          sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
+          ./xiv-staging.sh
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
-          for f in wine-tkg-userpatches/wine/*.patch; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh

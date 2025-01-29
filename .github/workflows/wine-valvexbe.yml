@@ -19,9 +19,7 @@ jobs:
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
           sudo apt install libxkbregistry0 libxkbregistry-dev libswresample4 libavcodec60 libavutil58 libncurses-dev libfreetype-dev
           cd wine-tkg-git
-          sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
-          sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
-          sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
+          ./xiv-valve.sh
           for f in wine-tkg-userpatches/valvexbe/*.patch; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
           for f in wine-tkg-userpatches/valvexbe/*.revert; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
           echo '_ci_build="true"' >> customization.cfg
