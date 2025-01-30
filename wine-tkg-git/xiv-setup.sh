@@ -64,6 +64,7 @@ else
         echo "Disabling protonify patchset"
         sed -i 's/_protonify="true"/_protonify="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
+        rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
     fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
@@ -71,6 +72,7 @@ else
         sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
+        rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
     else
         echo "Using ESync and FSync patches"
         sed -i 's/_use_esync="false"/_use_esync="true"/' customization.cfg
