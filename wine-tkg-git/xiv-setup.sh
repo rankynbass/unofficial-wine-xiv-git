@@ -3,14 +3,16 @@ echo "Setting up environment for Wine-XIV build"
 xiv_staging=1
 xiv_valve=0
 xiv_ntsync=0
+xiv_protonify=1
 
-while getopts ":nvshc" flag; do
+while getopts ":nvpshc" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
+        p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         h)
-            echo "Use -n to disable staging, -v to use valve wine, and -s to enable ntsync."
+            echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
             exit 0;;
         c)
             git clean -xdf
@@ -25,6 +27,7 @@ rm -f wine-tkg-userpatches/*.myrevert
 sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
+sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
 
 if [ "$xiv_valve" == "1" ]; then
     if [ "$xiv_ntsync" == "1" ]; then
@@ -50,16 +53,20 @@ else
         for f in wine-tkg-userpatches/wine/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
     else
         echo "Using Wine without Staging patches"
-        sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
         for f in wine-tkg-userpatches/vanilla/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+    fi
+    if [ "$xiv_protonify" == "0" ]; then
+        echo "Disabling protonify patchset"
+        sed -i 's/_protonify="true"/_protonify="false"/' customization.cfg
+        rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
     fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
         sed -i 's/_use_ntsync="false"/_use_ntsync="true"/' customization.cfg
         sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
-        rm wine-tkg-userpatches/thread-prios-protonify.mypatch
+        rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
     else
         echo "Using ESync and FSync patches"
         sed -i 's/_use_esync="false"/_use_esync="true"/' customization.cfg
