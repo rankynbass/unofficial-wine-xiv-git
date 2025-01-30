@@ -1,5 +1,4 @@
 #!/bin/bash
-echo "Setting up environment for Wine-XIV build"
 xiv_staging=1
 xiv_valve=0
 xiv_ntsync=0
@@ -18,8 +17,13 @@ while getopts ":nvpshc" flag; do
             git clean -xdf
             git restore .
             exit 0;;
+        \?) echo "Invalid option: ${OPTARG}"
+            echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
+            exit 1;;
     esac
 done
+
+echo "Setting up environment for Wine-XIV build"
 
 rm -f wine-tkg-userpatches/*.mypatch
 rm -f wine-tkg-userpatches/*.myrevert
