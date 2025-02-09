@@ -6,9 +6,10 @@ xiv_ntsync=0
 xiv_protonify=1
 xiv_wineversion=""
 xiv_stagingversion=""
+xiv_valveversion=""
 
 
-while getopts ":nvpsthcW:S:" flag; do
+while getopts ":nvpsthcW:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
@@ -17,11 +18,13 @@ while getopts ":nvpsthcW:S:" flag; do
         t) xiv_threads=1;;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
+        V) xiv_valveversion=${OPTARG};;
         h)
             echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
             echo "Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             echo "Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)"
             echo "Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)"
+            echo "Use -V <hash> or <tag> to set the valve bleeding edge commit hash or tag"
             echo "Use -c to clean up the repo and set it to a default state."
             exit 0;;
         c)
@@ -51,8 +54,15 @@ sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
 sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
-sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
-sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"${xiv_stagingversion}\"/" customization.cfg
+if [ -n "$xiv_wineversion" ]; then
+    sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
+fi
+if [ -n "$xiv_stagingversion" ]; then
+    sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"${xiv_stagingversion}\"/" customization.cfg
+fi
+if [ -n "$xiv_valveversion" ]; then
+    sed -i "s/_bleeding_tag=\"\(.*\)\"/_bleeding_tag=\"${xiv_valveversion}\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+fi
 
 
 

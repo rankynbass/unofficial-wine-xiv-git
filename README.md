@@ -28,7 +28,7 @@ sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
 sudo apt install libxkbregistry0 libxkbregistry-dev
 ```
 
-Then simply clone the repo, cd into the directory, and run the following command to see your options:
+After you've set up your build environment, simply clone the repo, cd into the directory, and run the following command to see your options:
 ```
 git clone https://github.com/rankynbass/unofficial-wine-xiv-git
 cd unofficial-wine-xiv-git/wine-tkg
@@ -41,9 +41,15 @@ Use -n to disable staging, -v to use valve wine, -p to disable protonify patchse
 Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
 Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)
 Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)
+Use -V <hash> or <tag> to set the valve bleeding edge commit hash or tag
 Use -c to clean up the repo and set it to a default state.
 ```
-Then run it again with the appropriate flags to set up the patches and configuration files. Run `yes | ./non-makepkg-build.sh` to build.
+Then run it again with the appropriate flags to set up the patches and configuration files. 
+* If you do not set a version flag, it will use whatever is already in the customization.cfg or wine-tkg-exp-bleeding.cfg files.
+* If you set the version flag to `""` it will use the latest commit instead of a specific version.
+* `-t` should only be used on non-ntsync wine-staging builds prior to 10.1. I've tested it as far back as 8.21, but it may work on earlier versions as well. 
+
+Run `yes | ./non-makepkg-build.sh` to build. I usually use `yes | ./non-makepkg-build.sh 2>&1 | tee buildfile.log` so that the output is piped to the console and to a file.
 
 ***WARNING for NTSYNC builds***
 If you are using arch with cachyos repos (and not cachyos from its own installer), the above command *will* fail and get stuck in a loop due to having multiple repos. The first time you will have to
@@ -62,9 +68,10 @@ For 10.0 and earlier, add the -t flag to enable the thread priorities patch (inc
 
 This needs to be done on arch or Ubuntu 24.04 or later. I haven't tested it on Fedora, and it fails on Ubuntu 22.04 and earlier.
 ```
-./xiv-setup.sh -v
+./xiv-setup.sh -v -V ""
 yes | ./non-makepkg-build.sh 2>&1 | tee valve.log
 ```
+This will build vavle bleeding edge wine with the latest commit.
 
 **Example 3: NTSync**
 ```
