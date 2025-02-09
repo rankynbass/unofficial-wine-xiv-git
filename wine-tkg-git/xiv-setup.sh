@@ -57,14 +57,14 @@ else
     if [ "$xiv_staging" == "1" ]; then
         echo "Using Wine Staging"
         sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
-        for f in wine-tkg-userpatches/wine/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
-        if [ "$xiv_threads" == "0" ]; then
-            rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
+        for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+        if [ "$xiv_threads" == "1" ]; then
+            cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
         fi
     else
         echo "Using Wine without Staging patches"
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
-        for f in wine-tkg-userpatches/vanilla/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+        for f in wine-tkg-userpatches/mainline/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
     fi
     if [ "$xiv_protonify" == "0" ]; then
         echo "Disabling protonify patchset"
