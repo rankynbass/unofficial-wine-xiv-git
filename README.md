@@ -1,4 +1,4 @@
-# Wine to rule Eorzea !
+# Wine to rule Eorzea (Unofficially)!
 
 Nightly builds | [Arch Linux](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-ubuntu.yml) |
 -------------|--------|--------|-------|
