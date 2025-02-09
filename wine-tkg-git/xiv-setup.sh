@@ -1,17 +1,20 @@
 #!/bin/bash
 xiv_staging=1
+xiv_threads=0
 xiv_valve=0
 xiv_ntsync=0
 xiv_protonify=1
 
-while getopts ":nvpshc" flag; do
+while getopts ":nvpsthc" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
+        t) xiv_threads=1;;
         h)
             echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
+            echo "Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             exit 0;;
         c)
             git clean -xdf
@@ -55,6 +58,9 @@ else
         echo "Using Wine Staging"
         sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
         for f in wine-tkg-userpatches/wine/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+        if [ "$xiv_threads" == "0" ]; then
+            rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
+        fi
     else
         echo "Using Wine without Staging patches"
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
