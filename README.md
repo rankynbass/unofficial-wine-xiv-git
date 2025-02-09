@@ -1,37 +1,82 @@
 # Wine to rule Eorzea (Unofficially)!
 
-Nightly builds | [Arch Linux](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/goatcorp/wine-xiv-git/actions/workflows/wine-ubuntu.yml) |
--------------|--------|--------|-------|
-
-Valve Wine | [Exp Bleeding Edge Arch Linux](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-valvexbe-pacman.yml) | [Exp Bleeding Edge Other distro](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/wine-valvexbe.yml) |
--------------|--------|--------|
-
-*The Exp Bleeding Edge Other distro versions are built on Ubuntu latest, which should work fine on most distros not using years old packages*
-
-## Proton nightly builds
-
-- wine-staging patchset applied
-- built on Arch current, making glibc 2.36 a requirement
-
-Proton | [Valve Exp Bleeding Edge](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/proton-valvexbe-arch-nopackage.yml) | [Wine Master](https://github.com/Frogging-Family/wine-tkg-git/actions/workflows/proton-arch-nopackage.yml) |
--------------|--------|--------|
-
-(drop the extracted folder in `/$HOME/.steam/root/compatibilitytools.d/` or, for Ubuntu/Debian based, the `/$HOME/.steam/compatibilitytools.d/` dir)
+Build Scripts | [Arch Linux](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-ubuntu.yml) | [Valve Bleeding Edge](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-valvexbe.yml) |
+-------------|--------|--------|-------|-------|
 
 ## PLEASE DO NOT REPORT BUGS ENCOUNTERED WITH THIS AT WINEHQ OR VALVESOFTWARE, REPORT HERE INSTEAD !
+Unofficial-wine-xiv is based on wine-tkg and builds wine with several patches to improve the experience of FFXIV on Linux machines. Wine-tkg is a build-system aiming at easier custom wine builds creation.
 
-Wine-tkg is a build-system aiming at easier custom wine builds creation. You can now easily get the "plain wine + pba + steam fix" build you've been dreaming about!
-Wine-xiv is based on wine-tkg and builds wine with several patches to improve the experience of FFXIV on Linux machines.
+I've set up a custom script to make building wine on your own machine a bit easier. I recommend compiling in a [Distrobox container](https://distrobox.it/), unless you are building for ntsync. If you want to build ntsync, you'll need to compile on your base system or set up a full VM with an ntsync-enabled kernel and kernel headers. I use [Vagrant](https://www.vagrantup.com/) with arch linux and cachyos repos for this.
 
-It can also make custom Proton builds with its wrapping script: https://github.com/Frogging-Family/wine-tkg-git/tree/master/proton-tkg
+If you are going to use a distrobox, create/enter it now and make sure that `git` and any additional required dev packages are installed.
 
-**By default, it'll pull current wine/wine-staging git versions. You can target a specific release or commit in the .cfg if needed.**
+Arch: Make sure multilib is enabled in /etc/pacman.conf
+```
+sudo pacman -Syu --no-confirm git base-devel
+```
 
-A comfortable selection of patches is available to you, with some of them being enabled by default for your convenience (see [this sample config file](https://github.com/Frogging-Family/wine-tkg-git/blob/master/wine-tkg-git/wine-tkg-profiles/sample-external-config.cfg) for the full list and details)
+Fedora:
+```
+sudo dnf install git
+```
 
-An ever evolving selection of staging, experimental and/or hacky patches are also available [in the community-patches](https://github.com/Frogging-Family/community-patches/tree/master/wine-tkg-git)
+Ubuntu:
+```
+sudo dpkg --add-architecture i386 && sudo apt update
+sudo apt install aptitude
+sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
+sudo apt install libxkbregistry0 libxkbregistry-dev
+```
 
-**Can be built with your own patches - See [README in wine-tkg-git/wine-tkg-userpatches](https://github.com/Frogging-Family/wine-tkg-git/blob/master/wine-tkg-git/wine-tkg-userpatches/README.md) for instructions**
+Then simply clone the repo, cd into the directory, and run the following command to see your options:
+```
+git clone https://github.com/rankynbass/unofficial-wine-xiv-git
+cd unofficial-wine-xiv-git/wine-tkg
+./xiv-setup.sh -h
+```
+
+That will give you the following output:
+```
+Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync.
+Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
+Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)
+Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)
+Use -c to clean up the repo and set it to a default state.
+```
+Then run it again with the appropriate flags to set up the patches and configuration files. Run `yes | ./non-makepkg-build.sh` to build.
+
+***WARNING for NTSYNC builds***
+If you are using arch with cachyos repos (and not cachyos from its own installer), the above command *will* fail and get stuck in a loop due to having multiple repos. The first time you will have to
+babysit the install. Just run `./non-makepkg-build.sh` and be prepared to hit enter a bunch of times until it starts compiling.
+
+**Example 1: Do a basic staging build**
+
+This will build staging 10.1 and output the build info to the console and the staging-10.1.log file.
+```
+./xiv-setup.sh -S v10.1
+yes | ./non-makepkg-build.sh 2>&1 | tee staging-10.1.log
+```
+For 10.0 and earlier, add the -t flag to enable the thread priorities patch (included in 10.1 and later)
+
+**Example 2: Do a valve bleeding edge build**
+
+This needs to be done on arch or Ubuntu 24.04 or later. I haven't tested it on Fedora, and it fails on Ubuntu 22.04 and earlier.
+```
+./xiv-setup.sh -v
+yes | ./non-makepkg-build.sh 2>&1 | tee valve.log
+```
+
+**Example 3: NTSync**
+```
+./xiv-setup.sh -s -S v10.0
+yes | ./non-makepkg-build.sh 2>&1 | tee ntsync.log
+```
+This will build wine-staging 10.0 with ntsync patches.
+
+### This repo uses Wine-tkg build system and patches from Wine-xiv-git
+For more information on using this build system, check out the original repo: [Frogging-Family/wine-tkg-git](https://github.com/Frogging-Family/wine-tkg-git)
+
+For the official Wine-xiv-git repo and patches: [goatcorp/wine-xiv-git](https://github.com/goatcorp/wine-xiv-git)
 
 ### Generated Wine-tkg sources (staging-based):
  - Wine-tkg : https://github.com/Tk-Glitch/wine-tkg
@@ -46,11 +91,3 @@ Wine esync : https://github.com/zfigura/wine/tree/esync
 Wine fsync : https://github.com/zfigura/wine/tree/fsync
 
 Proton : https://github.com/ValveSoftware/Proton
-
-Wine-pba (Only working correctly up to 3.18 - Force disabled on newer wine bases due to regressions) : https://github.com/acomminos/wine-pba
-
-Thanks to @Firerat and @bobwya for their rebase work :
-- https://gitlab.com/Firer4t/wine-pba
-- https://github.com/bobwya/gentoo-wine-pba
-
-For Gallium 9 support, use https://github.com/iXit/wine-nine-standalone (available from winetricks and AUR) - Legacy nine support can still be turned on if you're building a 4.1 base or older.
