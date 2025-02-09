@@ -4,17 +4,24 @@ xiv_threads=0
 xiv_valve=0
 xiv_ntsync=0
 xiv_protonify=1
+xiv_wineversion=""
+xiv_stagingversion=""
 
-while getopts ":nvpsthc" flag; do
+
+while getopts ":nvpsthcW:S:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
+        W) xiv_wineversion=${OPTARG};;
+        S) xiv_stagingversion=${OPTARG};;
         h)
             echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
             echo "Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
+            echo "Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)"
+            echo "Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)" 
             exit 0;;
         c)
             git clean -xdf
@@ -26,6 +33,14 @@ while getopts ":nvpsthc" flag; do
     esac
 done
 
+# echo "xiv_staging=${xiv_staging}"
+# echo "xiv_valve=${xiv_valve}"
+# echo "xiv_protonify=${xiv_protonify}"
+# echo "xiv_ntsync=${xiv_ntsync}"
+# echo "xiv_threads=${xiv_threads}"
+# echo "xiv_wineversion=${xiv_wineversion}"
+# echo "xiv_stagingversion=${xiv_stagingversion}"
+
 echo "Setting up environment for Wine-XIV build"
 
 rm -f wine-tkg-userpatches/*.mypatch
@@ -35,6 +50,10 @@ sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
 sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
+sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
+sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"${xiv_stagingversion}\"/" customization.cfg
+
+
 
 if [ "$xiv_valve" == "1" ]; then
     if [ "$xiv_ntsync" == "1" ]; then
