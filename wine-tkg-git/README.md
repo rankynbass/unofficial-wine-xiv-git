@@ -1,4 +1,4 @@
-# Wine to rule Eorzea (Unofficially)!
+# Wine to rule Eorzea &lpar;Unofficially&rpar;!
 
 Build Scripts | [Arch Linux](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-arch.yml) | [Fedora](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-fedora.yml) | [Ubuntu](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-ubuntu.yml) | [Valve Bleeding Edge](https://github.com/rankynbass/unofficial-wine-xiv-git/actions/workflows/wine-valvexbe.yml) |
 -------------|--------|--------|-------|-------|
