@@ -21,7 +21,8 @@ while getopts ":nvpsthcW:S:" flag; do
             echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
             echo "Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             echo "Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)"
-            echo "Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)" 
+            echo "Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)"
+            echo "Use -c to clean up the repo and set it to a default state."
             exit 0;;
         c)
             git clean -xdf
