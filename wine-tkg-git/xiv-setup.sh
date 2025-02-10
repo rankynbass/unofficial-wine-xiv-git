@@ -1,31 +1,48 @@
 #!/bin/bash
 xiv_staging=1
 xiv_threads=0
+xiv_fsyncfix=1
 xiv_valve=0
 xiv_ntsync=0
 xiv_protonify=1
 xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
+xiv_nomingw="false"
 
 
-while getopts ":nvpsthcW:S:V:" flag; do
+while getopts ":nvpstfmhcW:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
+        f) xiv_fsyncfix=0;;
+        m) xiv_nomingw="true";;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
         V) xiv_valveversion=${OPTARG};;
         h)
-            echo "Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync."
-            echo "Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
-            echo "Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)"
-            echo "Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)"
-            echo "Use -V <hash> or <tag> to set the valve bleeding edge commit hash or tag"
-            echo "Use -c to clean up the repo and set it to a default state."
+            echo "usage: xiv-setup.sh [OPTION...]"
+            echo ""
+            echo "Main flags:"
+            echo "  -c      clean up the repo and set it to a default state."
+            echo "  -n      disable staging"
+            echo "  -v      use valve wine"
+            echo "  -p      disable protonify patchset (non-valve wine only)"
+            echo "  -s      enable ntsync"
+            echo "  -m      disable mingw-gcc for building PE files"
+            echo ""
+            echo "Extra patches and fixes:"
+            echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
+            echo "  -f      disable the fsync fix. Use for pre-10.1 wine."
+            echo ""
+            echo "Version flags:"
+            echo "  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)"
+            echo "  -S <version>        set staging version. Must be a valid tag or commit hash (v10.1)"
+            echo "  -V <hash> or <tag>  set the valve bleeding edge commit hash or tag"
+
             exit 0;;
         c)
             git clean -xdf
@@ -52,16 +69,21 @@ rm -f wine-tkg-userpatches/*.myrevert
 
 sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
+sed -i "s/_NO_MINGW=\"\(.*\)\"/_NO_MINGW=\"${xiv_nomingw}\"/" wine-tkg-profiles/advanced-customization.cfg
+echo "Using _NO_MINGW=${xiv_nomingw}"
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
 sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
 if [ -n "$xiv_wineversion" ]; then
-    sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
+    sed -i "s/_plain_version=\"\(.\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
+    echo "Setting plain wine version to ${xiv_wineversion}"
 fi
 if [ -n "$xiv_stagingversion" ]; then
     sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"${xiv_stagingversion}\"/" customization.cfg
+    echo "Setting wine-staging version to ${xiv_stagingversion}"
 fi
 if [ -n "$xiv_valveversion" ]; then
     sed -i "s/_bleeding_tag=\"\(.*\)\"/_bleeding_tag=\"${xiv_valveversion}\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+    echo "Setting valve experimental to commit/tag ${xiv_valveversion}"
 fi
 
 
@@ -91,6 +113,10 @@ else
         if [ "$xiv_threads" == "1" ]; then
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
         fi
+        if [ "$xiv_fsyncfix" == "0" ]; then
+            echo "Disabling fsync fix"
+            rm -f wine-tkg-userpatches/fsync-fix-for-10.1.mypatch
+        fi
     else
         echo "Using Wine without Staging patches"
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
@@ -109,6 +135,7 @@ else
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
         rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
+        rm -f wine-tkg-userpatches/fsync-fix-for-10.1.mypatch
     else
         echo "Using ESync and FSync patches"
         sed -i 's/_use_esync="false"/_use_esync="true"/' customization.cfg

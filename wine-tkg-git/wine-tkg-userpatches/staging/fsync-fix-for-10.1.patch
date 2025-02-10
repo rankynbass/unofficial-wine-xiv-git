@@ -1,0 +1,34 @@
+--- a/dlls/ntdll/unix/sync.c
++++ b/dlls/ntdll/unix/sync.c
+@@ -1401,16 +1401,30 @@ NTSTATUS WINAPI NtYieldExecution(void)
+ NTSTATUS WINAPI NtDelayExecution( BOOLEAN alertable, const LARGE_INTEGER *timeout )
+ {
+     unsigned int status = STATUS_SUCCESS;
+ 
+     /* if alertable, we need to query the server */
+     if (alertable)
+     {
++        if (do_fsync())
++        {
++            NTSTATUS ret = fsync_wait_objects( 0, NULL, TRUE, TRUE, timeout );
++            if (ret != STATUS_NOT_IMPLEMENTED)
++                return ret;
++        }
++
++        if (do_esync())
++        {
++            NTSTATUS ret = esync_wait_objects( 0, NULL, TRUE, TRUE, timeout );
++            if (ret != STATUS_NOT_IMPLEMENTED)
++                return ret;
++        }
++
+         /* Since server_wait will result in an unconditional implicit yield,
+            we never return STATUS_NO_YIELD_PERFORMED */
+         if ((status = server_wait( NULL, 0, SELECT_INTERRUPTIBLE | SELECT_ALERTABLE, timeout )) == STATUS_TIMEOUT)
+             status = STATUS_SUCCESS;
+         return status;
+     }
+ 
+     if (!timeout || timeout->QuadPart == TIMEOUT_INFINITE)  /* sleep forever */
+     {
+--
