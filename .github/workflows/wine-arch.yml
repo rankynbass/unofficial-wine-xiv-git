@@ -19,9 +19,6 @@ jobs:
         run: |
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel sudo
-          curl -L https://archive.archlinux.org/packages/m/mingw-w64-binutils/mingw-w64-binutils-2.43-1-x86_64.pkg.tar.zst -o mingw-w64-binutils.pkg.tar.zst
-          curl -L https://archive.archlinux.org/packages/b/binutils/binutils-2.43_1%2Br186%2Bg61f8adadd6db-1-x86_64.pkg.tar.zst -o binutils.pkg.tar.zst
-          pacman --noconfirm -U  mingw-w64-binutils.pkg.tar.zst binutils.pkg.tar.zst
           cd wine-tkg-git
           ./xiv-setup.sh -m -S v10.1
           echo '_ci_build="true"' >> customization.cfg

@@ -1,25 +1,21 @@
 #!/bin/bash
 xiv_staging=1
 xiv_threads=0
-xiv_fsyncfix=1
 xiv_valve=0
 xiv_ntsync=0
 xiv_protonify=1
 xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
-xiv_nomingw="false"
 
 
-while getopts ":nvpstfmhcW:S:V:" flag; do
+while getopts ":nvpsthcW:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
-        f) xiv_fsyncfix=0;;
-        m) xiv_nomingw="true";;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
         V) xiv_valveversion=${OPTARG};;
@@ -32,11 +28,9 @@ while getopts ":nvpstfmhcW:S:V:" flag; do
             echo "  -v      use valve wine"
             echo "  -p      disable protonify patchset (non-valve wine only)"
             echo "  -s      enable ntsync"
-            echo "  -m      disable mingw-gcc for building PE files"
             echo ""
             echo "Extra patches and fixes:"
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
-            echo "  -f      disable the fsync fix. Use for pre-10.1 wine."
             echo ""
             echo "Version flags:"
             echo "  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)"
@@ -69,8 +63,6 @@ rm -f wine-tkg-userpatches/*.myrevert
 
 sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
-sed -i "s/_NO_MINGW=\"\(.*\)\"/_NO_MINGW=\"${xiv_nomingw}\"/" wine-tkg-profiles/advanced-customization.cfg
-echo "Using _NO_MINGW=${xiv_nomingw}"
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
 sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
 if [ -n "$xiv_wineversion" ]; then
@@ -113,10 +105,6 @@ else
         if [ "$xiv_threads" == "1" ]; then
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
         fi
-        if [ "$xiv_fsyncfix" == "0" ]; then
-            echo "Disabling fsync fix"
-            rm -f wine-tkg-userpatches/fsync-fix-for-10.1.mypatch
-        fi
     else
         echo "Using Wine without Staging patches"
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
@@ -126,7 +114,6 @@ else
         echo "Disabling protonify patchset"
         sed -i 's/_protonify="true"/_protonify="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
-        rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
     fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
@@ -134,8 +121,6 @@ else
         sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
-        rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
-        rm -f wine-tkg-userpatches/fsync-fix-for-10.1.mypatch
     else
         echo "Using ESync and FSync patches"
         sed -i 's/_use_esync="false"/_use_esync="true"/' customization.cfg
