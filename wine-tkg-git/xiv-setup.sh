@@ -96,9 +96,7 @@ if [ "$xiv_valve" == "1" ]; then
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using ntsync valve patches. Known to work with commit b561e8d5d8a86062ca783296cb28ffe6e2be593"
         cp wine-tkg-userpatches/valvexbe/ntsync-latest.disabled wine-tkg-userpatches/ntsync-latest.mypatch
-        rm -f wine-tkg-userpatches/*.myrevert
-        rm -f wine-tkg-userpatches/0003-ntdll-Downgrade-using-kernel-write-watches-from-MESS.mypatch
-        rm -f wine-tkg-userpatches/proton-fshack-AMD-FSR-complete.mypatch
+        # rm -f wine-tkg-userpatches/proton-fshack-AMD-FSR-complete.mypatch
     fi
 else
     if [ "$xiv_staging" == "1" ]; then
