@@ -85,6 +85,13 @@ _prebuild_common() {
 		fi
 	fi
 
+	# Check wine commit and change lib path to workaround
+	if (cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8c3f205696571558a6fae42314370fbd7cc14a12 HEAD); then
+		export _new_makefiles="true"
+	else
+		export _new_makefiles="false"
+	fi
+
 	echo -e "\nconfigure arguments: ${_configure_args[@]}\n" >>"$_where"/last_build_config.log
 }
 
@@ -204,11 +211,19 @@ _package_nomakepkg() {
 		local _lib32name="lib"
 		local _lib64name="lib"
 	elif [ -e /lib ] && [ -e /lib64 ] && [ -d /usr/lib ] && [ -d /usr/lib32 ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then
-		local _lib32name="lib32"
+		if [ "$_new_makefiles" = "true" ]; then
+			local _lib32name="lib"
+		else
+			local _lib32name="lib32"
+		fi
 		local _lib64name="lib"
 	else
 		local _lib32name="lib"
-		local _lib64name="lib64"
+		if [ "$_new_makefiles" = "true" ]; then
+			local _lib64name="lib"
+		else
+			local _lib64name="lib64"
+		fi
 	fi
 
 	# External install
@@ -359,12 +374,21 @@ _package_nomakepkg() {
 
 _package_makepkg() {
 	local _prefix=/usr
-	local _lib32name="lib32"
+	if [ "$_new_makefiles" = "true" ]; then
+		local _lib32name="lib"
+	else
+		local _lib32name="lib32"
+	fi
 	local _lib64name="lib"
 
 	# External install
 	if [ "$_EXTERNAL_INSTALL" = "true" ]; then
-		_lib32name="lib" && _lib64name="lib64"
+		if [ "$_new_makefiles" = "true" ]; then
+			_lib32name="lib" && _lib64name="lib"
+		else
+			_lib32name="lib" && _lib64name="lib64"
+		fi
+
 		if [ "$_EXTERNAL_NOVER" = "true" ]; then
 			_prefix="$_DEFAULT_EXTERNAL_PATH/$pkgname"
 		else
@@ -508,7 +532,7 @@ _package_makepkg() {
 		fi
 	fi
 
-	if [ "$_use_fastsync" = "true" ]; then
+	if [ "$_use_fastsync" = "true" ] || [ "$_use_ntsync" = "true" ]; then
 		msg2 '##########################################################################################################################'
 		msg2 ''
 		msg2 'To disable NTsync, export WINE_DISABLE_FAST_SYNC=1'
