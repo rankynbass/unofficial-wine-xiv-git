@@ -1,0 +1,52 @@
+From 6db12ec816d92c8de931600343fe84bf6671b663 Mon Sep 17 00:00:00 2001
+From: Marc-Aurel Zent <mzent@codeweavers.com>
+Date: Mon, 29 Jul 2024 11:18:34 +0200
+Subject: [PATCH] HACK: dbghelp: Suppress SymInitializeW for FFXIV.
+
+---
+ dlls/dbghelp/dbghelp.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/dlls/dbghelp/dbghelp.c b/dlls/dbghelp/dbghelp.c
+index 4e6938cb557..a9b93889012 100644
+--- a/dlls/dbghelp/dbghelp.c
++++ b/dlls/dbghelp/dbghelp.c
+@@ -436,6 +436,24 @@ static BOOL check_live_target(struct process* pcs, BOOL wow64, BOOL child_wow64)
+     return TRUE;
+ }
+ 
++
++static BOOL is_ffxiv(void)
++{
++    static int status = -1;
++    if (status == -1)
++    {
++        WCHAR name[MAX_PATH], *module_exe;
++        if (GetModuleFileNameW(NULL, name, ARRAYSIZE(name)))
++        {
++            module_exe = wcsrchr(name, '\\');
++            module_exe = module_exe ? module_exe + 1 : name;
++            status = !wcsicmp(module_exe, L"ffxiv_dx11.exe");
++        }
++    }
++
++    return status;
++}
++
+ /******************************************************************
+  *		SymInitializeW (DBGHELP.@)
+  *
+@@ -469,6 +487,13 @@ BOOL WINAPI SymInitializeW(HANDLE hProcess, PCWSTR UserSearchPath, BOOL fInvadeP
+ 
+     TRACE("(%p %s %u)\n", hProcess, debugstr_w(UserSearchPath), fInvadeProcess);
+ 
++    if (is_ffxiv()) 
++    {
++        ERR("suppressed for FFXIV!\n");
++        SetLastError(ERROR_NOT_SUPPORTED);
++        return FALSE;
++    }
++
+     if (process_find_by_handle(hProcess))
+     {
+         WARN("the symbols for this process have already been initialized!\n");
