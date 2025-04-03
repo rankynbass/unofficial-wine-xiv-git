@@ -19,7 +19,7 @@ jobs:
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
           sudo apt install libxkbregistry0 libxkbregistry-dev libswresample4 libavcodec60 libavutil58 libncurses-dev libfreetype-dev
           cd wine-tkg-git
-          ./xiv-setup.sh -v -V b9323b13eeb210bf59851b1a3886ac187cfdc960
+          ./xiv-setup.sh -v -V 71b75ebe1ec2a6c56f841e8b1aaf3b6d35585b45
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
