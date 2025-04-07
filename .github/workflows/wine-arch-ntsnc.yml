@@ -12,7 +12,28 @@ jobs:
     container: archlinux:latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+          pacman -Syu --noconfirm base-devel sudo lib32-jack2 git vulkan-headers
+
+      - name: Create User
+        run: |
+          useradd -m -G wheel -s /bin/bash user
+          echo "user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - name: Build and Install ntsync-header from PKGBUILD
+        run: |
+          sudo -u user bash -c "
+            cd ~
+            git clone https://aur.archlinux.org/ntsync.git
+            cd ntsync
+            makepkg -si --noconfirm
+          "
+
       - name: Compilation
         env:
           XDG_CACHE_HOME: /tmp/.cache
