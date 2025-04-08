@@ -36,12 +36,12 @@ jobs:
         env:
           XDG_CACHE_HOME: /tmp/.cache
         run: |
-          chown user -R . && cd wine-tkg-git
+          cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' PKGBUILD
           sed -i 's/wayland_driver="false"/wayland_driver="true"/' customization.cfg
-          sed -i 's/_use_ntsync=\"false\"/_use_ntsync=\"true\"/' proton-tkg.cfg
-          sed -i 's/_use_esync=\"true\"/_use_esync=\"false\"/' proton-tkg.cfg
-          sed -i 's/_use_fsync=\"true\"/_use_fsync=\"false\"/' proton-tkg.cfg
+          sed -i 's/_use_ntsync=\"false\"/_use_ntsync=\"true\"/' customization.cfg
+          sed -i 's/_use_esync=\"true\"/_use_esync=\"false\"/' customization.cfg
+          sed -i 's/_use_fsync=\"true\"/_use_fsync=\"false\"/' customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
