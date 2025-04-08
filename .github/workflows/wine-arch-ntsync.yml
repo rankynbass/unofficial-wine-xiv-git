@@ -37,7 +37,7 @@ jobs:
           XDG_CACHE_HOME: /tmp/.cache
         run: |
           cd wine-tkg-git
-          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' PKGBUILD
+          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
           sed -i 's/wayland_driver="false"/wayland_driver="true"/' customization.cfg
           sed -i 's/_use_ntsync=\"false\"/_use_ntsync=\"true\"/' customization.cfg
           sed -i 's/_use_esync=\"true\"/_use_esync=\"false\"/' customization.cfg
