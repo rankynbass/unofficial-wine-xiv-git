@@ -37,12 +37,25 @@ cd unofficial-wine-xiv-git/wine-tkg
 
 That will give you the following output:
 ```
-Use -n to disable staging, -v to use valve wine, -p to disable protonify patchset (non-valve wine only), and -s to enable ntsync.
-Use -t to use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
-Use -W <version> to set wine version. Must be a valid tag or commit hash (wine-10.1)
-Use -S <version> to set staging version. Must be a valid tag or commit hash (v10.1)
-Use -V <hash> or <tag> to set the valve bleeding edge commit hash or tag
-Use -c to clean up the repo and set it to a default state.
+usage: xiv-setup.sh [OPTION...]
+
+Main flags:
+  -c      clean up the repo and set it to a default state.
+  -n      disable staging
+  -v      use valve wine
+  -p      disable protonify patchset (non-valve wine only)
+  -s      enable ntsync
+
+Extra patches and fixes:
+  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
+  -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4
+          2: Use lsteamclient_trampolines patch for wine = 10.5
+          3: (default) use lsteamclient_trampolines patch for wine >= 10.6
+
+Version flags:
+  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)
+  -S <version>        set staging version. Must be a valid tag or commit hash (v10.1)
+  -V <hash> or <tag>  set the valve bleeding edge commit hash or tag
 ```
 Then run it again with the appropriate flags to set up the patches and configuration files. 
 * If you do not set a version flag, it will use whatever is already in the customization.cfg or wine-tkg-exp-bleeding.cfg files.

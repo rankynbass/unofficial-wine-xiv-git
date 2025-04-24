@@ -1,6 +1,7 @@
 #!/bin/bash
 xiv_staging=1
 xiv_threads=0
+xiv_trampolines=3
 xiv_valve=0
 xiv_ntsync=0
 xiv_protonify=1
@@ -9,13 +10,14 @@ xiv_stagingversion=""
 xiv_valveversion=""
 
 
-while getopts ":nvpsthcW:S:V:" flag; do
+while getopts ":nvpsthcT:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1;;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
+        T) xiv_trampolines=${OPTARG};;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
         V) xiv_valveversion=${OPTARG};;
@@ -31,6 +33,9 @@ while getopts ":nvpsthcW:S:V:" flag; do
             echo ""
             echo "Extra patches and fixes:"
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
+            echo "  -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4"
+            echo "          2: Use lsteamclient_trampolines patch for wine = 10.5"
+            echo "          3: (default) use lsteamclient_trampolines patch for wine >= 10.6"
             echo ""
             echo "Version flags:"
             echo "  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)"
@@ -107,10 +112,34 @@ else
         if [ "$xiv_threads" == "1" ]; then
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
         fi
+        case "$xiv_trampolines" in
+            1)  echo "Using lsteamclient_trampolines 10.4 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.4.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.4.mypatch
+                ;;
+            2)  echo "Using lsteamclient_trampolines 10.5 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.5.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.5.mypatch
+                ;;
+            *)  echo "Using default lsteamclient_trampolines patch for 10.6+"
+                ;;
+        esac
     else
         echo "Using Wine without Staging patches"
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
         for f in wine-tkg-userpatches/mainline/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+        case "$xiv_trampolines" in
+            1)  echo "Using lsteamclient_trampolines 10.4 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.4.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.4.mypatch
+                ;;
+            2)  echo "Using lsteamclient_trampolines 10.5 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.5.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.5.mypatch
+                ;;
+            *)  echo "Using default lsteamclient_trampolines patch for 10.6+"
+                ;;
+        esac
     fi
     if [ "$xiv_protonify" == "0" ]; then
         echo "Disabling protonify patchset"
