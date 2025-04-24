@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:40
+    container: fedora:41
 
     steps:
 
