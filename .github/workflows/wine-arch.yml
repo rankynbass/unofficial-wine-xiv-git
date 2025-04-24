@@ -1,7 +1,6 @@
 name: Wine Arch Linux CI
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:

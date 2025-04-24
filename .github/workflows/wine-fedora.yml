@@ -2,7 +2,6 @@ name: Wine Fedora CI
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
@@ -14,6 +13,7 @@ jobs:
       - name: Compilation
         run: |
           sudo dnf -y -q upgrade --refresh
+          sudo dnf install ocl-icd-devel
           cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
           sed -i 's/_wayland_driver="false"/_wayland_driver="true"/' customization.cfg
