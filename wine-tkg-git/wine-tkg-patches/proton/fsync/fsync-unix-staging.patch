@@ -1600,32 +1600,34 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_signal_and_wait( signal, wait, alertable, timeout );
  
-@@ -1348,7 +1348,24 @@ NTSTATUS WINAPI NtYieldExecution(void)
- NTSTATUS WINAPI NtDelayExecution( BOOLEAN alertable, const LARGE_INTEGER *timeout )
- {
+@@ -1646,9 +1758,26 @@ NTSTATUS WINAPI NtDelayExecution( BOOLEAN alertable, const LARGE_INTEGER *timeou
      /* if alertable, we need to query the server */
--    if (alertable) return server_wait( NULL, 0, SELECT_INTERRUPTIBLE | SELECT_ALERTABLE, timeout );
-+    if (alertable)
-+    {
+     if (alertable)
+     {
 +        if (do_fsync())
 +        {
-+            NTSTATUS ret = fsync_wait_objects( 0, NULL, TRUE, TRUE, timeout );
-+            if (ret != STATUS_NOT_IMPLEMENTED)
-+                return ret;
++            status = fsync_wait_objects( 0, NULL, TRUE, TRUE, timeout );
++            if (status != STATUS_NOT_IMPLEMENTED)
++                goto alert_waited;
 +        }
 +
 +        if (do_esync())
 +        {
-+            NTSTATUS ret = esync_wait_objects( 0, NULL, TRUE, TRUE, timeout );
-+            if (ret != STATUS_NOT_IMPLEMENTED)
-+                return ret;
++            status = esync_wait_objects( 0, NULL, TRUE, TRUE, timeout );
++            if (status != STATUS_NOT_IMPLEMENTED)
++                goto alert_waited;
 +        }
 +
-+        return server_wait( NULL, 0, SELECT_INTERRUPTIBLE | SELECT_ALERTABLE, timeout );
-+    }
- 
-     if (!timeout || timeout->QuadPart == TIMEOUT_INFINITE)  /* sleep forever */
-     {
+         /* Since server_wait will result in an unconditional implicit yield,
+            we never return STATUS_NO_YIELD_PERFORMED */
+-        if ((status = server_wait( NULL, 0, SELECT_INTERRUPTIBLE | SELECT_ALERTABLE, timeout )) == STATUS_TIMEOUT)
++        status = server_wait( NULL, 0, SELECT_INTERRUPTIBLE | SELECT_ALERTABLE, timeout );
++
++alert_waited:
++        if (status == STATUS_TIMEOUT)
+             status = STATUS_SUCCESS;
+         return status;
+     }
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
 index e7033932bcb..a2f485d892f 100644
 --- a/dlls/ntdll/unix/unix_private.h
@@ -1722,7 +1724,15 @@ diff --git a/server/completion.c b/server/completion.c
 index ef66260c991..2149d0bbf32 100644
 --- a/server/completion.c
 +++ b/server/completion.c
-@@ -65,6 +65,7 @@ static const struct object_ops completion_ops =
+@@ -92,6 +92,7 @@ static const struct object_ops completion_wait_ops =
+     remove_queue,                   /* remove_queue */
+     completion_wait_signaled,       /* signaled */
+     NULL,                           /* get_esync_fd */
++    NULL,                           /* get_fsync_idx */
+     completion_wait_satisfied,      /* satisfied */
+     no_signal,                      /* signal */
+     no_get_fd,                      /* get_fd */
+@@ -166,6 +167,7 @@ static const struct object_ops completion_ops =
      remove_queue,              /* remove_queue */
      completion_signaled,       /* signaled */
      NULL,                      /* get_esync_fd */
@@ -1744,12 +1754,12 @@ index 78635f3fae1..824b930bba0 100644
  
 @@ -82,6 +83,7 @@ static const struct object_ops console_input_ops =
      remove_queue,                     /* remove_queue */
-     console_input_signaled,           /* signaled */
+     console_signaled,                 /* signaled */
      NULL,                             /* get_esync_fd */
 +    NULL,                             /* get_fsync_idx */
      no_satisfied,                     /* satisfied */
      no_signal,                        /* signal */
-     console_input_get_fd,             /* get_fd */
+     console_get_fd,                   /* get_fd */
 @@ -136,6 +138,7 @@ struct console_server
      int                   term_fd;     /* UNIX terminal fd */
      struct termios        termios;     /* original termios */
@@ -1775,11 +1785,11 @@ index 78635f3fae1..824b930bba0 100644
      no_signal,                        /* signal */
      console_server_get_fd,            /* get_fd */
 @@ -224,6 +229,7 @@ static const struct object_ops screen_buffer_ops =
-     NULL,                             /* remove_queue */
-     NULL,                             /* signaled */
+     remove_queue,                     /* remove_queue */
+     screen_buffer_signaled,           /* signaled */
      NULL,                             /* get_esync_fd */
 +    NULL,                             /* get_fsync_idx */
-     NULL,                             /* satisfied */
+     no_satisfied,                     /* satisfied */
      no_signal,                        /* signal */
      screen_buffer_get_fd,             /* get_fd */
 @@ -272,6 +278,7 @@ static const struct object_ops console_device_ops =
@@ -1791,16 +1801,16 @@ index 78635f3fae1..824b930bba0 100644
      no_signal,                        /* signal */
      no_get_fd,                        /* get_fd */
 @@ -297,6 +301,7 @@ static const struct object_ops input_device_ops =
-     NULL,                             /* remove_queue */
-     NULL,                             /* signaled */
+     remove_queue,                     /* remove_queue */
+     console_input_signaled,           /* signaled */
      NULL,                             /* get_esync_fd */
 +    NULL,                             /* get_fsync_idx */
      no_satisfied,                     /* satisfied */
      no_signal,                        /* signal */
      input_device_get_fd,              /* get_fd */
 @@ -327,6 +332,7 @@ static const struct object_ops output_device_ops =
-     NULL,                             /* remove_queue */
-     NULL,                             /* signaled */
+     remove_queue,                     /* remove_queue */
+     console_output_signaled,          /* signaled */
      NULL,                             /* get_esync_fd */
 +    NULL,                             /* get_fsync_idx */
      no_satisfied,                     /* satisfied */
@@ -3048,6 +3058,14 @@ index e59a5b6c183..d0ea32a24d5 100644
      no_satisfied,                            /* satisfied */
      no_signal,                               /* signal */
      named_pipe_device_file_get_fd,           /* get_fd */
+@@ -344,6 +344,7 @@
+     remove_queue,                            /* remove_queue */
+     default_fd_signaled,                     /* signaled */
+     NULL,                                    /* get_esync_fd */
++    NULL,                                    /* get_fsync_idx */
+     no_satisfied,                            /* satisfied */
+     no_signal,                               /* signal */
+     named_pipe_dir_get_fd,                   /* get_fd */
 diff --git a/server/object.h b/server/object.h
 index 5b6bb9cbfe1..4c92b174ef3 100644
 --- a/server/object.h
@@ -3780,4 +3798,25 @@ index 012795e410d..ba442324276 100644
      if (do_esync() && !is_signaled( queue ))
          esync_clear( queue->esync_fd );
 
+ };
+diff --git a/server/object.c b/server/object.c
+index 29f1ea9..33fc18c 100644
+--- a/server/object.c
++++ b/server/object.c
+@@ -120,6 +120,7 @@ static const struct object_ops apc_reserve_ops =
+     NULL,                       /* remove_queue */
+     NULL,                       /* signaled */
+     NULL,                       /* get_esync_fd */
++    NULL,                       /* get_fsync_idx */
+     no_satisfied,               /* satisfied */
+     no_signal,                  /* signal */
+     no_get_fd,                  /* get_fd */
+@@ -144,6 +145,7 @@ static const struct object_ops completion_reserve_ops =
+     NULL,                      /* remove_queue */
+     NULL,                      /* signaled */
+     NULL,                      /* get_esync_fd */
++    NULL,                      /* get_fsync_idx */
+     no_satisfied,              /* satisfied */
+     no_signal,                 /* signal */
+     no_get_fd,                 /* get_fd */
 

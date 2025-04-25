@@ -2,7 +2,6 @@ name: Wine Fedora CI
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
@@ -14,9 +13,9 @@ jobs:
       - name: Compilation
         run: |
           sudo dnf -y -q upgrade --refresh
+          sudo dnf install -y -q ocl-icd-devel
           cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
-          sed -i 's/distro=""/distro="fedora"/' customization.cfg
           sed -i 's/_wayland_driver="false"/_wayland_driver="true"/' customization.cfg
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
@@ -25,5 +24,5 @@ jobs:
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-tkg-build
+          name: wine-xiv-fedora
           path: wine-tkg-git/non-makepkg-builds

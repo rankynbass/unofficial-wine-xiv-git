@@ -85,6 +85,13 @@ _prebuild_common() {
 		fi
 	fi
 
+	# Check wine commit and change lib path to workaround
+	if ( [ "$_unfrog" != "true" ] && cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8c3f205696571558a6fae42314370fbd7cc14a12 HEAD ); then
+		export _new_makefiles="true"
+	else
+		export _new_makefiles="false"
+	fi
+
 	echo -e "\nconfigure arguments: ${_configure_args[@]}\n" >>"$_where"/last_build_config.log
 }
 
@@ -136,7 +143,7 @@ _build_serial() {
 		fi
 		_exports_64
 		_configure_64
-		_build_64
+		_build_64 || exit 1
 	fi
 	if [ "$_NOLIB32" != "true" ] && [ "$_NOLIB32" != "wow64" ]; then
 		# build wine 32-bit
@@ -155,7 +162,7 @@ _build_serial() {
 		# /nomakepkg
 		_exports_32
 		_configure_32
-		_build_32
+		_build_32 || exit 1
 		if [ "$_nomakepkg_dependency_autoresolver" = "true" ] && [ "$_NOLIB64" != "true" ]; then # Install 64-bit deps back after 32-bit wine is built
 			install_deps "64" "${_ci_build}" || {
 				error "64-bit deps installation failed, aborting."
@@ -204,10 +211,18 @@ _package_nomakepkg() {
 		local _lib32name="lib"
 		local _lib64name="lib"
 	elif [ -e /lib ] && [ -e /lib64 ] && [ -d /usr/lib ] && [ -d /usr/lib32 ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then
-		local _lib32name="lib32"
+		if [ "$_new_makefiles" = "true" ]; then
+			local _lib32name="lib"
+		else
+			local _lib32name="lib32"
+		fi
 		local _lib64name="lib"
 	else
-		local _lib32name="lib"
+		if [ "$_new_makefiles" = "true" ]; then
+			local _lib32name="lib64"
+		else
+			local _lib32name="lib"
+		fi
 		local _lib64name="lib64"
 	fi
 
@@ -258,8 +273,20 @@ _package_nomakepkg() {
 
 	# Fixes compatibility with installation scripts (like winetricks) that use
 	# the wine64 binary, which is not present in WoW64 builds.
-	if [ "$_NOLIB32" = "wow64" ]; then
+	if [ "$_NOLIB32" = "wow64" ] || [ "$_new_makefiles" = "true" ]; then
 		(cd "$_prefix/bin" && ln -s wine wine64)
+	fi
+
+	# This fix for new makefiles. Should work for old wine
+	if [ "$_EXTERNAL_INSTALL" = "proton" ] && [ "$_NOLIB32" != "true" ] && [ "$_new_makefiles" = "true" ]; then
+		mkdir -v "$_prefix"/lib/ && mkdir -v "$_prefix"/lib/wine
+		cd "$_prefix"/lib/wine/
+		ln -s ../../"$_lib64name"/wine/x86_64-windows ./
+  		ln -s ../../"$_lib64name"/wine/x86_64-unix ./
+		ln -s ../../"$_lib64name"/wine/i386-windows ./
+		if [ "$_NOLIB32" != "wow64" ]; then
+			ln -s ../../"$_lib64name"/wine/i386-unix ./
+		fi
 	fi
 
 	# strip
@@ -359,12 +386,20 @@ _package_nomakepkg() {
 
 _package_makepkg() {
 	local _prefix=/usr
-	local _lib32name="lib32"
+	if [ "$_new_makefiles" = "true" ]; then
+		local _lib32name="lib"
+	else
+		local _lib32name="lib32"
+	fi
 	local _lib64name="lib"
 
 	# External install
 	if [ "$_EXTERNAL_INSTALL" = "true" ]; then
-		_lib32name="lib" && _lib64name="lib64"
+		if [ "$_new_makefiles" = "true" ]; then
+			_lib32name="lib" && _lib64name="lib"
+		else
+			_lib32name="lib" && _lib64name="lib64"
+		fi
 		if [ "$_EXTERNAL_NOVER" = "true" ]; then
 			_prefix="$_DEFAULT_EXTERNAL_PATH/$pkgname"
 		else
@@ -434,9 +469,19 @@ _package_makepkg() {
 
 	# Fixes compatibility with installation scripts (like winetricks) that use
 	# the wine64 binary, which is not present in WoW64 builds.
-	if [ "$_NOLIB32" = "wow64" ]; then
+	if [ "$_NOLIB32" = "wow64" ] || [ "$_new_makefiles" = "true" ]; then
 		(cd "${pkgdir}$_prefix/bin" && ln -s wine wine64)
 	fi
+
+	# This fix for new makefiles. Should work for old wine
+#	if [ "$_NOLIB32" = "false" ]; then
+#		cd "${pkgdir}$_prefix"/"$_lib32name"/wine/
+#		ln -s ../../"$_lib64name"/wine/x86_64-windows ./
+#  		ln -s ../../"$_lib64name"/wine/x86_64-unix ./
+#		cd "${pkgdir}$_prefix"/"$_lib64name"/wine/
+#		ln -s ../../"$_lib32name"/wine/i386-windows ./
+#		ln -s ../../"$_lib32name"/wine/i386-unix ./
+#	fi
 
 	# strip
 	if [ "$_EXTERNAL_INSTALL" != "proton" ]; then
@@ -508,7 +553,7 @@ _package_makepkg() {
 		fi
 	fi
 
-	if [ "$_use_fastsync" = "true" ]; then
+	if [ "$_use_fastsync" = "true" ] || [ "$_use_ntsync" = "true" ]; then
 		msg2 '##########################################################################################################################'
 		msg2 ''
 		msg2 'To disable NTsync, export WINE_DISABLE_FAST_SYNC=1'

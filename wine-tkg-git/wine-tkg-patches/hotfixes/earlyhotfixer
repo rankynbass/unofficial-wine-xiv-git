@@ -28,6 +28,9 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
         cp "$_where"/wine-tkg-patches/hotfixes/valve/fixes/*.mypatch "$_where"/
       fi
 
+      # Fix for binutils 2.41
+      cp "$_where"/wine-tkg-patches/hotfixes/binutils/*.mypatch "$_where"/
+
       if [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]]; then
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
         _GE_FSR="true"
@@ -83,7 +86,7 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
     # Disable the amd_fsr_fshack patch if _proton_fs_hack is disabled.
     if [[ ${_community_patches[*]} =~ "amd_fsr_fshack.mypatch" ]] || [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]] && [ "$_unfrog" != "true" ]; then
       if [ "$_proton_fs_hack" != "true" ] || [ "$_use_staging" != "true" ] || [ "$_shared_gpu_resources" = "true" ]; then
-        warning "Disabling the amd_fsr_fshack community patch because either its _proton_fs_hack dependency is disabled or the incompatible shared_gpu_resources option is enabled"
+        warning "Disabling the amd_fsr_fshack community patch because either its _proton_fs_hack dependency is disabled/unavailable or the incompatible shared_gpu_resources option is enabled"
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack-alternative.mypatch//g" | tr -s " ")
       elif [ "$_use_staging" = "true" ] && [ "$_proton_fs_hack" = "true" ]; then
@@ -219,6 +222,12 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
 EOM
     fi
 
+    # Fix broken staging commit 6912feaf
+    if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 6912feaf6590508836f1cb521fd8a85896506789 HEAD ); then
+      warning "Disable broken winedevice-Default_Drivers patchset on staging 6912feaf"
+      _staging_args+=(-W winedevice-Default_Drivers)
+    fi
+
     # Fix broken staging commit 86091d3b
     if ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 86091d3b1f5068693e1720ae1c301d2916dc975f HEAD && ! git merge-base --is-ancestor f2648a9a40cc7516ee4a469cca16778268053056 HEAD ); then
       warning "Disable broken xactengine3_7-callbacks patchset on staging 86091d3b+"
@@ -287,7 +296,8 @@ EOM
 
     # Disable problematic syscall emulation patchset in semi-recent trees that enable it (for new-style WoW64 builds)
     # This workarounds the "Internal error" message when running a 32-bit program in the new-style WoW64 mode
-    if [ "$_unfrog" != "true" ] && ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 2e9f238732289907b4f07335d826ac3e7882f5ba HEAD && [ -e "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ] && ! grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ) && [ "${_NOLIB32}" = "wow64" ]; then
+    # However possibly this no longer need so for 647004cd is apply syscall emulation patchset
+    if [ "$_unfrog" != "true" ] && ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 2e9f238732289907b4f07335d826ac3e7882f5ba HEAD && cd "${srcdir}"/"${_winesrcdir}" && ! git merge-base --is-ancestor 647004cd5d7ee93ad8b53abb8939da87be3e25a0 HEAD && [ -e "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ] && ! grep -Fxq 'Disabled: True' "${srcdir}/${_stgsrcdir}/patches/ntdll-Syscall_Emulation/definition" ) && [ "${_NOLIB32}" = "wow64" ]; then
       warning "Disable ntdll-Syscall_Emulation patchset for WoW64 builds (on staging 2e9f2387+)"
       _staging_args+=(-W ntdll-Syscall_Emulation)
     fi
