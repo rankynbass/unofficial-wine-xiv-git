@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo dnf -y -q upgrade --refresh
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.5
+          ./xiv-setup.sh -S v10.6
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
