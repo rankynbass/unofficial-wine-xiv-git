@@ -22,10 +22,9 @@ index 266aad81389..211b61f8576 100644
          /* the symbols we can safely ignore for now */
          case S_SKIP:
          case S_TRAMPOLINE:
-@@ -2878,6 +2891,9 @@ static BOOL codeview_snarf(const struct msc_debug_info* msc_dbg,
+@@ -2878,5 +2891,8 @@ static BOOL codeview_snarf(const struct msc_debug_info* msc_dbg,
          case S_EXPORT:
          case S_CALLSITEINFO:
-         case S_ARMSWITCHTABLE:
 +        case S_TOKENREF:
 +        case S_OEM:
 +        case S_MANSLOT:
