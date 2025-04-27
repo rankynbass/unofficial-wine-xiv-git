@@ -1,7 +1,10 @@
 {
     "ID": "RankynBass",
     "Name": "Rankyn's Unofficial XIV Wine List",
-    "Timestamp": "2025-04-26 17:25:00",
+    "Timestamp": "2025-04-26 17:55:00",
+    "DefaultWine": "Unofficial_10.6",
+    "DefaultDxvk": "Stable",
+    "DefaultNvapi": "Stable",
     "Wine": [
       {
         "Folder": "wine-xiv-staging-fsync-git-10.5.r0.g835c92a2",
@@ -69,13 +72,6 @@
         "TopLevelFolder": false,
         "Name": "Legacy 0.6.0",
         "Description": "Dxvk-nvapi 0.6.0 to enable DLSS. For nvidia driver version <= 525."
-      },
-      {
-        "Folder": "dxvk-nvapi-v0.5.4",
-        "DownloadUrl": "https://github.com/jp7677/dxvk-nvapi/releases/download/v0.5.4/dxvk-nvapi-v0.5.4.tar.gz",
-        "TopLevelFolder": false,
-        "Name": "Legacy 0.5.4",
-        "Description": "Dxvk-nvapi 0.5.4 to enable DLSS. May work with Dxvk 1.10.3."
       }
     ]
   }
