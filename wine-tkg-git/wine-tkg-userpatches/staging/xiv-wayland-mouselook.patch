@@ -1,0 +1,25 @@
+From ec2cca0efaeddb758a4d7698bc5e3b4380865248 Mon Sep 17 00:00:00 2001
+From: khyperia <953151+khyperia@users.noreply.github.com>
+Date: Wed, 30 Apr 2025 20:26:19 +0200
+Subject: [PATCH] Set covers_vscreen to true to fix janky mouselook
+
+---
+ dlls/winewayland.drv/wayland_pointer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winewayland.drv/wayland_pointer.c b/dlls/winewayland.drv/wayland_pointer.c
+index beb9cc06702..3ffad5f645d 100644
+--- a/dlls/winewayland.drv/wayland_pointer.c
++++ b/dlls/winewayland.drv/wayland_pointer.c
+@@ -879,7 +879,7 @@ BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset)
+     {
+         wl_surface = surface->wl_surface;
+         if (clip) wayland_surface_calc_confine(surface, clip, &confine_rect);
+-        covers_vscreen = wayland_surface_client_covers_vscreen(surface);
++        covers_vscreen = TRUE;
+         wayland_surface_coords_from_window(surface,
+                 cursor_pos.x - surface->window.rect.left,
+                 cursor_pos.y - surface->window.rect.top,
+-- 
+2.49.0
+
