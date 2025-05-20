@@ -204,8 +204,10 @@ function build_vrclient {
 
   cp -a "${_nowhere}"/Proton/vrclient_x64/* build/vrclient.win64
   cp -a "${_nowhere}"/Proton/vrclient_x64/* build/vrclient.win32
-  mv build/vrclient.win32/vrclient_x64 build/vrclient.win32/vrclient
-  if [ -e build/vrclient.win32/vrclient/vrclient_x64.spec ]; then
+  if [ -e build/vrclient.win32/vrclient_x64 ]; then
+    mv build/vrclient.win32/vrclient_x64 build/vrclient.win32/vrclient
+  fi
+  if [ -e build/vrclient.win32/vrclient/vrclient_x64.spec ] && [ ! -e build/vrclient.win32/vrclient/vrclient.spec ]; then
     mv build/vrclient.win32/vrclient/vrclient_x64.spec build/vrclient.win32/vrclient/vrclient.spec
     _vrclient_longpath64="/vrclient_x64"
     _vrclient_longpath32="/vrclient"
@@ -966,7 +968,7 @@ else
     fi
 
     # Tooling compilation needs an update for latest BE - Use slightly older tooling for now
-    if [ -n "$_bleeding_tag" ] || [[ "$_proton_branch" = experimental_8* ]] || [[ "$_proton_branch" = *9* ]]; then
+    if [ -n "$_bleeding_tag" ] || [[ "$_proton_branch" = experimental_8* ]] || [[ "$_proton_branch" = *9* ]] || [[ "$_proton_branch" = *10* ]]; then
       git checkout f5e9c76903e4e18e0416e719a6d42d0cb00998aa
     fi
 
