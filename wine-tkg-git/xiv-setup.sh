@@ -5,18 +5,22 @@ xiv_trampolines=3
 xiv_valve=0
 xiv_ntsync=0
 xiv_protonify=1
+xiv_debug=0
 xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
 
 
-while getopts ":nvpsthcT:W:S:V:" flag; do
+while getopts ":nvpsthcd:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
-        v) xiv_valve=1;;
+        v) xiv_valve=1
+           xiv_debug=1
+           ;;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
+        d) xiv_debug=${OPTARG};;
         T) xiv_trampolines=${OPTARG};;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
@@ -32,6 +36,8 @@ while getopts ":nvpsthcT:W:S:V:" flag; do
             echo "  -s      enable ntsync"
             echo ""
             echo "Extra patches and fixes:"
+            echo "  -d <#>  0: Disable debug patch (default for mainline, staging)"
+            echo "          1: Enable debug patch (default for valve wine)"
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             echo "  -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4"
             echo "          2: Use lsteamclient_trampolines patch for wine = 10.5"
@@ -104,6 +110,10 @@ if [ "$xiv_valve" == "1" ]; then
         sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
     fi
+    if [ "$xiv_debug" == 0 ]; then
+        echo "Disabling debug patch"
+        rm -f wine-tkg-userpatches/portable-pdb.mypatch
+    fi
 else
     if [ "$xiv_staging" == "1" ]; then
         echo "Using Wine Staging"
@@ -111,6 +121,10 @@ else
         for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
         if [ "$xiv_threads" == "1" ]; then
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
+        fi
+        if [ "$xiv_debug" == 1 ]; then
+            echo "Enabling debug patch"
+            cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
         fi
         case "$xiv_trampolines" in
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
@@ -128,6 +142,10 @@ else
         echo "Using Wine without Staging patches"
         sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
         for f in wine-tkg-userpatches/mainline/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+        if [ "$xiv_debug" == 1 ]; then
+            echo "Enabling debug patch"
+            cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
+        fi
         case "$xiv_trampolines" in
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
