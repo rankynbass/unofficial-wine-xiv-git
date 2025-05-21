@@ -129,7 +129,7 @@ if [ "$xiv_valve" == "1" ]; then
         sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
         sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
         for f in wine-tkg-userpatches/valvexbe10/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
-        for f in wine-tkg-userpatches/valvexbe10/*.revert; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
+        # for f in wine-tkg-userpatches/valvexbe10/*.revert; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
         if [ "$xiv_staging" == "1" ]; then
             echo "Using Staging patches"
             sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg

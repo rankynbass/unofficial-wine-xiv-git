@@ -1,0 +1,24 @@
+From efc1e9030e15edea83ef45b1b48ef037843aed3f Mon Sep 17 00:00:00 2001
+From: Rankyn Bass <rankyn@proton.me>
+Date: Tue, 20 May 2025 19:22:03 -0700
+Subject: [PATCH] Disable dlls/icu
+
+---
+ configure.ac | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index 9acc7ce2845..b74cd7208b2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2767,7 +2767,6 @@ WINE_CONFIG_MAKEFILE(dlls/iccvid)
+ WINE_CONFIG_MAKEFILE(dlls/icmp)
+ WINE_CONFIG_MAKEFILE(dlls/icmui)
+ WINE_CONFIG_MAKEFILE(dlls/icmui/tests)
+-WINE_CONFIG_MAKEFILE(dlls/icu)
+ WINE_CONFIG_MAKEFILE(dlls/ieframe)
+ WINE_CONFIG_MAKEFILE(dlls/ieframe/tests)
+ WINE_CONFIG_MAKEFILE(dlls/ieproxy)
+-- 
+2.49.0
+
