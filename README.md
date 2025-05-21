@@ -42,11 +42,14 @@ usage: xiv-setup.sh [OPTION...]
 Main flags:
   -c      clean up the repo and set it to a default state.
   -n      disable staging
-  -v      use valve wine
+  -v      Use valve wine with version 10 patches
+  -9      Use valve wine with version 9 patches
   -p      disable protonify patchset (non-valve wine only)
   -s      enable ntsync
 
 Extra patches and fixes:
+  -d <#>  0: Disable debug patch (default for mainline, staging)
+          1: Enable debug patch (default for valve wine)
   -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
   -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4
           2: Use lsteamclient_trampolines patch for wine = 10.5
@@ -64,7 +67,12 @@ Then run it again with the appropriate flags to set up the patches and configura
 
 Run `yes | ./non-makepkg-build.sh` to build. I usually use `yes | ./non-makepkg-build.sh 2>&1 | tee buildfile.log` so that the output is piped to the console and to a file.
 
-***WARNING for NTSYNC builds***
+### WARNING for the debug patch
+
+As of FFXIV 7.2, Dalamud requires an additional patch to function with wine versions from 9.0 to 10.7. As of wine version 10.8, the debug patch is no longer needed. Since valve wine is based on 9.0 or 10.0, it also needs the debug patch.
+
+### WARNING for NTSYNC builds
+
 If you are using arch with cachyos repos (and not cachyos from its own installer), the above command *will* fail and get stuck in a loop due to having multiple repos. The first time you will have to
 babysit the install. Just run `./non-makepkg-build.sh` and be prepared to hit enter a bunch of times until it starts compiling.
 
