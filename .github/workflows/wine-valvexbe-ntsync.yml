@@ -1,4 +1,4 @@
-name: Wine Valve exp bleeding edge CI
+name: Wine Valve exp bleeding edge NTSYNC CI
 
 on:
   workflow_dispatch:
