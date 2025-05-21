@@ -6316,10 +6316,11 @@ diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
 index e0870584a68..b21c4412cba 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
-@@ -89,5 +89,6 @@ enum ntdll_unix_funcs
+@@ -89,6 +89,7 @@ enum ntdll_unix_funcs
      unix_wine_server_handle_to_fd,
      unix_wine_spawnvp,
      unix_system_time_precise,
+     unix_steamclient_setup_trampolines,
 +    unix_wine_get_sync_type,
      unix_is_pc_in_native_so,
      unix_debugstr_pc,
