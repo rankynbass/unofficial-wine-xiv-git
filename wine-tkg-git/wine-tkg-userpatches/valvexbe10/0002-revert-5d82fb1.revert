@@ -1,15 +1,3 @@
-diff --git a/configure.ac b/configure.ac
-index 99dc18b52c0..94360305965 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -2752,6 +2752,7 @@ WINE_CONFIG_MAKEFILE(dlls/hvsimanagementapi/tests)
- WINE_CONFIG_MAKEFILE(dlls/ia2comproxy)
- WINE_CONFIG_MAKEFILE(dlls/iccvid)
- WINE_CONFIG_MAKEFILE(dlls/icmp)
-+WINE_CONFIG_MAKEFILE(dlls/icu)
- WINE_CONFIG_MAKEFILE(dlls/ieframe)
- WINE_CONFIG_MAKEFILE(dlls/ieframe/tests)
- WINE_CONFIG_MAKEFILE(dlls/ieproxy)
 diff --git a/dlls/icu/Makefile.in b/dlls/icu/Makefile.in
 new file mode 100644
 index 00000000000..ca8ca903048

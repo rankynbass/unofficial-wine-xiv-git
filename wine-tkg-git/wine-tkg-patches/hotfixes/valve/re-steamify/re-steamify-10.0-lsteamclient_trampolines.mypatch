@@ -142,10 +142,12 @@ index 803d8079213..028846f346a 100644
  
  static const unixlib_entry_t unix_call_funcs[] =
  {
-@@ -983,6 +1052,7 @@ static const unixlib_entry_t unix_call_funcs[] =
+@@ -1052,8 +1121,9 @@ static const unixlib_entry_t unix_call_funcs[] =
      unixcall_wine_server_handle_to_fd,
      unixcall_wine_spawnvp,
      system_time_precise,
+     is_pc_in_native_so,
+     debugstr_pc,
 +    steamclient_setup_trampolines,
  };
  
