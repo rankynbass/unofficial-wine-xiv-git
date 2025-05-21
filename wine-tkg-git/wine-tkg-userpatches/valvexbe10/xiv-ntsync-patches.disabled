@@ -6247,20 +6247,18 @@ diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
 index 80b17e17b16..595f72f7651 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -1262,6 +1262,7 @@ static const unixlib_entry_t unix_call_funcs[] =
+@@ -1262,5 +1262,6 @@ static const unixlib_entry_t unix_call_funcs[] =
      unixcall_wine_server_handle_to_fd,
      unixcall_wine_spawnvp,
      system_time_precise,
 +    unixcall_wine_get_sync_type,
-     steamclient_setup_trampolines,
      is_pc_in_native_so,
      debugstr_pc,
-@@ -1308,6 +1309,7 @@ const unixlib_entry_t unix_call_wow64_funcs[] =
+@@ -1308,5 +1309,6 @@ const unixlib_entry_t unix_call_wow64_funcs[] =
      wow64_wine_server_handle_to_fd,
      wow64_wine_spawnvp,
      system_time_precise,
 +    unixcall_wine_get_sync_type,
-     wow64_steamclient_setup_trampolines,
      is_pc_in_native_so,
      wow64_debugstr_pc,
 diff --git a/dlls/ntdll/unix/sync.c b/dlls/ntdll/unix/sync.c
@@ -6318,12 +6316,11 @@ diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
 index e0870584a68..b21c4412cba 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
-@@ -89,6 +89,7 @@ enum ntdll_unix_funcs
+@@ -89,5 +89,6 @@ enum ntdll_unix_funcs
      unix_wine_server_handle_to_fd,
      unix_wine_spawnvp,
      unix_system_time_precise,
 +    unix_wine_get_sync_type,
-     unix_steamclient_setup_trampolines,
      unix_is_pc_in_native_so,
      unix_debugstr_pc,
 diff --git a/include/winternl.h b/include/winternl.h
