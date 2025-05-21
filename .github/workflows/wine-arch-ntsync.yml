@@ -39,7 +39,7 @@ jobs:
           XDG_CACHE_HOME: /tmp/.cache
         run: |
           cd wine-tkg-git
-          ./xiv-setup.sh -s -S v10.7
+          ./xiv-setup.sh -s -S v10.8
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
