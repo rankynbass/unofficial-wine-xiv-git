@@ -83,7 +83,7 @@ sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customi
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
 sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
 if [ -n "$xiv_wineversion" ]; then
-    sed -i "s/_plain_version=\"\(.\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
+    sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"${xiv_wineversion}\"/" customization.cfg
     echo "Setting plain wine version to ${xiv_wineversion}"
 fi
 if [ -n "$xiv_stagingversion" ]; then
@@ -99,10 +99,10 @@ if [ "$xiv_valve" == "1" ]; then
     if [ "$xiv_valve9" == "1" ]; then
         echo "Using Valve Wine with 9.0 patchset"
         sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
-        sed -i "s/_plain_version=\"\(.\)\"/_plain_version=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_proton_branch=\"\(.\)\"/_proton_branch=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_staging_version=\"\(.\)\"/_staging_version=\"cab93f47b8d095eb968bb3c7debf9117a91307ce\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_GE_WAYLAND=\"\(.\)\"/_GE_WAYLAND=\"false\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"cab93f47b8d095eb968bb3c7debf9117a91307ce\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"false\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
         echo '_wayland_driver="true"' >> wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
 
         for f in wine-tkg-userpatches/valvexbe9/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
@@ -124,10 +124,10 @@ if [ "$xiv_valve" == "1" ]; then
     else
         echo "Using Valve Wine with 10.0 patchset"
         sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
-        sed -i "s/_plain_version=\"\(.\)\"/_plain_version=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_proton_branch=\"\(.\)\"/_proton_branch=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_staging_version=\"\(.\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_GE_WAYLAND=\"\(.\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+        sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
         for f in wine-tkg-userpatches/valvexbe10/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
         for f in wine-tkg-userpatches/valvexbe10/*.revert; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
         if [ "$xiv_staging" == "1" ]; then
