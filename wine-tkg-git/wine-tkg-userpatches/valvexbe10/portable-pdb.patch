@@ -1,0 +1,158 @@
+diff --git a/dlls/dbghelp/msc.c b/dlls/dbghelp/msc.c
+index 266aad81389..211b61f8576 100644
+--- a/dlls/dbghelp/msc.c
++++ b/dlls/dbghelp/msc.c
+@@ -2869,6 +2869,19 @@ static BOOL codeview_snarf(const struct msc_debug_info* msc_dbg,
+                 FIXME("Unexpected S_FRAMEPROC %d (%p %p) %x\n", top_frame_size, top_func, curr_func, i);
+             break;
+ 
++        case S_GMANPROC:
++        case S_LMANPROC:
++            /* skip whole record and sub-records */
++            i = sym->managed_proc_v3.pEnd;
++            sym = (const union codeview_symbol*)(root + i);
++            if (i + sizeof(sym->generic) > size || sym->generic.id != S_END)
++            {
++                FIXME("Wrong relocation after managed proc, aborting\n");
++                return FALSE;
++            }
++            length = 2 + sym->generic.len;
++            break;
++
+         /* the symbols we can safely ignore for now */
+         case S_SKIP:
+         case S_TRAMPOLINE:
+@@ -2878,5 +2891,8 @@ static BOOL codeview_snarf(const struct msc_debug_info* msc_dbg,
+         case S_EXPORT:
+         case S_CALLSITEINFO:
++        case S_TOKENREF:
++        case S_OEM:
++        case S_MANSLOT:
+             /* even if S_LOCAL groks all the S_DEFRANGE* records following itself,
+              * those kinds of records can also be present after a S_FILESTATIC record
+              * so silence them until (at least) S_FILESTATIC is supported
+@@ -2982,11 +2998,13 @@ static BOOL codeview_snarf_sym_hashtable(const struct msc_debug_info* msc_dbg, c
+     if (hashsize < sizeof(DBI_HASH_HEADER) ||
+         hash_hdr->signature != 0xFFFFFFFF ||
+         hash_hdr->version != 0xeffe0000 + 19990810 ||
++        !hash_hdr->hash_records_size ||
+         (hash_hdr->hash_records_size % sizeof(DBI_HASH_RECORD)) != 0 ||
+         sizeof(DBI_HASH_HEADER) + hash_hdr->hash_records_size + DBI_BITMAP_HASH_SIZE > hashsize ||
+         (hashsize - (sizeof(DBI_HASH_HEADER) + hash_hdr->hash_records_size + DBI_BITMAP_HASH_SIZE)) % sizeof(unsigned))
+     {
+-        FIXME("Incorrect hash structure\n");
++        if (hash_hdr->hash_records_size)
++            FIXME("Incorrect hash structure\n");
+         return FALSE;
+     }
+ 
+diff --git a/include/wine/mscvpdb.h b/include/wine/mscvpdb.h
+index a21cc897059..e4eeca2f355 100644
+--- a/include/wine/mscvpdb.h
++++ b/include/wine/mscvpdb.h
+@@ -2090,6 +2090,43 @@ union codeview_symbol
+         unsigned                numInstrs;
+         unsigned                staInstLive;
+     } pogoinfo_v3;
++
++    struct
++    {
++        unsigned short int      len;
++        unsigned short int      id;
++        unsigned int            pParent;
++        unsigned int            pEnd;
++        unsigned int            pNext;
++        unsigned int            proc_len;
++        unsigned int            debug_start;
++        unsigned int            debug_end;
++        unsigned int            token;
++        unsigned int            off;
++        unsigned short          sect;
++        unsigned char           flags;
++        unsigned short          retReg;
++        unsigned char           name[];
++    } managed_proc_v3;
++
++    struct
++    {
++        unsigned short          len;
++        unsigned short          id;
++        unsigned int            iSlot;
++        cv_typ_t                typeid;
++        struct cv_local_varflag attr;
++        unsigned char           name[];
++    } managed_slot_v3;
++
++    struct
++    {
++        unsigned short          len;
++        unsigned short          id;
++        GUID                    idOEM;
++        cv_typ_t                typeid;
++        unsigned int            rgl[];
++    } oem_v3;
+ };
+ 
+ enum BinaryAnnotationOpcode
+@@ -2145,6 +2182,7 @@ enum BinaryAnnotationOpcode
+ #define S_DATAREF_ST    0x0401
+ #define S_ALIGN         0x0402
+ #define S_LPROCREF_ST   0x0403
++#define S_OEM           0x0404
+ 
+ #define S_REGISTER_ST   0x1001 /* Variants with new 32-bit type indices */
+ #define S_CONSTANT_ST   0x1002
+diff --git a/tools/winedump/msc.c b/tools/winedump/msc.c
+index 28f95d9ddea..743ca2f5703 100644
+--- a/tools/winedump/msc.c
++++ b/tools/winedump/msc.c
+@@ -1968,6 +1968,49 @@ BOOL codeview_dump_symbols(const void* root, unsigned long start, unsigned long
+                    sym->pogoinfo_v3.numInstrs, sym->pogoinfo_v3.staInstLive);
+             break;
+ 
++        case S_TOKENREF:
++            printf("Tokenref V3 %x %x %x %x %x \n",
++                   ((const unsigned*)sym)[1],
++                   ((const unsigned*)sym)[2],
++                   ((const unsigned*)sym)[3],
++                   ((const unsigned*)sym)[4],
++                   ((const unsigned*)sym)[5]);
++            break;
++
++        case S_GMANPROC:
++        case S_LMANPROC:
++            printf("%s Managed Procedure V3: '%s' (%04x:%08x#%x) attr:%x\n",
++                   sym->generic.id == S_GMANPROC ? "Global" : "Local",
++                   sym->managed_proc_v3.name,
++                   sym->managed_proc_v3.sect, sym->managed_proc_v3.off, sym->managed_proc_v3.proc_len,
++                   sym->managed_proc_v3.flags);
++            printf("%*s\\- Debug: start=%08x end=%08x\n",
++                   indent, "", sym->managed_proc_v3.debug_start, sym->managed_proc_v3.debug_end);
++            printf("%*s\\- parent:<%x> end:<%x> next<%x>\n",
++                   indent, "", sym->managed_proc_v3.pParent, sym->managed_proc_v3.pEnd, sym->managed_proc_v3.pNext);
++            printf("%*s\\- token:%x retReg:%x\n",
++                   indent, "", sym->managed_proc_v3.token, sym->managed_proc_v3.retReg);
++            push_symbol_dumper(&sd, sym, sym->managed_proc_v3.pEnd);
++            break;
++
++        case S_MANSLOT:
++            printf("Managed slot V3: '%s' type:%x attr:%s slot:%u\n",
++                   sym->managed_slot_v3.name, sym->managed_slot_v3.typeid,
++                   get_varflags(sym->managed_slot_v3.attr), sym->managed_slot_v3.iSlot);
++            break;
++
++        case S_OEM:
++            printf("OEM symbol V3 guid=%s type=%x\n",
++                   get_guid_str(&sym->oem_v3.idOEM), sym->oem_v3.typeid);
++            {
++                const unsigned int *from = (const void*)sym->oem_v3.rgl;
++                const unsigned int *last = (unsigned int*)((unsigned char*)sym + 2 + sym->generic.len);
++                printf("%*s\\- rgl: [", indent, "");
++                for (; from < last; from++) printf("%08x%s", *from, (from + 1) < last ? " " : "");
++                printf("]\n");
++            }
++            break;
++
+         default:
+             printf("\n\t\t>>> Unsupported symbol-id %x sz=%d\n", sym->generic.id, sym->generic.len + 2);
+             dump_data((const void*)sym, sym->generic.len + 2, "  ");

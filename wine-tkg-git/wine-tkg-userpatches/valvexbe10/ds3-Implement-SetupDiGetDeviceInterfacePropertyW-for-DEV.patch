@@ -1,0 +1,87 @@
+From 2b94858cd4f02c0e557535b90d2fb386d0779f6a Mon Sep 17 00:00:00 2001
+From: Claire <claire.github-309c@sitedethib.com>
+Date: Tue, 29 Nov 2022 17:37:44 +0100
+Subject: [PATCH 3/3] Implement SetupDiGetDeviceInterfacePropertyW for
+ DEVPKEY_Device_InstanceId
+
+Fixes a crash in Marvel's Spider-Man
+---
+ dlls/setupapi/devinst.c     | 49 +++++++++++++++++++++++++++++++++++++
+ dlls/setupapi/setupapi.spec |  1 +
+ 2 files changed, 50 insertions(+)
+
+diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
+index f6675ee7840..72c990b39f6 100644
+--- a/dlls/setupapi/devinst.c
++++ b/dlls/setupapi/devinst.c
+@@ -3121,6 +3121,55 @@ BOOL WINAPI SetupDiDestroyDeviceInfoList(HDEVINFO devinfo)
+     return TRUE;
+ }
+ 
++/***********************************************************************
++ *              SetupDiGetDeviceInterfacePropertyW (SETUPAPI.@)
++ */
++BOOL WINAPI SetupDiGetDeviceInterfacePropertyW(HDEVINFO devinfo, SP_DEVICE_INTERFACE_DATA *iface_data,
++                const DEVPROPKEY *prop_key, DEVPROPTYPE *prop_type, BYTE *prop_buff,
++                DWORD prop_buff_size, DWORD *required_size, DWORD flags) {
++
++    // TODO: should probably use DEVPKEY_Device_InstanceId
++    static const DEVPROPKEY device_instanceid_key = {
++        {0x78c34fc8, 0x104a, 0x4aca, {0x9e, 0xa4, 0x52, 0x4d, 0x52, 0x99, 0x6e, 0x57}}, 256
++    };
++
++    TRACE("%p, %p, (%s, %04lx), %p, %p, %ld, %p, %#lx\n", devinfo, iface_data, wine_dbgstr_guid(&prop_key->fmtid), prop_key->pid, prop_type, prop_buff, prop_buff_size,
++          required_size, flags);
++
++    // Special case for InstanceID
++    if (IsEqualDevPropKey(*prop_key, device_instanceid_key)) {
++        struct device *device;
++        struct device_iface *iface;
++
++        if (!(iface = get_device_iface(devinfo, iface_data)))
++            return FALSE;
++
++        if (!(device = iface->device))
++            return FALSE;
++
++        TRACE("instance ID: %s\n", debugstr_w(device->instanceId));
++        if (prop_buff_size < lstrlenW(device->instanceId) + 1)
++        {
++            SetLastError(ERROR_INSUFFICIENT_BUFFER);
++            if (required_size)
++                *required_size = lstrlenW(device->instanceId) + 1;
++            return FALSE;
++        }
++
++        lstrcpyW((WCHAR *) prop_buff, device->instanceId);
++        if (required_size)
++            *required_size = lstrlenW(device->instanceId) + 1;
++        *prop_type = DEVPROP_TYPE_STRING;
++
++        return TRUE;
++    } else {
++        // TODO: maybe fall back as SetupDiGetDevicePropertyW?
++        FIXME("stub\n");
++    }
++
++    return FALSE;
++}
++
+ /***********************************************************************
+  *		SetupDiGetDeviceInterfaceDetailA (SETUPAPI.@)
+  */
+diff --git a/dlls/setupapi/setupapi.spec b/dlls/setupapi/setupapi.spec
+index 1c93a1f3b9b..ce0d0b5813e 100644
+--- a/dlls/setupapi/setupapi.spec
++++ b/dlls/setupapi/setupapi.spec
+@@ -358,6 +358,7 @@
+ @ stdcall SetupDiGetDeviceInterfaceDetailA(long ptr ptr long ptr ptr)
+ @ stdcall SetupDiGetDeviceInterfaceDetailW(long ptr ptr long ptr ptr)
+ @ stdcall SetupDiGetDevicePropertyKeys(ptr ptr ptr long ptr long)
++@ stdcall SetupDiGetDeviceInterfacePropertyW(ptr ptr ptr ptr ptr long ptr long)
+ @ stdcall SetupDiGetDevicePropertyW(ptr ptr ptr ptr ptr long ptr long)
+ @ stdcall SetupDiGetDeviceRegistryPropertyA(long ptr long ptr ptr long ptr)
+ @ stdcall SetupDiGetDeviceRegistryPropertyW(long ptr long ptr ptr long ptr)
+-- 
+2.49.0
+

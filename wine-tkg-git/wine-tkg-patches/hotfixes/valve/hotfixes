@@ -29,8 +29,10 @@ if [ "$_EXTERNAL_INSTALL" != "proton" ]; then
   elif [[ "$_plain_version" = *_10.0 ]]; then
     if [[ "$_LOCAL_PRESET" = valve-ex* ]]; then
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-10.0-be.mypatch "$_where"/
+      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-10.0-*.mypatch "$_where"/
     else
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-10.0.mypatch "$_where"/
+      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-10.0-*.mypatch "$_where"/
     fi
   fi
 fi
