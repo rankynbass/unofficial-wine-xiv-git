@@ -15,7 +15,7 @@ index 39de15066d4..6ea1d3f53c2 100644
 @@ -1041,6 +1041,21 @@ HANDLE WINAPI DECLSPEC_HOTPATCH OpenProcess( DWORD access, BOOL inherit, DWORD i
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
- 
+
 +    /* PROTON HACK:
 +     * On Windows, the Steam client puts its process ID into the registry
 +     * at:
@@ -33,6 +33,6 @@ index 39de15066d4..6ea1d3f53c2 100644
 +
      cid.UniqueProcess = ULongToHandle(id);
      cid.UniqueThread  = 0;
- 
+
 -- 
 GitLab
