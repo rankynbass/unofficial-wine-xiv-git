@@ -166,13 +166,13 @@ else
             cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
         fi
         case "$xiv_topology" in
-            1)  echo "Using proton-cpu-topology-overrides-fix for 10.9"
+            1)  echo "Using proton-cpu-topology-overrides-fix for 10.9 (disabled)"
                 cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.9.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.9.mypatch
                 ;;
             2)  echo "Using proton-cpu-topology-overrides-fix for 10.0"
                 cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
                 ;;
-            *)  echo "Not using proton-cpu-topology-overrides-fix patches (default)"
+            *)  echo "Not using proton-cpu-topology-overrides-fix patches"
                 ;;
         esac
         case "$xiv_trampolines" in
