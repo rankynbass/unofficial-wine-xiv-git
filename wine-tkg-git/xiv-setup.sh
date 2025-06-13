@@ -44,9 +44,10 @@ while getopts ":nv9psthcd:C:T:W:S:V:" flag; do
             echo "  -s      enable ntsync"
             echo ""
             echo "Extra patches and fixes:"
-            echo "  -d <#>  0: Disable debug patch (default for mainline, staging)"
+            echo "  -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+"
+            echo "          0: Disable debug patch (default for mainline, staging)"
             echo "          1: Enable debug patch (default for valve wine)"
-            echo "  -C <#>  Proton-cpu-topology override patches for Protonify Staging wine"
+            echo "  -C <#>  Proton-cpu-topology override patches for Protonify Staging non-ntsync wine"
             echo "          0: Use no patches, 1: Use 10.9+ patch, 2: Use 10.0 patch"
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             echo "  -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4"
@@ -57,6 +58,9 @@ while getopts ":nv9psthcd:C:T:W:S:V:" flag; do
             echo "  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)"
             echo "  -S <version>        set staging version. Must be a valid tag or commit hash (v10.1)"
             echo "  -V <hash> or <tag>  set the valve bleeding edge commit hash or tag"
+            echo ""
+            echo "Some combinations of flags will be ignored. For example, setting -t or -C when using -s"
+            echo " (enable ntsync) does nothing."
 
             exit 0;;
         c)
@@ -158,22 +162,26 @@ else
         echo "Using Wine Staging"
         sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
         for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+        if [ "$xiv_ntsync" == "1" ] || [ "$xiv_protonify" != "1" ]; then
+            xiv_topology=0
+            xiv_threads=0
+        fi
         if [ "$xiv_threads" == "1" ]; then
+            echo "Enabling thread-prios-protonify patch"
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
         fi
-        if [ "$xiv_debug" == 1 ]; then
+        if [ "$xiv_debug" == "1" ]; then
             echo "Enabling debug patch"
             cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
         fi
         case "$xiv_topology" in
-            1)  echo "Using proton-cpu-topology-overrides-fix for 10.9 (disabled)"
+            1)  echo "Using proton-cpu-topology-overrides-fix for 10.9 (default)"
                 cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.9.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.9.mypatch
                 ;;
             2)  echo "Using proton-cpu-topology-overrides-fix for 10.0"
                 cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
                 ;;
-            *)  echo "Not using proton-cpu-topology-overrides-fix patches"
-                ;;
+            *)  ;;
         esac
         case "$xiv_trampolines" in
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
@@ -212,6 +220,7 @@ else
         echo "Disabling protonify patchset"
         sed -i 's/_protonify="true"/_protonify="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
+        rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
     fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
@@ -219,6 +228,7 @@ else
         sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
+        rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
     else
         echo "Using ESync and FSync patches"
         sed -i 's/_use_esync="false"/_use_esync="true"/' customization.cfg

@@ -48,8 +48,11 @@ Main flags:
   -s      enable ntsync
 
 Extra patches and fixes:
-  -d <#>  0: Disable debug patch (default for mainline, staging)
+  -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+
+          0: Disable debug patch (default for mainline, staging)
           1: Enable debug patch (default for valve wine)
+  -C <#>  Proton-cpu-topology override patches for Protonify Staging non-ntsync wine
+          0: Use no patches, 1: Use 10.9+ patch, 2: Use 10.0 patch
   -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
   -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4
           2: Use lsteamclient_trampolines patch for wine = 10.5
@@ -59,6 +62,9 @@ Version flags:
   -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)
   -S <version>        set staging version. Must be a valid tag or commit hash (v10.1)
   -V <hash> or <tag>  set the valve bleeding edge commit hash or tag
+
+Some combinations of flags will be ignored. For example, setting -t or -C when using -s
+ (enable ntsync) does nothing.
 ```
 Then run it again with the appropriate flags to set up the patches and configuration files. 
 * If you do not set a version flag, it will use whatever is already in the customization.cfg or wine-tkg-exp-bleeding.cfg files.
