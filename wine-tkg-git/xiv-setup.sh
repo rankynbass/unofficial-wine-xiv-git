@@ -10,9 +10,10 @@ xiv_debug=0
 xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
+xiv_topology=1
 
 
-while getopts ":nv9psthcd:T:W:S:V:" flag; do
+while getopts ":nv9psthcd:C:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1
@@ -26,6 +27,7 @@ while getopts ":nv9psthcd:T:W:S:V:" flag; do
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
         d) xiv_debug=${OPTARG};;
+        C) xiv_topology=${OPTARG};;
         T) xiv_trampolines=${OPTARG};;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
@@ -44,6 +46,8 @@ while getopts ":nv9psthcd:T:W:S:V:" flag; do
             echo "Extra patches and fixes:"
             echo "  -d <#>  0: Disable debug patch (default for mainline, staging)"
             echo "          1: Enable debug patch (default for valve wine)"
+            echo "  -C <#>  Proton-cpu-topology override patches for Protonify Staging wine"
+            echo "          0: Use no patches, 1: Use 10.9+ patch, 2: Use 10.0 patch"
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             echo "  -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4"
             echo "          2: Use lsteamclient_trampolines patch for wine = 10.5"
@@ -161,6 +165,16 @@ else
             echo "Enabling debug patch"
             cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
         fi
+        case "$xiv_topology" in
+            1)  echo "Using proton-cpu-topology-overrides-fix for 10.9"
+                cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.9.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.9.mypatch
+                ;;
+            2)  echo "Using proton-cpu-topology-overrides-fix for 10.0"
+                cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
+                ;;
+            *)  echo "Not using proton-cpu-topology-overrides-fix patches (default)"
+                ;;
+        esac
         case "$xiv_trampolines" in
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
