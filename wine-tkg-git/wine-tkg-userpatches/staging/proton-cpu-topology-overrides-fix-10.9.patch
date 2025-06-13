@@ -1,0 +1,31 @@
+diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
+index ca5dac43bb0..bc6a5451611 100644
+--- a/dlls/ntdll/unix/system.c
++++ b/dlls/ntdll/unix/system.c
+@@ -1404,7 +1404,11 @@ void init_cpu_info(void)
+     num = 1;
+     FIXME("Detecting the number of processors is not supported.\n");
+ #endif
+-    peb->NumberOfProcessors = num;
++
++    fill_cpu_override(num);
++
++    peb->NumberOfProcessors = cpu_override.mapping.cpu_count
++            ? cpu_override.mapping.cpu_count : num;
+     init_cpu_model();
+ }
+
+diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
+index ca5dac43bb0..bc6a5451611 100644
+--- a/dlls/ntdll/unix/unix_private.h
++++ b/dlls/ntdll/unix/unix_private.h
+@@ -279,7 +279,8 @@ extern NTSTATUS open_unix_file( HANDLE *handle, const char *unix_name, ACCESS_MA
+ extern NTSTATUS get_device_info( int fd, struct _FILE_FS_DEVICE_INFORMATION *info );
+ extern void init_files(void);
+ extern void init_cpu_info(void);
+ extern void init_shared_data_cpuinfo( struct _KUSER_SHARED_DATA *data );
++extern struct cpu_topology_override *get_cpu_topology_override(void);
+ extern void file_complete_async( HANDLE handle, unsigned int options, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
+                                  IO_STATUS_BLOCK *io, NTSTATUS status, ULONG_PTR information );
+ extern void set_async_direct_result( HANDLE *async_handle, unsigned int options, IO_STATUS_BLOCK *io,
+--
