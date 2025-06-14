@@ -15,7 +15,7 @@ jobs:
           XDG_CACHE_HOME: /tmp/.cache
         run: |
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
-          pacman -Syu --noconfirm base-devel sudo
+          pacman -Syu --noconfirm base-devel sudo jack
           cd wine-tkg-git
           sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
           sed -i 's/wayland_driver="false"/wayland_driver="true"/' customization.cfg
