@@ -264,13 +264,23 @@ _init() {
     if [ -z "$_LOCAL_PRESET" ]; then
       msg2 "No _LOCAL_PRESET set in .cfg. Please select your desired base:"
       warning "With Valve trees, most wine-specific customization options will be ignored such as game-specific patches, esync/fsync/fastsync or Proton-specific features support. Those patches and features are for the most part already in, but some bits deemed useful such as FSR support for Proton's fshack are made available through community patches. Staging and GE patches are available through regular .cfg options."
-      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (Expect breakage)\n    choice[1-4?]: '`" CONDITION;
+      read -p "    What kind of Proton base do you want?`echo $'\n    > 1.Valve Proton Experimental Bleeding Edge (Recommended for gaming on the edge)\n      2.Valve Proton Experimental\n      3.Valve Proton\n      4.Wine upstream Proton (Expect breakage)\n      5.Other and legacy presets\n    choice[1-5?]: '`" CONDITION;
       if [ "$CONDITION" = "2" ]; then
         _LOCAL_PRESET="valve-exp"
       elif [ "$CONDITION" = "3" ]; then
         _LOCAL_PRESET="valve"
       elif [ "$CONDITION" = "4" ]; then
         _LOCAL_PRESET=""
+      elif [ "$CONDITION" = "5" ]; then
+        i=0
+        for _profiles in "$_where/wine-tkg-profiles"/legacy/wine-tkg-*.cfg; do
+          _GOTCHA=( "${_profiles//*\/wine-tkg-/}" )
+          msg2 "  $i - ${_GOTCHA//.cfg/}" && ((i+=1))
+        done
+        read -rp "  choice [0-$(($i-1))]: " _SELECT_PRESET;
+        _profiles=( `ls "$_where/wine-tkg-profiles"/legacy/wine-tkg-*.cfg` )
+        _strip_profiles=( "${_profiles[@]//*\/wine-tkg-/}" )
+        _LOCAL_PRESET="${_strip_profiles[$_SELECT_PRESET]//.cfg/}"
       else
         _LOCAL_PRESET="valve-exp-bleeding"
       fi
@@ -403,7 +413,9 @@ _init() {
     _proton_rawinput="false"
     _large_address_aware="false"
     _proton_mf_hacks="false"
+    _proton_mf_patches="false"
     _update_winevulkan="false"
+    _proton_winevulkan="false"
     _steam_fix="false"
     _mtga_fix="false"
     _protonify="false"
@@ -996,13 +1008,16 @@ _prepare() {
                    "$_where/wine-tkg-patches/game-specific/overwatch-mfstub/overwatch-mfstub"
                    "$_where/wine-tkg-patches/game-specific/mtga/mtga"
                    "$_where/wine-tkg-patches/proton/proton_mf_hacks/proton_mf_hacks"
+                   "$_where/wine-tkg-patches/proton/proton-mf-patch/proton-mf-patch"
                    "$_where/wine-tkg-patches/misc/enable_stg_shared_mem_def/enable_stg_shared_mem_def"
 		   "$_where/wine-tkg-patches/misc/enable_dynamic_wow64_def/enable_dynamic_wow64_def"
                    "$_where/wine-tkg-patches/misc/nvidia-hate/nvidia-hate"
                    "$_where/wine-tkg-patches/misc/kernelbase-reverts/kernelbase-reverts"
                    "$_where/wine-tkg-patches/proton/LAA/LAA"
+		   "$_where/wine-tkg-patches/proton/proton-winevulkan/proton-winevulkan"
                    "$_where/wine-tkg-patches/proton-tkg-specific/proton-staging/proton-staging_winex11-MWM_Decorations"
-                   "$_where/wine-tkg-patches/proton-tkg-specific/proton-tkg-steamclient-swap/proton-tkg-steamclient-swap") && _patchpathloader
+                   "$_where/wine-tkg-patches/proton-tkg-specific/proton-tkg-steamclient-swap/proton-tkg-steamclient-swap"
+		   "$_where/wine-tkg-patches/misc/winewayland/winewayland") && _patchpathloader
 
 	echo -e "" >> "$_where"/last_build_config.log
 
