@@ -37,8 +37,6 @@ cd unofficial-wine-xiv-git/wine-tkg
 
 That will give you the following output:
 ```
-usage: xiv-setup.sh [OPTION...]
-
 Main flags:
   -c      clean up the repo and set it to a default state.
   -n      disable staging
@@ -51,8 +49,8 @@ Extra patches and fixes:
   -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+
           0: Disable debug patch (default for mainline, staging)
           1: Enable debug patch (default for valve wine)
-  -C <#>  Proton-cpu-topology override patches for Protonify Staging non-ntsync wine
-          0: Use no patches, 1: Use 10.9+ patch, 2: Use 10.0 patch
+  -C      Proton-cpu-topology override patches for Protonify Staging non-ntsync wine 10.0
+          Only use for 10.0 builds, not for 10.1 and later.
   -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
   -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4
           2: Use lsteamclient_trampolines patch for wine = 10.5
