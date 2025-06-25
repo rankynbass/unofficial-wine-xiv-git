@@ -11,9 +11,10 @@ xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
 xiv_topology=0
+xiv_proton_mf=1
 
 
-while getopts ":nv9psthCcd:T:W:S:V:" flag; do
+while getopts ":nv9pmsthCcd:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1
@@ -24,6 +25,7 @@ while getopts ":nv9psthCcd:T:W:S:V:" flag; do
            xiv_debug=1
            ;;
         p) xiv_protonify=0;;
+        m) xiv_proton_mf=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
         d) xiv_debug=${OPTARG};;
@@ -41,6 +43,7 @@ while getopts ":nv9psthCcd:T:W:S:V:" flag; do
             echo "  -v      Use valve wine with version 10 patches"
             echo "  -9      Use valve wine with version 9 patches"
             echo "  -p      disable protonify patchset (non-valve wine only)"
+            echo "  -m      disable proton media foundation patches (for 10.8 and earlier)"
             echo "  -s      enable ntsync"
             echo ""
             echo "Extra patches and fixes:"
@@ -216,6 +219,11 @@ else
         sed -i 's/_protonify="true"/_protonify="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
         rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
+    fi
+    if [ "$xiv_proton_mf" == "0" ]; then
+        sed -i 's/_proton_mf_patches="\(.*\)"/_proton_mf_patches="false"/' customization.cfg
+    else
+        sed -i 's/_proton_mf_patches="\(.*\)"/_proton_mf_patches="true"/' customization.cfg
     fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
