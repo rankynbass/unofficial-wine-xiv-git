@@ -1,4 +1,4 @@
-name: Wine Ubuntu CI
+name: Wine Ubuntu lsteamclient CI
 
 on:
   workflow_dispatch:
