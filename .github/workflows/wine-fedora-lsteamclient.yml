@@ -1,4 +1,4 @@
-name: Wine Fedora CI
+name: Wine Fedora lsteamclient CI
 
 on:
   workflow_dispatch:

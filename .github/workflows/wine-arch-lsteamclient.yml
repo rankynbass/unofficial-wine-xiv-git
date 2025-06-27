@@ -1,4 +1,4 @@
-name: Wine Arch Linux CI
+name: Wine Arch Linux lsteamclient CI
 
 on:
   workflow_dispatch:
