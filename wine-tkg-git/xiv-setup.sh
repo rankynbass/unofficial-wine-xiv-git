@@ -14,7 +14,7 @@ xiv_valveversion=""
 xiv_topology=0
 
 
-while getopts ":nv9plsthCcd:T:W:S:V:" flag; do
+while getopts ":nv9psthCcd:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1
@@ -25,7 +25,6 @@ while getopts ":nv9plsthCcd:T:W:S:V:" flag; do
            xiv_debug=1
            ;;
         p) xiv_protonify=0;;
-        l) xiv_lsteamclient=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
         d) xiv_debug=${OPTARG};;
@@ -43,7 +42,6 @@ while getopts ":nv9plsthCcd:T:W:S:V:" flag; do
             echo "  -v      Use valve wine with version 10 patches"
             echo "  -9      Use valve wine with version 9 patches"
             echo "  -p      disable protonify patchset (non-valve wine only)"
-            echo "  -l      disable lsteamclient patchset and binaries"
             echo "  -s      enable ntsync"
             echo ""
             echo "Extra patches and fixes:"
@@ -53,7 +51,8 @@ while getopts ":nv9plsthCcd:T:W:S:V:" flag; do
             echo "  -C      Proton-cpu-topology override patches for Protonify Staging non-ntsync wine 10.0"
             echo "          Only use for 10.0 builds, not for 10.1 and later."
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
-            echo "  -T <#>  1: Use lsteamclient_tranpolines patch for wine <= 10.4"
+            echo "  -T <#>  0: Disable lsteamclient patches and binaries"
+            echo "          1: Use lsteamclient_tranpolines patch for wine <= 10.4"
             echo "          2: Use lsteamclient_trampolines patch for wine = 10.5"
             echo "          3: (default) use lsteamclient_trampolines patch for wine >= 10.6"
             echo ""
@@ -182,6 +181,7 @@ else
             cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
         fi
         case "$xiv_trampolines" in
+            0)  ;;
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.4.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.4.mypatch
@@ -202,6 +202,7 @@ else
             cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
         fi
         case "$xiv_trampolines" in
+            0)  ;;
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.4.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.4.mypatch
@@ -220,15 +221,6 @@ else
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
         rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
     fi
-    if [ "$xiv_lsteamclient" = "0" ]; then
-        echo "Disabling lsteamclient patches and binaries"
-        rm -f wine-userpatches/lsteamclient_*
-        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' customization.cfg
-        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' wine-tkg-profiles/advanced-customization.cfg
-    else
-        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' customization.cfg
-        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' wine-tkg-profiles/advanced-customization.cfg
-    fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
         sed -i 's/_use_ntsync="false"/_use_ntsync="true"/' customization.cfg
@@ -242,4 +234,13 @@ else
         sed -i 's/_use_fsync="false"/_use_fsync="true"/' customization.cfg
         sed -i 's/_use_ntsync="true"/_use_ntsync="false"/' customization.cfg
     fi
+fi
+if [ "$xiv_trampolines" = "0" ]; then
+    echo "Disabling lsteamclient patches and binaries"
+    rm -f wine-tkg-userpatches/lsteamclient_*.mypatch
+    sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' customization.cfg
+    sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+else
+    sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' customization.cfg
+    sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
 fi
