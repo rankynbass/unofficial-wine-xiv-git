@@ -88,7 +88,6 @@ echo "Setting up environment for Wine-XIV build"
 rm -f wine-tkg-userpatches/*.mypatch
 rm -f wine-tkg-userpatches/*.myrevert
 
-sed -i 's/pkgname=wine-tkg/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
 sed -i 's/LOCAL_PRESET="valve-exp-bleeding"/LOCAL_PRESET=""/' customization.cfg
 sed -i 's/_protonify="false"/_protonify="true"/' customization.cfg
@@ -240,7 +239,11 @@ if [ "$xiv_trampolines" = "0" ]; then
     rm -f wine-tkg-userpatches/lsteamclient_*.mypatch
     sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' customization.cfg
     sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+    sed -i 's/pkgname=wine-tkg$/pkgname=unofficial-wine-xiv-nolsc/' non-makepkg-build.sh
+    sed -i 's/pkgname=unofficial-wine-xiv$/pkgname=unofficial-wine-xiv-nolsc/' non-makepkg-build.sh
 else
     sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' customization.cfg
     sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+    sed -i 's/pkgname=wine-tkg$/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
+    sed -i 's/pkgname=unofficial-wine-xiv-nolsc$/pkgname=unofficial-wine-xiv/' non-makepkg-build.sh
 fi
