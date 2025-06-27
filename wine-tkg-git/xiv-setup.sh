@@ -6,6 +6,7 @@ xiv_valve=0
 xiv_valve9=0
 xiv_ntsync=0
 xiv_protonify=1
+xiv_lsteamclient=1
 xiv_debug=0
 xiv_wineversion=""
 xiv_stagingversion=""
@@ -13,7 +14,7 @@ xiv_valveversion=""
 xiv_topology=0
 
 
-while getopts ":nv9psthCcd:T:W:S:V:" flag; do
+while getopts ":nv9plsthCcd:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
         v) xiv_valve=1
@@ -24,6 +25,7 @@ while getopts ":nv9psthCcd:T:W:S:V:" flag; do
            xiv_debug=1
            ;;
         p) xiv_protonify=0;;
+        l) xiv_lsteamclient=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
         d) xiv_debug=${OPTARG};;
@@ -41,6 +43,7 @@ while getopts ":nv9psthCcd:T:W:S:V:" flag; do
             echo "  -v      Use valve wine with version 10 patches"
             echo "  -9      Use valve wine with version 9 patches"
             echo "  -p      disable protonify patchset (non-valve wine only)"
+            echo "  -l      disable lsteamclient patchset and binaries"
             echo "  -s      enable ntsync"
             echo ""
             echo "Extra patches and fixes:"
@@ -216,6 +219,15 @@ else
         sed -i 's/_protonify="true"/_protonify="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
         rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
+    fi
+    if [ "$xiv_lsteamclient" = "0" ]; then
+        echo "Disabling lsteamclient patches and binaries"
+        rm -f wine-userpatches/lsteamclient_*
+        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' customization.cfg
+        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' wine-tkg-profiles/advanced-customization.cfg
+    else
+        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' customization.cfg
+        sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="true"/' wine-tkg-profiles/advanced-customization.cfg
     fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
