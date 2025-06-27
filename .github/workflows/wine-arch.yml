@@ -20,12 +20,12 @@ jobs:
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel sudo jack lib32-jack2
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.10
+          ./xiv-setup.sh -T 0 -S v10.10
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-xiv-arch
+          name: wine-xiv-nolsc-arch
           path: wine-tkg-git/non-makepkg-builds

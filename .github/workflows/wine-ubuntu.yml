@@ -20,7 +20,7 @@ jobs:
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
           sudo apt install libxkbregistry0 libxkbregistry-dev
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.10
+          ./xiv-setup.sh -T 0 -S v10.10
           sed -i 's/"-W ntdll-NtAlertThreadByThreadId"/"-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
@@ -28,5 +28,5 @@ jobs:
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-xiv-ubuntu
+          name: wine-xiv-nolsc-ubuntu
           path: wine-tkg-git/non-makepkg-builds
