@@ -1,0 +1,32 @@
+name: Wine Arch Linux CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile
+        env:
+          XDG_CACHE_HOME: /tmp/.cache
+        run: |
+          echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+          pacman -Syu --noconfirm base-devel sudo jack
+          cd wine-tkg-git
+          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
+          sed -i 's/wayland_driver="false"/wayland_driver="true"/' customization.cfg
+          sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
+          echo '_ci_build="true"' >> customization.cfg
+          echo '_lsteamclient_patches="true"' >> customization.cfg
+          for f in wine-tkg-userpatches/*.lsc; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.lsc}).mypatch"; done
+          touch tarplz
+          yes|./non-makepkg-build.sh
+      - name: Archive the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-xiv-lsc-arch
+          path: wine-tkg-git/non-makepkg-builds
