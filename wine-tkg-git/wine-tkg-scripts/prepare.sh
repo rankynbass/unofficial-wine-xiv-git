@@ -452,7 +452,7 @@ _pkgnaming() {
       msg2 "Using staging patchset"
     fi
 
-    if [ "$_use_ntsync" = "true" ] && [ "$_use_fsync" != "true" ]; then
+    if [ "$_use_ntsync" != "false" ] && [ "$_use_fsync" != "true" ]; then
       pkgname+="-ntsync"
       msg2 "Using ntsync patchset"
     elif [ "$_use_fsync" = "true" ] && [ "$_use_esync" = "true" ]; then
@@ -741,10 +741,14 @@ _prepare() {
 	echo "" >> "$_where"/last_build_config.log
 	echo -e "*.patch\n*.orig\n*~\n.gitignore\nautom4te.cache/*" > "${srcdir}"/"${_winesrcdir}"/.gitignore
 
-	# Disable local Esync on 553986f
+	# Disable local Esync on 553986f 3e94d12465c0ed9f6ce1bec742ae779a0932813c
 	if [ "$_use_staging" = "true" ]; then
 	  cd "${srcdir}"/"${_stgsrcdir}"
-	  if git merge-base --is-ancestor 553986fdfb111914f793ff1487d53af022e4be19 HEAD; then # eventfd_synchronization: Add patch set.
+      if ( git merge-base --is-ancestor 3e94d12465c0ed9f6ce1bec742ae779a0932813c HEAD ) && [ "$_use_esync" = "true" ]; then
+	    _use_esync="true"
+	    _staging_esync="true"
+	    echo "Re-enable esync patches since Staging impl is disabled." >> "$_where"/last_build_config.log
+	  elif ( git merge-base --is-ancestor 553986fdfb111914f793ff1487d53af022e4be19 HEAD) && ( ! git merge-base --is-ancestor 3e94d12465c0ed9f6ce1bec742ae779a0932813c HEAD); then # eventfd_synchronization: Add patch set.
 	    _use_esync="false"
 	    _staging_esync="true"
 	    echo "Disabled the local Esync patchset to use Staging impl instead." >> "$_where"/last_build_config.log
@@ -1168,7 +1172,7 @@ _polish() {
 	  if [ "$_use_fsync" = "true" ] && [ "$_staging_esync" = "true" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
 	    _version_tags+=(Fsync)
 	  fi
-	  if [ "$_use_ntsync" = "true" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
+	  if [ "$_use_ntsync" != "false" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
 	    _version_tags+=(NTsync)
 	  fi
 	  if [ "$_use_pba" = "true" ] && [ "$_pba_version" != "none" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then

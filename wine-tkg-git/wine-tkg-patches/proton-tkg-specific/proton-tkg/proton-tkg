@@ -2,7 +2,7 @@
 
   if [ "$_unfrog" != "true" ]; then
 	if [ "$_EXTERNAL_INSTALL" = "proton" ] && ! git merge-base --is-ancestor 74dc0c5df9c3094352caedda8ebe14ed2dfd615e HEAD || ([ "$_protonify" = "true" ] || [ "$_EXTERNAL_INSTALL" = "proton" ] && git merge-base --is-ancestor 74dc0c5df9c3094352caedda8ebe14ed2dfd615e HEAD); then
-	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor c8832bff6ec7e97c5622b3db771e188684e7f1c6 HEAD ); then
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor e9dcdf38041a1911d37117e0219dced5ba5dbf7f HEAD ); then
 	    if [ "$_use_staging" = "true" ]; then
 	      if ! git merge-base --is-ancestor dedd5ccc88547529ffb1101045602aed59fa0170 HEAD; then
 	        _patchname='proton-tkg-staging-rpc.patch' && _patchmsg="Using Steam-specific Proton-tkg patches (staging) 1/3" && nonuser_patcher
@@ -26,7 +26,11 @@
 	      fi
 	    fi
 	  else
-	    if git merge-base --is-ancestor 7a054a4a8f477142d88c5ec07e0ba32ab52875c9 HEAD; then
+	    if git merge-base --is-ancestor c8832bff6ec7e97c5622b3db771e188684e7f1c6 HEAD; then
+	      _lastcommit="e9dcdf38"
+	      _rpc="1"
+	      _stmbits="1"
+	    elif git merge-base --is-ancestor 7a054a4a8f477142d88c5ec07e0ba32ab52875c9 HEAD; then
 	      _lastcommit="c8832bf"
 	      _rpc="1"
 	      _stmbits="1"
@@ -546,8 +550,10 @@
 	  fi
 	  if [ "$_proton_fs_hack" != "true" ] && [ "$_wayland_driver" != "true" ] && [ "$_use_staging" = "true" ] && [ "$_childwindow_fix" = "true" ] || git merge-base --is-ancestor 21a0c158b94bfc65d4baa95095307a1db396db0c HEAD && git merge-base --is-ancestor 3ded60bd1654dc689d24a23305f4a93acce3a6f2 HEAD; then
 	    _patchpath=( "$_where/wine-tkg-patches/proton-tkg-specific/proton-tkg/proton-tkg" )
-	    if git merge-base --is-ancestor 26f3edd4531a85bf2d873a34eaf3514020bf2ea4 HEAD; then
+	    if git merge-base --is-ancestor 54238a0646cb1e9fc0c98f4ffd3442ea1d411a9c HEAD; then
 	      _patchname='proton-tkg-additions.patch' && _patchmsg="Using additional Proton-tkg patches" && nonuser_patcher
+	    elif git merge-base --is-ancestor 26f3edd4531a85bf2d873a34eaf3514020bf2ea4 HEAD; then
+	      _patchname='proton-tkg-additions-54238a06.patch' && _patchmsg="Using additional Proton-tkg patches" && nonuser_patcher
 	    elif git merge-base --is-ancestor 968ab4e79a58a895841b90245f891c34b5d3b692 HEAD; then
 	      _patchname='proton-tkg-additions-26f3edd4.patch' && _patchmsg="Using additional Proton-tkg patches" && nonuser_patcher
 	    elif git merge-base --is-ancestor 0467b298b4d0699ea5b91f28252fca0d4e6485eb HEAD; then
