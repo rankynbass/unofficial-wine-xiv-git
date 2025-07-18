@@ -319,8 +319,10 @@ _package_nomakepkg() {
 	fi
 
 	# copy lsteamclient files. We don't want to strip these
-	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
-	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+	if [ "$_lsteamclient_patches" != "false" ]; then
+		cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
+		cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+	fi
 
 	cp -v "$_where"/last_build_config.log "$_prefix"/share/wine/wine-tkg-config.txt
 
@@ -513,8 +515,10 @@ _package_makepkg() {
 	fi
 
 	# copy lsteamclient files
-	cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "${pkgdir}$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
-	cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "${pkgdir}$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+	if [ "$_lsteamclient_patches" != "false" ]; then
+		cp -v "$_where"/lsteamclient/x86_64-unix/lsteamclient.so "${pkgdir}$_prefix"/"$_lib64name"/wine/x86_64-unix/lsteamclient.so
+		cp -v "$_where"/lsteamclient/x86_64-windows/lsteamclient.dll "${pkgdir}$_prefix"/"$_lib64name"/wine/x86_64-windows/lsteamclient.dll
+	fi
 
 	cp "$_where"/last_build_config.log "${pkgdir}$_prefix"/share/wine/wine-tkg-config.txt
 

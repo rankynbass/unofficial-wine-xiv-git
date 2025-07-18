@@ -154,7 +154,7 @@ if [ "$xiv_valve" == "1" ]; then
             sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
         fi
     fi
-    if [ "$xiv_debug" == 0 ]; then
+    if [ "$xiv_debug" == "0" ]; then
         echo "Disabling debug patch"
         rm -f wine-tkg-userpatches/portable-pdb.mypatch
     fi
@@ -234,7 +234,7 @@ else
         sed -i 's/_use_ntsync="true"/_use_ntsync="false"/' customization.cfg
     fi
 fi
-if [ "$xiv_trampolines" = "0" ]; then
+if [ "$xiv_trampolines" == "0" ]; then
     echo "Disabling lsteamclient patches and binaries"
     rm -f wine-tkg-userpatches/lsteamclient_*.mypatch
     sed -i 's/_lsteamclient_patches="\(.*\)"/_lsteamclient_patches="false"/' customization.cfg
