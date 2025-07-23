@@ -2,8 +2,7 @@
 xiv_staging=1
 xiv_threads=0
 xiv_trampolines=3
-xiv_valve=0
-xiv_valve9=0
+xiv_valve=""
 xiv_ntsync=0
 xiv_protonify=1
 xiv_lsteamclient=1
@@ -14,16 +13,10 @@ xiv_valveversion=""
 xiv_topology=0
 
 
-while getopts ":nv9psthCcd:T:W:S:V:" flag; do
+while getopts ":n9psthCcv:d:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
-        v) xiv_valve=1
-           xiv_debug=1
-           ;;
-        9) xiv_valve9=1
-           xiv_valve=1
-           xiv_debug=1
-           ;;
+        v) xiv_valve=${OPTARG};;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
         t) xiv_threads=1;;
@@ -39,8 +32,9 @@ while getopts ":nv9psthCcd:T:W:S:V:" flag; do
             echo "Main flags:"
             echo "  -c      clean up the repo and set it to a default state."
             echo "  -n      disable staging"
-            echo "  -v      Use valve wine with version 10 patches"
-            echo "  -9      Use valve wine with version 9 patches"
+            echo "  -v <#>  0: Use Valve wine with latest patches"
+            echo "          10: Valve wine v10 patches, pre-GE-Proton10-9 (may not work for everything)"
+            echo "          9: Valve wine v9 patches"
             echo "  -p      disable protonify patchset (non-valve wine only)"
             echo "  -s      enable ntsync"
             echo ""
@@ -104,60 +98,80 @@ if [ -n "$xiv_valveversion" ]; then
     echo "Setting valve experimental to commit/tag ${xiv_valveversion}"
 fi
 
-if [ "$xiv_valve" == "1" ]; then
-    if [ "$xiv_valve9" == "1" ]; then
-        echo "Using Valve Wine with 9.0 patchset"
-        sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
-        sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"cab93f47b8d095eb968bb3c7debf9117a91307ce\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"false\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        echo '_wayland_driver="true"' >> wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+if [ "$xiv_valve" != "" ]; then
+    case "$xiv_valve" in
+        9)  echo "Using Valve Wine with 9.0 patchset"
+            sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
+            sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_9.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"cab93f47b8d095eb968bb3c7debf9117a91307ce\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"false\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            echo '_wayland_driver="true"' >> wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
 
-        for f in wine-tkg-userpatches/valvexbe9/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
-        for f in wine-tkg-userpatches/valvexbe9/*.revert; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
-        if [ "$xiv_staging" == "1" ]; then
-            echo "Using Staging patches"
-            sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
-        else
-            echo "Disabling Staging patches"
-            sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
-            rm -f wine-tkg-userpatches/ds*
-        fi
-        if [ "$xiv_ntsync" == "1" ]; then
-            echo "Using ntsync valve patches. Known to work with commit b561e8d5d8a86062ca783296cb28ffe6e2be593"
-            cp wine-tkg-userpatches/valvexbe9/xiv-ntsync-patches.disabled wine-tkg-userpatches/xiv-ntsync-patches.mypatch
-            sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
-            sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
-        fi
-    else
-        echo "Using Valve Wine with 10.0 patchset"
-        sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
-        sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
-        for f in wine-tkg-userpatches/valvexbe10/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
-        # for f in wine-tkg-userpatches/valvexbe10/*.revert; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
-        if [ "$xiv_staging" == "1" ]; then
-            echo "Using Staging patches"
-            sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
-        else
-            echo "Disabling Staging patches"
-            sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
-            rm -f wine-tkg-userpatches/ds*
-        fi
-        if [ "$xiv_ntsync" == "1" ]; then
-            echo "Using ntsync valve patches. Known to work with commit b561e8d5d8a86062ca783296cb28ffe6e2be593"
-            cp wine-tkg-userpatches/valvexbe10/xiv-ntsync-patches.disabled wine-tkg-userpatches/xiv-ntsync-patches.mypatch
-            sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
-            sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
-        fi
-    fi
-    if [ "$xiv_debug" == "0" ]; then
-        echo "Disabling debug patch"
-        rm -f wine-tkg-userpatches/portable-pdb.mypatch
-    fi
+            for f in wine-tkg-userpatches/valvexbe9/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+            for f in wine-tkg-userpatches/valvexbe9/*.revert; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.revert}).myrevert"; done
+            if [ "$xiv_staging" == "1" ]; then
+                echo "Using Staging patches"
+                sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
+            else
+                echo "Disabling Staging patches"
+                sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
+                rm -f wine-tkg-userpatches/ds*
+            fi
+            if [ "$xiv_ntsync" == "1" ]; then
+                echo "Using ntsync valve patches. Known to work with commit b561e8d5d8a86062ca783296cb28ffe6e2be593"
+                cp wine-tkg-userpatches/valvexbe9/xiv-ntsync-patches.disabled wine-tkg-userpatches/xiv-ntsync-patches.mypatch
+                sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
+                sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
+            fi
+            if [ "$xiv_debug" == "0" ]; then
+                echo "Disabling debug patch"
+                rm -f wine-tkg-userpatches/portable-pdb.mypatch
+            fi
+            ;;
+        10) echo "Using Valve Wine with old 10.0 patchset"
+            sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
+            sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            for f in wine-tkg-userpatches/valvexbe10/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+            if [ "$xiv_staging" == "1" ]; then
+                echo "Using Staging patches"
+                sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
+            else
+                echo "Disabling Staging patches"
+                sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
+                rm -f wine-tkg-userpatches/ds*
+            fi
+            if [ "$xiv_ntsync" == "1" ]; then
+                echo "Using ntsync valve patches. Known to work with commit b561e8d5d8a86062ca783296cb28ffe6e2be593"
+                cp wine-tkg-userpatches/valvexbe10/xiv-ntsync-patches.disabled wine-tkg-userpatches/xiv-ntsync-patches.mypatch
+                sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
+                sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
+            fi
+            if [ "$xiv_debug" == "0" ]; then
+                echo "Disabling debug patch"
+                rm -f wine-tkg-userpatches/portable-pdb.mypatch
+            fi
+            ;;
+        *) echo "Using Valve Wine with new 10.0 patchset"
+            sed -i 's/LOCAL_PRESET=""/LOCAL_PRESET="valve-exp-bleeding"/' customization.cfg
+            sed -i "s/_plain_version=\"\(.*\)\"/_plain_version=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_proton_branch=\"\(.*\)\"/_proton_branch=\"experimental_10.0\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
+            for f in wine-tkg-userpatches/valvexbe10-ntsync/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+            if [ "$xiv_staging" == "1" ]; then
+                echo "Using Staging patches"
+                sed -i 's/_use_staging="false"/_use_staging="true"/' customization.cfg
+            else
+                echo "Disabling Staging patches"
+                sed -i 's/_use_staging="true"/_use_staging="false"/' customization.cfg
+                rm -f wine-tkg-userpatches/ds*
+            fi
+            ;;
+    esac
 else
     if [ "$xiv_staging" == "1" ]; then
         echo "Using Wine Staging"
