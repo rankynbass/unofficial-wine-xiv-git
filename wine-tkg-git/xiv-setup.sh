@@ -69,14 +69,6 @@ while getopts ":n9psthCcv:d:T:W:S:V:" flag; do
     esac
 done
 
-# echo "xiv_staging=${xiv_staging}"
-# echo "xiv_valve=${xiv_valve}"
-# echo "xiv_protonify=${xiv_protonify}"
-# echo "xiv_ntsync=${xiv_ntsync}"
-# echo "xiv_threads=${xiv_threads}"
-# echo "xiv_wineversion=${xiv_wineversion}"
-# echo "xiv_stagingversion=${xiv_stagingversion}"
-
 echo "Setting up environment for Wine-XIV build"
 
 rm -f wine-tkg-userpatches/*.mypatch
@@ -162,12 +154,6 @@ if [ "$xiv_valve" != "" ]; then
             sed -i "s/_staging_version=\"\(.*\)\"/_staging_version=\"05bc4b822fdb1898777b08a8597639ad851f5601\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
             sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
             for f in wine-tkg-userpatches/valvexbe10-latest/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
-            if [ "$xiv_ntsync" == "1" ]; then
-                echo "Using ntsync valve patches. Known to work with commit b561e8d5d8a86062ca783296cb28ffe6e2be593"
-                cp wine-tkg-userpatches/valvexbe10/xiv-ntsync-patches.disabled wine-tkg-userpatches/xiv-ntsync-patches.mypatch
-                sed -i 's/_use_esync="true"/_use_esync="false"/' customization.cfg
-                sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
-            fi
             if [ "$xiv_ntsync" == "1" ]; then
                 echo "Enabling NTSync patches"
                 for f in wine-tkg-userpatches/valvexbe10-latest/*.ntsync; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
