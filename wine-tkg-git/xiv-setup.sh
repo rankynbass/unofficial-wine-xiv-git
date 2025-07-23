@@ -60,7 +60,7 @@ while getopts ":n9psthCcv:d:T:W:S:V:" flag; do
 
             exit 0;;
         c)
-            git clean -xdf
+            git clean -df
             git restore .
             exit 0;;
         \?) echo "Invalid option: ${OPTARG}"
