@@ -5,21 +5,41 @@ on:
   push:
     tags:
       "valvebe-[0-9]+-[0-9]+"
+
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    container: archlinux:latest
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-      - name: Compilation
+      - name: Install System Dependencies
         run: |
-          sudo dpkg --add-architecture i386 && sudo apt update
-          sudo apt install aptitude
-          sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
-          sudo apt install libxkbregistry0 libxkbregistry-dev libswresample4 libavcodec60 libavutil58 libncurses-dev libfreetype-dev
+          echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+          pacman -Syu --noconfirm base-devel sudo jack lib32-jack2 git vulkan-headers
+
+      - name: Create User
+        run: |
+          useradd -m -G wheel -s /bin/bash user
+          echo "user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - name: Build and Install ntsync-header from PKGBUILD
+        run: |
+          sudo -u user bash -c "
+            cd ~
+            git clone https://aur.archlinux.org/ntsync.git
+            cd ntsync
+            makepkg -si --noconfirm
+          "
+
+      - name: Compilation
+        env:
+          XDG_CACHE_HOME: /tmp/.cache
+        run: |
           cd wine-tkg-git
-          ./xiv-setup.sh -vs -V b9bfd858366afed93ef2651404abd15d904f1d60
+          ./xiv-setup.sh -s -v 0 -V 245d4b08958a1fa27d684de7d2a8120df8f9c299
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
