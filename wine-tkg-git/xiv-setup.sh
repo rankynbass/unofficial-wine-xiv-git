@@ -155,8 +155,7 @@ if [ "$xiv_valve" != "" ]; then
             sed -i "s/_GE_WAYLAND=\"\(.*\)\"/_GE_WAYLAND=\"true\"/" wine-tkg-profiles/wine-tkg-valve-exp-bleeding.cfg
             for f in wine-tkg-userpatches/valvexbe10-latest/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
             if [ "$xiv_ntsync" == "1" ]; then
-                echo "Enabling NTSync patches"
-                for f in wine-tkg-userpatches/valvexbe10-latest/*.ntsync; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+                echo "NTSync patches included by default. No need to explicitly enable."
             fi
             if [ "$xiv_staging" == "1" ]; then
                 echo "Using Staging patches"
