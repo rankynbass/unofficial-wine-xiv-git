@@ -1,0 +1,26 @@
+diff --git b/server/console.c a/server/console.c
+index 8f01311892f..aa7ec863605 100644
+--- b/server/console.c
++++ a/server/console.c
+@@ -861,11 +859,18 @@ static void screen_buffer_destroy( struct object *obj )
+             queue_host_ioctl( screen_buffer->input->server, IOCTL_CONDRV_CLOSE_OUTPUT,
+                               screen_buffer->id, NULL, NULL );
+     }
+     free_async_queue( &screen_buffer->ioctl_q );
+-    if (screen_buffer->sync) release_object( screen_buffer->sync );
+     if (screen_buffer->fd) release_object( screen_buffer->fd );
+ }
+
++static int screen_buffer_signaled( struct object *obj, struct wait_queue_entry *entry )
++{
++    struct screen_buffer *screen_buffer = (struct screen_buffer *)obj;
++    assert( obj->ops == &screen_buffer_ops );
++    if (!screen_buffer->input) return 0;
++    return screen_buffer->input->signaled;
++}
++
+ static struct object *screen_buffer_open_file( struct object *obj, unsigned int access,
+                                                unsigned int sharing, unsigned int options )
+ {
+--
+2.45.2
