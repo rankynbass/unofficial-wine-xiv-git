@@ -182,6 +182,7 @@ else
         if [ "$xiv_esyncpatch" == "1" ]; then
             echo "Enabling esync fix for staging 10.13 or later"
             cp wine-tkg-userpatches/staging/esync-fix-10.13.disabled wine-tkg-userpatches/esync-fix-10.13.mypatch
+        fi
         if [ "$xiv_threads" == "1" ]; then
             echo "Enabling thread-prios-protonify patch"
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
