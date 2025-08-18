@@ -11,11 +11,13 @@ xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
 xiv_topology=0
+xiv_esyncpatch=1
 
 
-while getopts ":n9psthCcv:d:T:W:S:V:" flag; do
+while getopts ":nepsthCcv:d:T:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
+        e) xiv_esyncpatch=0;;
         v) xiv_valve=${OPTARG};;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
@@ -32,6 +34,7 @@ while getopts ":n9psthCcv:d:T:W:S:V:" flag; do
             echo "Main flags:"
             echo "  -c      clean up the repo and set it to a default state."
             echo "  -n      disable staging"
+            echo "  -e      disable esync patch for wine staging 10.13"
             echo "  -v <#>  0: Use Valve wine with latest patches"
             echo "          10: Valve wine v10 patches, pre-GE-Proton10-9 (may not work for everything)"
             echo "          9: Valve wine v9 patches"
@@ -176,6 +179,9 @@ else
             xiv_topology=0
             xiv_threads=0
         fi
+        if [ "$xiv_esyncpatch" == "1" ]; then
+            echo "Enabling esync fix for staging 10.13 or later"
+            cp wine-tkg-userpatches/staging/esync-fix-10.13.disabled wine-tkg-userpatches/esync-fix-10.13.mypatch
         if [ "$xiv_threads" == "1" ]; then
             echo "Enabling thread-prios-protonify patch"
             cp wine-tkg-userpatches/staging/thread-prios-protonify.disabled wine-tkg-userpatches/thread-prios-protonify.mypatch
