@@ -243,6 +243,7 @@ else
         sed -i 's/_use_fsync="true"/_use_fsync="false"/' customization.cfg
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
         rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
+        rm -f wine-tkg-userpatches/esync-fix-10.13.mypatch
     else
         echo "Using ESync and FSync patches"
         sed -i 's/_use_esync="false"/_use_esync="true"/' customization.cfg
