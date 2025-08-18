@@ -42,11 +42,12 @@ usage: xiv-setup.sh [OPTION...]
 Main flags:
   -c      clean up the repo and set it to a default state.
   -n      disable staging
+  -e      disable esync fix for wine staging 10.13
   -v <#>  0: Use Valve wine with latest patches
           10: Valve wine v10 patches, pre-GE-Proton10-9 (may not work for everything)
           9: Valve wine v9 patches
   -p      disable protonify patchset (non-valve wine only)
-  -s      enable ntsync 
+  -s      enable ntsync
 
 Extra patches and fixes:
   -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+
@@ -68,10 +69,10 @@ Version flags:
 Some combinations of flags will be ignored. For example, setting -t or -C when using -s
  (enable ntsync) does nothing.
 ```
-Then run it again with the appropriate flags to set up the patches and configuration files. 
+Then run it again with the appropriate flags to set up the patches and configuration files.
 * If you do not set a version flag, it will use whatever is already in the customization.cfg or wine-tkg-exp-bleeding.cfg files.
 * If you set the version flag to `""` it will use the latest commit instead of a specific version.
-* `-t` should only be used on non-ntsync wine-staging builds prior to 10.1. I've tested it as far back as 8.21, but it may work on earlier versions as well. 
+* `-t` should only be used on non-ntsync wine-staging builds prior to 10.1. I've tested it as far back as 8.21, but it may work on earlier versions as well.
 
 Run `yes | ./non-makepkg-build.sh` to build. I usually use `yes | ./non-makepkg-build.sh 2>&1 | tee buildfile.log` so that the output is piped to the console and to a file.
 

@@ -34,7 +34,7 @@ while getopts ":nepsthCcv:d:T:W:S:V:" flag; do
             echo "Main flags:"
             echo "  -c      clean up the repo and set it to a default state."
             echo "  -n      disable staging"
-            echo "  -e      disable esync patch for wine staging 10.13"
+            echo "  -e      disable esync fix for wine staging 10.13"
             echo "  -v <#>  0: Use Valve wine with latest patches"
             echo "          10: Valve wine v10 patches, pre-GE-Proton10-9 (may not work for everything)"
             echo "          9: Valve wine v9 patches"
