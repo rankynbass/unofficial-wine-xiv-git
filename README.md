@@ -42,7 +42,6 @@ usage: xiv-setup.sh [OPTION...]
 Main flags:
   -c      clean up the repo and set it to a default state.
   -n      disable staging
-  -e      disable esync fix for wine staging 10.13
   -v <#>  0: Use Valve wine with latest patches
           10: Valve wine v10 patches, pre-GE-Proton10-9 (may not work for everything)
           9: Valve wine v9 patches
