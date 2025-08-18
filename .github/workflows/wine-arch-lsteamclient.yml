@@ -3,8 +3,7 @@ name: Wine Arch lsteamclient CI
 on:
   workflow_dispatch:
   push:
-    tags:
-      ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
+    tags: ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
   build:
@@ -20,7 +19,7 @@ jobs:
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel sudo jack lib32-jack2
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.12
+          ./xiv-setup.sh -S v10.13
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh

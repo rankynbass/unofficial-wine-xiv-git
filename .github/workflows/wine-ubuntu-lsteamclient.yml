@@ -3,15 +3,13 @@ name: Wine Ubuntu lsteamlient CI
 on:
   workflow_dispatch:
   push:
-    tags:
-      ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
+    tags: ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
   build:
     runs-on: ubuntu-24.04
 
     steps:
-
       - uses: actions/checkout@v4
       - name: Compilation
         run: |
@@ -20,7 +18,7 @@ jobs:
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
           sudo apt install libxkbregistry0 libxkbregistry-dev
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.12
+          ./xiv-setup.sh -S v10.13
           sed -i 's/"-W ntdll-NtAlertThreadByThreadId"/"-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz

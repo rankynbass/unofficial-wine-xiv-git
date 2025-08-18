@@ -3,8 +3,7 @@ name: Wine Fedora lsteamclient CI
 on:
   workflow_dispatch:
   push:
-    tags:
-      ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
+    tags: ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
   build:
@@ -12,13 +11,12 @@ jobs:
     container: fedora:41
 
     steps:
-
       - uses: actions/checkout@v4
       - name: Compilation
         run: |
           sudo dnf -y -q upgrade --refresh
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.12
+          ./xiv-setup.sh -S v10.13
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
