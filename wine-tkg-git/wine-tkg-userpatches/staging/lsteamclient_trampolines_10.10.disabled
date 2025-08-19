@@ -205,16 +205,6 @@ index 803d8079213..028846f346a 100644
  /***********************************************************************
   *           load_ntdll_functions
   */
-  @@ -1887,6 +2006,9 @@
-       virtual_map_user_shared_data();
-       init_cpu_info();
-       init_files();
-  +
-  +    set_thread_teb( teb );
-  +
-       init_startup_info();
-       *(ULONG_PTR *)&peb->CloudFileFlags = get_image_address();
-       set_load_order_app_name( main_wargv[0] );
 diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
 index 751b0081534..d1b2fb66563 100644
 --- a/dlls/ntdll/unix/signal_i386.c
