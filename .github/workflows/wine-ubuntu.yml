@@ -2,6 +2,8 @@ name: Wine Ubuntu CI
 
 on:
   workflow_dispatch:
+  push:
+    tags: ["v[0-9]+.[0-9]+-nolsc", "v[0-9]+.[0-9]+.[0-9]+-nolsc"]
 
 jobs:
   build:
