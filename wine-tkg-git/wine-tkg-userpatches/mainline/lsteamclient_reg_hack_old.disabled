@@ -1,17 +1,17 @@
-From 60365fa2e1f55e51b44788d5eac68c6ddce77266 Mon Sep 17 00:00:00 2001
+From 92cccd853a8f66c59de9e9eeb2bb76105c147ad6 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Wed, 27 Dec 2017 13:31:59 -0600
 Subject: [PATCH] HACK: steam: wine.inf: Add required Steam registry entries.
 
 ---
- loader/wine.inf.in | 25 ++++++++++++++++++++++---
- 1 file changed, 22 insertions(+), 3 deletions(-)
+ loader/wine.inf.in | 22 ++++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 2 deletions(-)
 
 diff --git a/loader/wine.inf.in b/loader/wine.inf.in
-index 5f9f61e2535..43cae2a2bc2 100644
+index f1525c4f6dd..fdb0161f75d 100644
 --- a/loader/wine.inf.in
 +++ b/loader/wine.inf.in
-@@ -96,7 +97,8 @@ AddReg=\
+@@ -95,7 +95,8 @@ AddReg=\
      Tapi,\
      ThemeManager,\
      VersionInfo,\
@@ -21,7 +21,7 @@ index 5f9f61e2535..43cae2a2bc2 100644
  
  [DefaultInstall.ntamd64]
  RegisterDlls=RegisterDllsSection
-@@ -122,7 +124,8 @@ AddReg=\
+@@ -120,7 +121,8 @@ AddReg=\
      Tapi,\
      ThemeManager,\
      VersionInfo,\
@@ -31,30 +31,10 @@ index 5f9f61e2535..43cae2a2bc2 100644
  
  [DefaultInstall.ntarm64]
  RegisterDlls=RegisterDllsSection
-@@ -148,7 +150,8 @@ AddReg=\
-     Tapi,\
-     ThemeManager,\
-     VersionInfo,\
--    LicenseInformation
-+    LicenseInformation, \
-+    SteamClient.ntamd64
-
- [Wow64Install]
- RegisterDlls=RegisterDllsSection
-@@ -164,7 +166,8 @@ AddReg=\
-     Misc,\
-     Tapi,\
-     VersionInfo,\
--    LicenseInformation
-+    LicenseInformation, \
-+    SteamClient
-
-
- [DefaultInstall.Services]
-@@ -3867,6 +3870,22 @@ l_intl.nls
- winehid.inf,"@%12%\winehid.sys,-1"
- wineusb.inf,"@%12%\wineusb.sys,-1"
- winexinput.inf,"@%12%\winexinput.sys,-1"
+@@ -2703,3 +2705,19 @@ EtcFiles  = 12,etc
+ InfFiles  = 17
+ NlsFiles  = 11
+ SortFiles = 10,globalization\sorting
 +
 +[SteamClient]
 +HKCU,Software\Valve\Steam,"SteamPath",,"%16422%\Steam"
@@ -68,11 +48,8 @@ index 5f9f61e2535..43cae2a2bc2 100644
 +HKCU,Software\Valve\Steam,"SteamExe",,"%16422%\Steam\Steam.exe"
 +HKCU,Software\Valve\Steam\ActiveProcess,"PID",0x10001,0x0000fffe
 +HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16426%\Steam\steamclient.dll"
-+HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"%16426%\Steam\steamclient64.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"C:\windows\system32\lsteamclient.dll"
 +HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
 +HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
- 
- [NlsFiles]
- c_037.nls
 -- 
 GitLab

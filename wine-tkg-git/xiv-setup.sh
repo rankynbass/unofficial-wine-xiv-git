@@ -1,7 +1,7 @@
 #!/bin/bash
 xiv_staging=1
 xiv_threads=0
-xiv_trampolines=3
+xiv_trampolines=4
 xiv_valve=""
 xiv_ntsync=0
 xiv_protonify=1
@@ -47,7 +47,8 @@ while getopts ":nepsthCcv:d:T:W:S:V:" flag; do
             echo "  -T <#>  0: Disable lsteamclient patches and binaries"
             echo "          1: Use lsteamclient_tranpolines patch for wine <= 10.4"
             echo "          2: Use lsteamclient_trampolines patch for wine = 10.5"
-            echo "          3: (default) use lsteamclient_trampolines patch for wine >= 10.6"
+            echo "          3: Use lsteamclient_trampolines patch for wine <= 10.10"
+            echo "          4: (default) use lsteamclient_trampolines patch for wine >= 10.12"
             echo ""
             echo "Version flags:"
             echo "  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)"
@@ -191,13 +192,23 @@ else
             0)  ;;
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_reg_hack_old.disabled wine-tkg-userpatches/lsteamclient_reg_hack_old.mypatch
                 cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.4.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.4.mypatch
                 ;;
             2)  echo "Using lsteamclient_trampolines 10.5 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_reg_hack_old.disabled wine-tkg-userpatches/lsteamclient_reg_hack_old.mypatch
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.5.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.5.mypatch
                 ;;
-            *)  echo "Using default lsteamclient_trampolines patch for 10.6+"
+            3)  echo "Using lsteamclient_trampolines 10.6 - 10.10 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_reg_hack_old.disabled wine-tkg-userpatches/lsteamclient_reg_hack_old.mypatch
+                rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.10.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.10.mypatch
+                ;;
+            *)  echo "Using default lsteamclient_trampolines patch for 10.12+"
                 ;;
         esac
     else
@@ -206,19 +217,29 @@ else
         for f in wine-tkg-userpatches/mainline/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
         if [ "$xiv_debug" == 1 ]; then
             echo "Enabling debug patch"
-            cp wine-tkg-userpatches/staging/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
+            cp wine-tkg-userpatches/mainline/portable-pdb.disabled wine-tkg-userpatches/portable-pdb.mypatch
         fi
         case "$xiv_trampolines" in
             0)  ;;
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_reg_hack_old.disabled wine-tkg-userpatches/lsteamclient_reg_hack_old.mypatch
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.4.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.4.mypatch
                 ;;
             2)  echo "Using lsteamclient_trampolines 10.5 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_reg_hack_old.disabled wine-tkg-userpatches/lsteamclient_reg_hack_old.mypatch
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.5.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.5.mypatch
                 ;;
-            *)  echo "Using default lsteamclient_trampolines patch for 10.6+"
+            3)  echo "Using lsteamclient_trampolines 10.6 - 10.10 patch."
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_reg_hack_old.disabled wine-tkg-userpatches/lsteamclient_reg_hack_old.mypatch
+                rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.10.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.10.mypatch
+                ;;
+            *)  echo "Using default lsteamclient_trampolines patch for 10.12+"
                 ;;
         esac
     fi
