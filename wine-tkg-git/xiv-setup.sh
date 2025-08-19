@@ -249,6 +249,10 @@ else
         rm -f wine-tkg-userpatches/thread-prios-protonify.mypatch
         rm -f wine-tkg-userpatches/proton-cpu-topology-overrides-fix-*.mypatch
     fi
+    if [ "$xiv_topology" == "1" ]; then
+        echo "Using proton-cpu-topology-overrides-fix for 10.0"
+        cp wine-tkg-userpatches/mainline/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
+    fi
     if [ "$xiv_ntsync" == "1" ]; then
         echo "Using NTSync patches. Requires compatible kernel headers to compile."
         sed -i 's/_use_ntsync="false"/_use_ntsync="true"/' customization.cfg
