@@ -27,8 +27,11 @@ jobs:
       - name: Build and Install ntsync-header from PKGBUILD
         run: |
           sudo -u user bash -c "
-            cp -r ntsync ~
-            cd ~
+            mkdir -p ~/ntsync
+            ls ntsync
+            cp -R ntsync/* ~/ntsync
+            cd ~/ntsync
+            ls
             makepkg -si --noconfirm
           "
 
