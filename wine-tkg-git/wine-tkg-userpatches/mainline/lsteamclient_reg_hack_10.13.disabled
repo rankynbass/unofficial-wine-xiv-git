@@ -11,45 +11,46 @@ diff --git a/loader/wine.inf.in b/loader/wine.inf.in
 index 5f9f61e2535..43cae2a2bc2 100644
 --- a/loader/wine.inf.in
 +++ b/loader/wine.inf.in
-@@ -70,7 +70,8 @@ AddReg=\
-     Printing,\
-     Services, \
-     SessionMgr,\
--    ThemeManager
-+    ThemeManager, \
+@@ -96,7 +97,8 @@ AddReg=\
+     Tapi,\
+     ThemeManager,\
+     VersionInfo,\
+-    LicenseInformation
++    LicenseInformation, \
 +    SteamClient
  
- [DefaultInstall]
- Needs=BaseInstall
-@@ -97,7 +97,8 @@ AddReg=\
- AddReg=\
-     CurrentVersionWow64.ntamd64,\
-     VCRuntime.ntamd64,\
--    VersionInfo
+ [DefaultInstall.ntamd64]
+ RegisterDlls=RegisterDllsSection
+@@ -122,7 +124,8 @@ AddReg=\
+     Tapi,\
+     ThemeManager,\
+     VersionInfo,\
+-    LicenseInformation
 +    LicenseInformation, \
 +    SteamClient.ntamd64
  
  [DefaultInstall.ntarm64]
- Needs=BaseInstall
-@@ -119,6 +119,7 @@ AddReg=\
-     MCI,\
-     Misc,\
--    VersionInfo
-+    VersionInfo, \
+ RegisterDlls=RegisterDllsSection
+@@ -148,7 +150,8 @@ AddReg=\
+     Tapi,\
+     ThemeManager,\
+     VersionInfo,\
+-    LicenseInformation
++    LicenseInformation, \
 +    SteamClient.ntamd64
- 
- [Wow64Install.ntx86]
- Needs=BaseWow64Install
-@@ -126,7 +126,8 @@ AddReg=\
- AddReg=\
-     CurrentVersionWow64.ntx86,\
-     VCRuntime.ntamd64,\
--    VCRuntime.ntx86
-+    VCRuntime.ntx86, \
+
+ [Wow64Install]
+ RegisterDlls=RegisterDllsSection
+@@ -164,7 +166,8 @@ AddReg=\
+     Misc,\
+     Tapi,\
+     VersionInfo,\
+-    LicenseInformation
++    LicenseInformation, \
 +    SteamClient
- 
- [Wow64Install.ntarm]
- Needs=BaseWow64Install
+
+
+ [DefaultInstall.Services]
 @@ -3867,6 +3870,22 @@ l_intl.nls
  winehid.inf,"@%12%\winehid.sys,-1"
  wineusb.inf,"@%12%\wineusb.sys,-1"
@@ -73,4 +74,5 @@ index 5f9f61e2535..43cae2a2bc2 100644
  
  [NlsFiles]
  c_037.nls
---
+-- 
+GitLab

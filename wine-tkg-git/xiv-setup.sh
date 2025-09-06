@@ -1,20 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env bash
 xiv_staging=1
+xiv_esyncfix=1
 xiv_threads=0
-xiv_trampolines=4
+xiv_trampolines=5
 xiv_valve=""
 xiv_ntsync=0
 xiv_protonify=1
 xiv_lsteamclient=1
+xiv_reghack=2
 xiv_debug=0
 xiv_wineversion=""
 xiv_stagingversion=""
 xiv_valveversion=""
 xiv_topology=0
 
-while getopts ":nepsthCcv:d:T:W:S:V:" flag; do
+while getopts ":nepsthCcv:d:T:r:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
+        e) xiv_esyncfix=0;;
         v) xiv_valve=${OPTARG};;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
@@ -22,6 +25,7 @@ while getopts ":nepsthCcv:d:T:W:S:V:" flag; do
         d) xiv_debug=${OPTARG};;
         C) xiv_topology=1;;
         T) xiv_trampolines=${OPTARG};;
+        r) xiv_trampolines=${OPTARG};;
         W) xiv_wineversion=${OPTARG};;
         S) xiv_stagingversion=${OPTARG};;
         V) xiv_valveversion=${OPTARG};;
@@ -41,14 +45,16 @@ while getopts ":nepsthCcv:d:T:W:S:V:" flag; do
             echo "  -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+"
             echo "          0: Disable debug patch (default for mainline, staging)"
             echo "          1: Enable debug patch (default for valve wine)"
+            echo "  -e      disable esync fix (for wine >= 10.14)"
             echo "  -C      Proton-cpu-topology override patches for Protonify Staging non-ntsync wine 10.0"
             echo "          Only use for 10.0 builds, not for 10.1 and later."
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
             echo "  -T <#>  0: Disable lsteamclient patches and binaries"
-            echo "          1: Use lsteamclient_tranpolines patch for wine <= 10.4"
-            echo "          2: Use lsteamclient_trampolines patch for wine = 10.5"
-            echo "          3: Use lsteamclient_trampolines patch for wine <= 10.10"
-            echo "          4: (default) use lsteamclient_trampolines patch for wine >= 10.12"
+            echo "          1: Use lsteamclients patches for wine <= 10.4"
+            echo "          2: Use lsteamclients patches for wine = 10.5"
+            echo "          3: Use lsteamclients patches for wine <= 10.10"
+            echo "          4: use lsteamclients patches for 10.12 <= wine <= 10.13"
+            echo "          5: (default) use lsteamclient patches for wine >= 10.14"
             echo ""
             echo "Version flags:"
             echo "  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)"
@@ -188,6 +194,10 @@ else
             echo "Using proton-cpu-topology-overrides-fix for 10.0"
             cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
         fi
+        if [ "$xiv_esyncfix" == "1" ]; then
+            echo "Using esync fix for wine >= 10.14! Make sure you are actually building wine 10.14 or later."
+            cp wine-tkg-userpatches/staging/esync-fix-10.14.disabled wine-tkg-userpatches/esync-fix-10.14.mypatch
+        fi
         case "$xiv_trampolines" in
             0)  ;;
             1)  echo "Using lsteamclient_trampolines 10.4 patch."
@@ -208,7 +218,11 @@ else
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/staging/lsteamclient_trampolines_10.10.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.10.mypatch
                 ;;
-            *)  echo "Using default lsteamclient_trampolines patch for 10.12+"
+            4)  echo "Using lsteamclient_trampolines for 10.12 - 10.13"
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/staging/lsteamclient_reg_hack_10.13.disabled wine-tkg-userpatches/lsteamclient_reg_hack_10.13.mypatch
+                ;;
+            *)  echo "Using default lsteamclient_trampolines patch for 10.14+"
                 ;;
         esac
     else
@@ -239,7 +253,11 @@ else
                 rm -f wine-tkg-userpatches/lsteamclient_trampolines.mypatch
                 cp wine-tkg-userpatches/mainline/lsteamclient_trampolines_10.10.disabled wine-tkg-userpatches/lsteamclient_trampolines_10.10.mypatch
                 ;;
-            *)  echo "Using default lsteamclient_trampolines patch for 10.12+"
+            4)  echo "Using lsteamclient_trampolines for 10.12 - 10.13"
+                rm -f wine-tkg-userpatches/lsteamclient_reg_hack.mypatch
+                cp wine-tkg-userpatches/mainline/lsteamclient_reg_hack_10.13.disabled wine-tkg-userpatches/lsteamclient_reg_hack_10.13.mypatch
+                ;;
+            *)  echo "Using default lsteamclient_trampolines patch for 10.14+"
                 ;;
         esac
     fi
