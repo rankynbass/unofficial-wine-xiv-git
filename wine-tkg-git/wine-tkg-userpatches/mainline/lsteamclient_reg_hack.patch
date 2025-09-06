@@ -34,6 +34,7 @@ index 5f9f61e2535..43cae2a2bc2 100644
 @@ -119,6 +119,7 @@ AddReg=\
      MCI,\
      Misc,\
+     Packages.wow64,\
 -    VersionInfo
 +    VersionInfo, \
 +    SteamClient.ntamd64
