@@ -1,0 +1,40 @@
+pkgbase = ntsync
+	pkgdesc = NT synchronization primitive driver
+	pkgver = 6.14
+	pkgrel = 2
+	url = https://lore.kernel.org/lkml/20240519202454.1192826-1-zfigura@codeweavers.com/
+	arch = any
+	license = GPL-2.0-only WITH Linux-syscall-note
+	source = ntsync.c-13845bdc869f136f92ad3d40ea09b867bb4ce467::https://raw.githubusercontent.com/torvalds/linux/13845bdc869f136f92ad3d40ea09b867bb4ce467/drivers/misc/ntsync.c
+	source = ntsync.h-13845bdc869f136f92ad3d40ea09b867bb4ce467::https://raw.githubusercontent.com/torvalds/linux/13845bdc869f136f92ad3d40ea09b867bb4ce467/include/uapi/linux/ntsync.h
+	source = ntsync.conf
+	source = ntsync-header.hook
+	source = 99-ntsync.rules
+	source = Makefile
+	source = dkms.conf
+	sha256sums = 2cf78fcf9689c216525b3091003f5a8adf502b04531fec96c50ed7f606138978
+	sha256sums = 006437ee52a3e04f921df77081eb5c21c44c71f598b10ac534c6ef9e78296262
+	sha256sums = c19771ae86e7df179f6b2f4a2837d3f0cbbbba7b32baef41a3c27120c760d78f
+	sha256sums = 9cc1de67ee92ec9e57271d7c4a2c4eb139eac62bdc7637886033574f0831f9f7
+	sha256sums = ce5221146a19206ba043211db8f27143a82f9224c0aff24a0b584b7268fcb994
+	sha256sums = 834a7b4c9a67a44f2cf593bf259918ea12b0c0eeee7862ed4f9fd268076171cf
+	sha256sums = e81694fa952711f1b74f02b6a64ac1e90c229f93c740e4f97df5692f3af99609
+
+pkgname = ntsync-dkms
+	pkgdesc = NT synchronization primitive driver - out-of-tree module
+	depends = dkms
+	depends = ntsync-common
+	optdepends = ntsync-header: Allow Wine to be compiled with ntsync support
+	provides = NTSYNC-MODULE
+	conflicts = ntsync
+
+pkgname = ntsync-header
+	pkgdesc = NT synchronization primitive driver - Linux API header file
+	install = ntsync-header.install
+	depends = linux-api-headers>=6.10
+
+pkgname = ntsync-common
+	pkgdesc = NT synchronization primitive driver - common files
+	provides = ntsync-udev-rule
+	conflicts = ntsync-udev-rule
+	replaces = ntsync-udev-rule

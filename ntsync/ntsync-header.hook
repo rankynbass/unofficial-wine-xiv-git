@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux-api-headers
+[Action]
+Description = Replacing incomplete ntsync header...
+Exec = /bin/sh -c '/usr/bin/mv -f /usr/include/linux/ntsync.h /usr/share/ntsync/ntsync.h_orig && /usr/bin/cp -a /usr/share/ntsync/ntsync.h /usr/include/linux'
+When = PostTransaction
+Depends = coreutils
