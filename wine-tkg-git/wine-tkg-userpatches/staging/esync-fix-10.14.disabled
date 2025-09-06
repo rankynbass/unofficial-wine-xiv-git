@@ -1,0 +1,12 @@
+--- server/thread.c
++++ server/thread.c
+@@ -677,8 +654,7 @@ static void thread_apc_destroy( struct object *obj )
+             async_set_result( apc->owner, apc->call.async_io.status, 0 );
+         release_object( apc->owner );
+     }
+-    if (apc->sync) release_object( apc->sync );
+     reserve_obj_unbind( apc->reserve );
+ }
+
+ /* queue an async procedure call */
+--
