@@ -52,13 +52,16 @@ Extra patches and fixes:
   -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+
           0: Disable debug patch (default for mainline, staging)
           1: Enable debug patch (default for valve wine)
+  -e      disable esync fix (for wine >= 10.14)
   -C      Proton-cpu-topology override patches for Protonify Staging non-ntsync wine 10.0
           Only use for 10.0 builds, not for 10.1 and later.
   -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
   -T <#>  0: Disable lsteamclient patches and binaries
-          1: Use lsteamclient_tranpolines patch for wine <= 10.4
-          2: Use lsteamclient_trampolines patch for wine = 10.5
-          3: (default) use lsteamclient_trampolines patch for wine >= 10.6
+          1: Use lsteamclients patches for wine <= 10.4
+          2: Use lsteamclients patches for wine = 10.5
+          3: Use lsteamclients patches for wine <= 10.10
+          4: use lsteamclients patches for 10.12 <= wine <= 10.13
+          5: (default) use lsteamclient patches for wine >= 10.14
 
 Version flags:
   -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)
