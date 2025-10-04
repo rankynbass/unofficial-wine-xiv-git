@@ -102,7 +102,7 @@
 	    _patchname='fastsync-clock_monotonic-fixup.patch' && _patchmsg="Applied fastsync fix due clock_monotonic" && nonuser_patcher
 	  fi
 
-	elif [ "$_use_ntsync" = "true" ]; then
+	elif [ "$_use_ntsync" = "legacy" ]; then
 
 	  check_ntsync_header
 	  check_esync_and_fsync
@@ -118,8 +118,12 @@
 	    fi
 
 		if [ "$_protonify" = "true" ]; then
-		  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0e8d8eebb3a8c786b9b6e0618b5205dcbbebe03d HEAD ); then
+		  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 4c41e6a34c86ec96baf7c7c961e1fbcc929b9f37 HEAD ); then
 	      _patchname='ntsync5-staging-protonify.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor ca95da9c33b5c8552e77d582dd5f4ca848113d50 HEAD ); then
+	      _patchname='ntsync5-staging-protonify-4c41e6a3.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0e8d8eebb3a8c786b9b6e0618b5205dcbbebe03d HEAD ); then
+	      _patchname='ntsync5-staging-protonify-ca95da9c.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor cbb1247f39e1b82baf0291142da8b1fc00651e7c HEAD ); then
 	      _patchname='ntsync5-staging-protonify-0e8d8eeb.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor a3cde52275f823ec36734503466c2e4ab5c0cc43 HEAD ); then
@@ -196,8 +200,12 @@
 	      _patchname='ntsync5-staging-protonify-7eb72b7b.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 	      fi
 	    else
-		  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0e8d8eebb3a8c786b9b6e0618b5205dcbbebe03d HEAD ); then
+		  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 4c41e6a34c86ec96baf7c7c961e1fbcc929b9f37 HEAD ); then
 	      _patchname='ntsync5-staging.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor ca95da9c33b5c8552e77d582dd5f4ca848113d50 HEAD ); then
+	      _patchname='ntsync5-staging-4c41e6a3.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0e8d8eebb3a8c786b9b6e0618b5205dcbbebe03d HEAD ); then
+	      _patchname='ntsync5-staging-ca95da9c.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor cbb1247f39e1b82baf0291142da8b1fc00651e7c HEAD ); then
 	      _patchname='ntsync5-staging-0e8d8eeb.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor a3cde52275f823ec36734503466c2e4ab5c0cc43 HEAD ); then
@@ -276,8 +284,14 @@
 		fi
 	  else
 	    if [ "$_protonify" = "true" ]; then
-		  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 035164229c01e58ff2fd6b58298ccefa37cb5c90 HEAD ); then
+		  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 4c41e6a34c86ec96baf7c7c961e1fbcc929b9f37 HEAD ); then
 		    _patchname='ntsync5-protonify.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 2c2f3f15b31ddc2f2a9108e2c850b89d42f01626 HEAD ); then
+		    _patchname='ntsync5-protonify-4c41e6a3.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor ca95da9c33b5c8552e77d582dd5f4ca848113d50 HEAD ); then
+		    _patchname='ntsync5-protonify-2c2f3f15.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 035164229c01e58ff2fd6b58298ccefa37cb5c90 HEAD ); then
+		    _patchname='ntsync5-protonify-ca95da9c.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0e8d8eebb3a8c786b9b6e0618b5205dcbbebe03d HEAD ); then
 		    _patchname='ntsync5-protonify-03516422.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor cbb1247f39e1b82baf0291142da8b1fc00651e7c HEAD ); then
@@ -356,8 +370,14 @@
 	      _patchname='ntsync5-protonify-7eb72b7b.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 		  fi
 		else
-	      if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 035164229c01e58ff2fd6b58298ccefa37cb5c90 HEAD ); then
+	      if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 4c41e6a34c86ec96baf7c7c961e1fbcc929b9f37 HEAD ); then
 		    _patchname='ntsync5-mainline.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+	      elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 2c2f3f15b31ddc2f2a9108e2c850b89d42f01626 HEAD ); then
+		    _patchname='ntsync5-mainline-4c41e6a3.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+	      elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor ca95da9c33b5c8552e77d582dd5f4ca848113d50 HEAD ); then
+		    _patchname='ntsync5-mainline-2c2f3f15.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
+	      elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 035164229c01e58ff2fd6b58298ccefa37cb5c90 HEAD ); then
+		    _patchname='ntsync5-mainline-ca95da9c.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 	      elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 0e8d8eebb3a8c786b9b6e0618b5205dcbbebe03d HEAD ); then
 		    _patchname='ntsync5-mainline-03516422.patch' && _patchmsg="Using ntsync patchset" && nonuser_patcher
 	      elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor cbb1247f39e1b82baf0291142da8b1fc00651e7c HEAD ); then
@@ -437,12 +457,18 @@
 		  fi
 		fi
 	  fi
-	elif  [ "$_use_ntsync" = "inproc" ]; then
+	elif  [ "$_use_ntsync" = "true" ]; then
 
 	  check_ntsync_header
 	  check_esync_and_fsync
 
-	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 991bf42f1052db41bb9b2e178b8af7a51be95ca7 HEAD ); then
+	  if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 9038ef6d5be71955c6e0739f0e7395e30ce57597 HEAD ); then
 	    _patchname='inproc-sync.patch' && _patchmsg="Using inproc sync patchset" && nonuser_patcher
+	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 4c41e6a34c86ec96baf7c7c961e1fbcc929b9f37 HEAD ); then
+	    _patchname='inproc-sync-9038ef6d.patch' && _patchmsg="Using inproc sync patchset" && nonuser_patcher
+	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor bcd3e1a4de9d6efb177b932a937412bfb962d149 HEAD ); then
+	    _patchname='inproc-sync-4c41e6a3.patch' && _patchmsg="Using inproc sync patchset" && nonuser_patcher
+	  elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 991bf42f1052db41bb9b2e178b8af7a51be95ca7 HEAD ); then
+	    _patchname='inproc-sync-bcd3e1a4.patch' && _patchmsg="Using inproc sync patchset" && nonuser_patcher
 	  fi
 	fi
