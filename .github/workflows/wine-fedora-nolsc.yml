@@ -3,7 +3,7 @@ name: Wine Fedora No lsteamclient CI
 on:
   workflow_dispatch:
   push:
-    tags: ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
+    tags: ["v[0-9]+.[0-9]+-nolsc", "v[0-9]+.[0-9]+.[0-9]+-nolsc"]
 
 jobs:
   build:
