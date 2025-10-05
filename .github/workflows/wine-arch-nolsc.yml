@@ -16,7 +16,7 @@ jobs:
 
       - name: Install ntsync header
         run: |
-          if [ ! -e "/usr/include/linux/ntsync.h" ]; then sudo cp wine-tkg-git/ntsync-header/ntsync.h /usr/include/linux/ntsync.h"; fi
+          ntsync-header/install-header.sh
 
       - name: Compilation
         env:
