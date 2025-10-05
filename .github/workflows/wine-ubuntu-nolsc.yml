@@ -1,4 +1,4 @@
-name: Wine Ubuntu lsteamlient CI
+name: Wine Ubuntu No lsteamlient CI
 
 on:
   workflow_dispatch:
@@ -10,7 +10,13 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install ntsync header
+        run: |
+          if [ ! -e "/usr/include/linux/ntsync.h" ]; then sudo cp wine-tkg-git/ntsync-header/ntsync.h /usr/include/linux/ntsync.h"; fi
+
       - name: Compilation
         run: |
           sudo dpkg --add-architecture i386 && sudo apt update
@@ -18,11 +24,12 @@ jobs:
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
           sudo apt install libxkbregistry0 libxkbregistry-dev
           cd wine-tkg-git
-          ./xiv-setup.sh -S v10.14
+          ./xiv-staging.sh -lS v10.16
           sed -i 's/"-W ntdll-NtAlertThreadByThreadId"/"-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           yes|./non-makepkg-build.sh
+
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
