@@ -33,5 +33,5 @@ jobs:
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-xiv-ubuntu
+          name: wine-xiv-ubuntu-nolsc
           path: wine-tkg-git/non-makepkg-builds

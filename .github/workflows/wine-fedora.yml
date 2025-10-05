@@ -30,5 +30,5 @@ jobs:
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-xiv-nolsc-fedora
+          name: wine-xiv-fedora
           path: wine-tkg-git/non-makepkg-builds
