@@ -1,9 +1,9 @@
-name: Wine Ubuntu No lsteamlient CI
+name: Wine Ubuntu Fsync CI
 
 on:
   workflow_dispatch:
   push:
-    tags: ["v[0-9]+.[0-9]+-nolsc", "v[0-9]+.[0-9]+.[0-9]+-nolsc"]
+    tags: ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
   build:
@@ -24,14 +24,15 @@ jobs:
           sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
           sudo apt install libxkbregistry0 libxkbregistry-dev
           cd wine-tkg-git
-          ./xiv-staging.sh -lS v10.16
+          ./xiv-staging.sh -fS v10.16
           sed -i 's/"-W ntdll-NtAlertThreadByThreadId"/"-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
+          sed -i 's/_NOCCACHE=\"\(.*\)\"/_NOCCACHE=\"true\"/' wine-tkg-profiles/advanced-customization.cfg
           yes|./non-makepkg-build.sh
 
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-xiv-ubuntu-nolsc
+          name: wine-xiv-ubuntu-fsync
           path: wine-tkg-git/non-makepkg-builds

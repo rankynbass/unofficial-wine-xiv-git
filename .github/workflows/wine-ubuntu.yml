@@ -28,10 +28,11 @@ jobs:
           sed -i 's/"-W ntdll-NtAlertThreadByThreadId"/"-W ntdll-NtAlertThreadByThreadId -W vcomp_for_dynamic_init_i8"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
+          sed -i 's/_NOCCACHE=\"\(.*\)\"/_NOCCACHE=\"true\"/' wine-tkg-profiles/advanced-customization.cfg
           yes|./non-makepkg-build.sh
 
       - name: Archive the artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wine-xiv-ubuntu
+          name: wine-xiv-ubuntu-ntsync
           path: wine-tkg-git/non-makepkg-builds
