@@ -13,10 +13,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install ntsync header
-        run: |
-          sudo ntsync-header/install-header.sh
-
       - name: Compilation
         run: |
           sudo dpkg --add-architecture i386 && sudo apt update
