@@ -2,12 +2,16 @@
 xiv_protonify=1
 xiv_lsteamclient=1
 xiv_stagingversion=""
+xiv_esync=0
+xiv_fsync=0
 
-while getopts ":hcplS:" flag; do
+while getopts ":hcplefS:" flag; do
     case "${flag}" in
         p) xiv_protonify=0;;
         S) xiv_stagingversion=${OPTARG};;
         l) xiv_lsteamclient=0;;
+        e) xiv_esync=1;;
+        f) xiv_fsync=1;;
         h)
             echo "usage: xiv-staging.sh [OPTION...]"
             echo "For wine-staging 10.16 and later. Use xiv-setup.sh for earlier versions or valve wine"
@@ -17,6 +21,8 @@ while getopts ":hcplS:" flag; do
             echo "  -p              disable protonify patchset"
             echo "  -S <version>    set staging version. Must be a valid tag or commit hash (v10.16)"
             echo "  -l              disable lsteamclient patches"
+            echo "  -f              build with esync & fsync instead of ntsync"
+            echo "  -e              build with esync instead of ntsync"
 
             exit 0;;
         c)
@@ -50,9 +56,22 @@ else
     echo "No staging version set. Using latest commit"
 fi
 sed -i "s/_use_staging=\"\(.*\)\"/_use_staging=\"true\"/" customization.cfg
-sed -i "s/_use_esync=\"\(.*\)\"/_use_esync=\"false\"/" customization.cfg
-sed -i "s/_use_fsync=\"\(.*\)\"/_use_fsync=\"false\"/" customization.cfg
-sed -i "s/_use_ntsync=\"\(.*\)\"/_use_ntsync=\"false\"/" customization.cfg
+if [ "$xiv_fsync" == "1" ]; then
+    echo "Using Fsync patches. This includes Esync, and disabled NTsync."
+    sed -i "s/_use_fsync=\"\(.*\)\"/_use_fsync=\"true\"/" customization.cfg
+    sed -i "s/_use_esync=\"\(.*\)\"/_use_esync=\"true\"/" customization.cfg
+    sed -i "s/_use_ntsync=\"\(.*\)\"/_use_ntsync=\"false\"/" customization.cfg
+elif [ "$xiv_esync" == "1" ]; then
+    echo "Using Esync patches. This disables NTsync."
+    sed -i "s/_use_fsync=\"\(.*\)\"/_use_fsync=\"false\"/" customization.cfg
+    sed -i "s/_use_esync=\"\(.*\)\"/_use_esync=\"true\"/" customization.cfg
+    sed -i "s/_use_ntsync=\"\(.*\)\"/_use_ntsync=\"false\"/" customization.cfg
+else
+    echo "Using NTsync. This disables Esync and Fsync."
+    sed -i "s/_use_fsync=\"\(.*\)\"/_use_fsync=\"false\"/" customization.cfg
+    sed -i "s/_use_esync=\"\(.*\)\"/_use_esync=\"false\"/" customization.cfg
+    sed -i "s/_use_ntsync=\"\(.*\)\"/_use_ntsync=\"true\"/" customization.cfg
+fi
 
 for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
 if [ "$xiv_lsteamclient" == "0" ]; then

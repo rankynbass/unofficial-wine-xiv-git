@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 xiv_staging=1
-xiv_esyncfix=1
 xiv_threads=0
 xiv_trampolines=5
 xiv_valve=""
@@ -17,7 +16,6 @@ xiv_topology=0
 while getopts ":nepsthCcv:d:T:r:W:S:V:" flag; do
     case "${flag}" in
         n) xiv_staging=0;;
-        e) xiv_esyncfix=0;;
         v) xiv_valve=${OPTARG};;
         p) xiv_protonify=0;;
         s) xiv_ntsync=1;;
@@ -45,7 +43,6 @@ while getopts ":nepsthCcv:d:T:r:W:S:V:" flag; do
             echo "  -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+"
             echo "          0: Disable debug patch (default for mainline, staging)"
             echo "          1: Enable debug patch (default for valve wine)"
-            echo "  -e      disable esync fix (for wine >= 10.14)"
             echo "  -C      Proton-cpu-topology override patches for Protonify Staging non-ntsync wine 10.0"
             echo "          Only use for 10.0 builds, not for 10.1 and later."
             echo "  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging."
@@ -193,10 +190,6 @@ else
         if [ "$xiv_topology" == "1" ]; then
             echo "Using proton-cpu-topology-overrides-fix for 10.0"
             cp wine-tkg-userpatches/staging/proton-cpu-topology-overrides-fix-10.0.disabled wine-tkg-userpatches/proton-cpu-topology-overrides-fix-10.0.mypatch
-        fi
-        if [ "$xiv_esyncfix" == "1" ]; then
-            echo "Using esync fix for wine >= 10.14! Make sure you are actually building wine 10.14 or later."
-            cp wine-tkg-userpatches/staging/esync-fix-10.14.disabled wine-tkg-userpatches/esync-fix-10.14.mypatch
         fi
         case "$xiv_trampolines" in
             0)  ;;
