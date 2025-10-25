@@ -25,7 +25,7 @@ jobs:
           echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel sudo jack lib32-jack2
           cd wine-tkg-git
-          ./xiv-staging.sh -S v10.16
+          ./xiv-staging.sh -S v10.17
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           sed -i 's/_NOCCACHE=\"\(.*\)\"/_NOCCACHE=\"true\"/' wine-tkg-profiles/advanced-customization.cfg
