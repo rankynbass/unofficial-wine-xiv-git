@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:41
+    container: fedora:42
 
     steps:
       - name: Checkout Repository
@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo dnf -y -q upgrade --refresh
           cd wine-tkg-git
-          ./xiv-staging.sh -S v10.17
+          ./xiv-staging.sh -S v10.18
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           sed -i 's/_NOCCACHE=\"\(.*\)\"/_NOCCACHE=\"true\"/' wine-tkg-profiles/advanced-customization.cfg

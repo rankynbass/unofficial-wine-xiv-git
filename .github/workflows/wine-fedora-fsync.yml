@@ -2,13 +2,11 @@ name: Wine Fedora Fsync CI
 
 on:
   workflow_dispatch:
-  push:
-    tags: ["v[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+", "v[0-9]+.[0-9]+-[0-9]+"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:41
+    container: fedora:42
 
     steps:
       - name: Checkout Repository
