@@ -4,14 +4,16 @@ xiv_lsteamclient=1
 xiv_stagingversion=""
 xiv_esync=0
 xiv_fsync=0
+xiv_disableicu=0
 
-while getopts ":hcplefS:" flag; do
+while getopts ":hcplefiS:" flag; do
     case "${flag}" in
         p) xiv_protonify=0;;
         S) xiv_stagingversion=${OPTARG};;
         l) xiv_lsteamclient=0;;
         e) xiv_esync=1;;
         f) xiv_fsync=1;;
+        i) xiv_disableicu=1;;
         h)
             echo "usage: xiv-staging.sh [OPTION...]"
             echo "For wine-staging 10.16 and later. Use xiv-setup.sh for earlier versions or valve wine"
@@ -23,6 +25,7 @@ while getopts ":hcplefS:" flag; do
             echo "  -l              disable lsteamclient patches"
             echo "  -f              build with esync & fsync instead of ntsync"
             echo "  -e              build with esync instead of ntsync"
+            echo "  -i              disable icu to fix dalamud (10.20 thru 11.0-rc1 only)"
 
             exit 0;;
         c)
@@ -74,6 +77,9 @@ else
 fi
 
 for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
+if [ "$xiv_disableicu" == "1" ]; then
+    cp "wine-tkg-userpatches/staging/disable-icu-10.20.disabled" "wine-tkg-userpatches/disable-icu.mypatch"
+fi
 if [ "$xiv_lsteamclient" == "0" ]; then
     echo "Disabling lsteamclient patches and binaries"
     rm -f wine-tkg-userpatches/lsteamclient_*.mypatch
