@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo dnf -y -q upgrade --refresh
           cd wine-tkg-git
-          ./xiv-staging.sh -S v10.20 -i
+          ./xiv-staging.sh -S v11.0-rc4
           echo '_ci_build="true"' >> customization.cfg
           touch tarplz
           sed -i 's/_NOCCACHE=\"\(.*\)\"/_NOCCACHE=\"true\"/' wine-tkg-profiles/advanced-customization.cfg
