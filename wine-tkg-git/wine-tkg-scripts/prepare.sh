@@ -1113,9 +1113,11 @@ _polish() {
 
 	echo -e "\nRunning make_vulkan" >> "$_where"/prepare.log && dlls/winevulkan/make_vulkan -v >> "$_where"/prepare.log 2>&1
 	if [ "$_no_container" = "false" ] && [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
-	  if [ -e "$HOME"/.cache/wine/vk-* ] && [ -e "$HOME"/.cache/wine/video-* ]; then
-	    cp "$HOME"/.cache/wine/vk-* "${srcdir}"/"${_winesrcdir}"/dlls/winevulkan/vk.xml
-	    cp "$HOME"/.cache/wine/video-* "${srcdir}"/"${_winesrcdir}"/dlls/winevulkan/video.xml
+	  if ! cp -v $( ls -v "$HOME"/.cache/wine/vk-* | tail -n 1 ) "${srcdir}"/"${_winesrcdir}"/dlls/winevulkan/vk.xml; then
+	    warning "Cached vk.xml not found"
+	  fi
+	  if ! cp -v $( ls -v "$HOME"/.cache/wine/video-* | tail -n 1 ) "${srcdir}"/"${_winesrcdir}"/dlls/winevulkan/video.xml; then
+	    warning "Cached video.xml not found"
 	  fi
 	fi
 	tools/make_requests
