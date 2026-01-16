@@ -244,9 +244,9 @@ index 803d8079213..028846f346a 100644
      unixcall_wine_spawnvp,
      system_time_precise,
 +    steamclient_setup_trampolines,
-     is_pc_in_native_so,
-     debugstr_pc,
- };
+     wine_get_unix_env,
+     wine_set_unix_env,
+     unix__wine_dbg_ftrace,
 @@ -1273,6 +1121,19 @@ static const unixlib_entry_t unix_call_funcs[] =
  static NTSTATUS wow64_load_so_dll( void *args ) { return STATUS_INVALID_IMAGE_FORMAT; }
  static NTSTATUS wow64_unwind_builtin_dll( void *args ) { return STATUS_UNSUCCESSFUL; }
@@ -272,9 +272,9 @@ index 803d8079213..028846f346a 100644
      wow64_wine_spawnvp,
      system_time_precise,
 +    wow64_steamclient_setup_trampolines,
-     is_pc_in_native_so,
-     wow64_debugstr_pc,
- };
+     wow64___wine_get_unix_env,
+     wow64___wine_set_unix_env,
+     wow64___wine_dbg_ftrace,
 diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
 index 33958f76ee9..5d5a0e0cf9e 100644
 --- a/dlls/ntdll/unix/signal_i386.c
@@ -359,8 +359,8 @@ index e0870584a68..94abe3450b8 100644
      unix_wine_spawnvp,
      unix_system_time_precise,
 +    unix_steamclient_setup_trampolines,
-     unix_is_pc_in_native_so,
-     unix_debugstr_pc,
- };
+     unix___wine_get_unix_env,
+     unix___wine_set_unix_env,
+     unix_wine_dbg_ftrace,
 -- 
 GitLab

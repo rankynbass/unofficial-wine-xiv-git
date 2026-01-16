@@ -11,22 +11,24 @@ diff --git a/loader/wine.inf.in b/loader/wine.inf.in
 index f1525c4f6dd..fdb0161f75d 100644
 --- a/loader/wine.inf.in
 +++ b/loader/wine.inf.in
-@@ -95,7 +95,8 @@ AddReg=\
-     Tapi,\
-     ThemeManager,\
+@@ -101,8 +101,9 @@ AddReg=\
+     VCRuntime.ntx86,\
      VersionInfo,\
--    LicenseInformation
-+    LicenseInformation, \
+     LicenseInformation,\
+     NVIDIANGX, \
+-    ProtonOverrides
++    ProtonOverrides,\
 +    SteamClient
  
  [DefaultInstall.ntamd64]
  RegisterDlls=RegisterDllsSection
-@@ -120,7 +121,8 @@ AddReg=\
-     Tapi,\
-     ThemeManager,\
+@@ -125,8 +126,9 @@ AddReg=\
+     VCRuntime.ntamd64,\
      VersionInfo,\
--    LicenseInformation
-+    LicenseInformation, \
+     LicenseInformation,\
+     NVIDIANGX, \
+-    ProtonOverrides
++    ProtonOverrides,\
 +    SteamClient.ntamd64
  
  [DefaultInstall.ntarm64]
@@ -51,8 +53,8 @@ index f1525c4f6dd..fdb0161f75d 100644
 +HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"C:\windows\system32\lsteamclient.dll"
 +HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
 +HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
- 
+
  [NVIDIANGX]
  HKLM,Software\NVIDIA Corporation\Global\NGXCore,"FullPath",,"C:\Windows\System32"
--- 
+--
 GitLab
