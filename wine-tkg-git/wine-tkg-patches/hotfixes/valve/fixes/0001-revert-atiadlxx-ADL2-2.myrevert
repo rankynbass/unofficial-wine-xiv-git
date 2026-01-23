@@ -1,0 +1,141 @@
+From e5597c59ca6d089394a7befd9f9b4061aae2e35e Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 16 Jan 2026 18:53:35 -0600
+Subject: [PATCH] atiadlxx: Add stub for ADL_Display_ODClockInfo_Get().
+
+CW-Bug-Id: #26449
+---
+ dlls/atiadlxx/atiadlxx.spec   |  2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 37 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 38 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index 30407b73b4c..50bd9877a21 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -897,7 +897,7 @@
+ @ stub ADL_Display_NeedWorkaroundFor5Clone_Get
+ @ stub ADL_Display_NumberOfDisplays_Get
+ @ stub ADL_Display_ODClockConfig_Set
+-@ stub ADL_Display_ODClockInfo_Get
++@ cdecl ADL_Display_ODClockInfo_Get(long ptr)
+ @ stub ADL_Display_Overlap_Set
+ @ stub ADL_Display_Overscan_Get
+ @ stub ADL_Display_Overscan_Set
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index ec2e654274a..caa193ad824 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -296,6 +296,28 @@ typedef struct ADLMVPUStatus
+   ADLAdapterLocation aAdapterLocation[ADL_DL_MAX_MVPU_ADAPTERS];
+ } ADLMVPUStatus;
+
++typedef struct ADLODClockSetting
++{
++    int iDefaultClock;
++    int iCurrentClock;
++    int iMaxClock;
++    int iMinClock;
++    int iRequestedClock;
++    int iStepClock;
++} ADLODClockSetting;
++
++#define ADL_DL_CLOCKINFO_FLAG_FULLSCREEN3DONLY   0x00000001
++#define ADL_DL_CLOCKINFO_FLAG_ALWAYSFULLSCREEN3D 0x00000002
++#define ADL_DL_CLOCKINFO_FLAG_VPURECOVERYREDUCED 0x00000004
++#define ADL_DL_CLOCKINFO_FLAG_THERMALPROTECTION  0x00000008
++typedef struct ADLAdapterODClockInfo
++{
++    int iSize;
++    int iFlags;
++    ADLODClockSetting sMemoryClock;
++    ADLODClockSetting sEngineClock;
++} ADLAdapterODClockInfo;
++
+ static const ADLVersionsInfo version = {
+     "99.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
+     "",
+@@ -1100,3 +1122,18 @@ int CDECL ADL_Display_MVPUStatus_Get(int adapter_index, ADLMVPUStatus *mvpu_stat
+     memset(&mvpu_status->iActiveAdapterCount, 0, sizeof(*mvpu_status) - offsetof(ADLMVPUStatus, iActiveAdapterCount));
+     return ADL_OK;
+ }
++
++int CDECL ADL_Display_ODClockInfo_Get(int adapter_index, ADLAdapterODClockInfo *clock_info)
++{
++    FIXME("adapter_index %d, clock_info %p stub.\n", adapter_index, clock_info);
++
++    clock_info->iFlags = ADL_DL_CLOCKINFO_FLAG_ALWAYSFULLSCREEN3D;
++    clock_info->sMemoryClock.iStepClock = 500;
++    clock_info->sMemoryClock.iDefaultClock = 210000;
++    clock_info->sMemoryClock.iMaxClock = 210000;
++    clock_info->sMemoryClock.iMinClock = 210000;
++    clock_info->sMemoryClock.iCurrentClock = 210000;
++    clock_info->sMemoryClock.iRequestedClock = 210000;
++    clock_info->sEngineClock = clock_info->sMemoryClock;
++    return ADL_OK;
++}
+
+From 29c21872ab45e6ea16f4110ae11bb5e3789c362f Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 16 Jan 2026 16:43:49 -0600
+Subject: [PATCH] atiadlxx: Add ADL_Display_MVPUStatus_Get().
+
+CW-Bug-Id: #26449
+---
+ dlls/atiadlxx/atiadlxx.spec   |  2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 25 +++++++++++++++++++++++++
+ 2 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index 532473b0d5a..30407b73b4c 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -882,7 +882,7 @@
+ @ stub ADL_Display_LCDRefreshRate_Set
+ @ stub ADL_Display_Limits_Get
+ @ stub ADL_Display_MVPUCaps_Get
+-@ stub ADL_Display_MVPUStatus_Get
++@ cdecl ADL_Display_MVPUStatus_Get(long ptr)
+ @ stub ADL_Display_ModeTimingOverrideInfo_Get
+ @ stub ADL_Display_ModeTimingOverrideListX2_Get
+ @ stub ADL_Display_ModeTimingOverrideList_Get
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 1d840aa5a7b..ec2e654274a 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -279,6 +279,23 @@ typedef struct ADLDDCInfo2
+     int iReserved[2];
+ } ADLDDCInfo2;
+
++#define ADL_DL_MAX_MVPU_ADAPTERS   4
++
++typedef struct ADLAdapterLocation
++{
++    int iBus;
++    int iDevice;
++    int iFunction;
++} ADLAdapterLocation, ADLBdf;
++
++typedef struct ADLMVPUStatus
++{
++  int iSize;
++  int iActiveAdapterCount;
++  int iStatus;
++  ADLAdapterLocation aAdapterLocation[ADL_DL_MAX_MVPU_ADAPTERS];
++} ADLMVPUStatus;
++
+ static const ADLVersionsInfo version = {
+     "99.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
+     "",
+@@ -1075,3 +1092,11 @@ int CDECL ADL_Display_DisplayMapConfig_Get(int adapter_index, int *display_map_c
+     return ADL2_Display_DisplayMapConfig_Get(default_ctx, adapter_index, display_map_count, display_maps,
+             display_target_count, display_targets, options);
+ }
++
++int CDECL ADL_Display_MVPUStatus_Get(int adapter_index, ADLMVPUStatus *mvpu_status)
++{
++    TRACE("adapter_index %d, mvpu_status %p.\n", adapter_index, mvpu_status);
++
++    memset(&mvpu_status->iActiveAdapterCount, 0, sizeof(*mvpu_status) - offsetof(ADLMVPUStatus, iActiveAdapterCount));
++    return ADL_OK;
++}

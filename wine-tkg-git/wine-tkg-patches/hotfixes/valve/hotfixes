@@ -17,10 +17,8 @@ if [ "$_EXTERNAL_INSTALL" != "proton" ]; then
   elif [[ "$_plain_version" = *_9.0 ]]; then
     if [[ "$_LOCAL_PRESET" = valve-ex* ]]; then
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-90-be.mypatch "$_where"/
-      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-90-*.mypatch "$_where"/
     else
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-90.mypatch "$_where"/
-      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-90-*.mypatch "$_where"/
     fi
     #if [ "$(_os_name)" = "ubuntu" ]; then
     #  warning "Disabling mediaconv for buntu"
@@ -29,13 +27,10 @@ if [ "$_EXTERNAL_INSTALL" != "proton" ]; then
   elif [[ "$_plain_version" = *_10.0 ]]; then
     if [[ "$_LOCAL_PRESET" = valve-exp-bleeding ]]; then
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-10.0-be.mypatch "$_where"/
-      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-10.0-*.mypatch "$_where"/
     elif [[ "$_LOCAL_PRESET" = valve-ex* ]]; then
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-10.0-exp.mypatch "$_where"/
-      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-10.0-*.mypatch "$_where"/
     else
       cp "$_where"/wine-tkg-patches/hotfixes/valve/de-steamify-10.0.mypatch "$_where"/
-      cp "$_where"/wine-tkg-patches/hotfixes/valve/re-steamify/re-steamify-10.0-*.mypatch "$_where"/
     fi
   fi
 fi
@@ -55,6 +50,7 @@ if [[ "$_plain_version" = *_10.0 ]]; then
 
   # Bleeding edge atiadlxx ADL2 changes are failing to build against current sniper container (and Archlinux alike), let's revert
   if [[ "$_LOCAL_PRESET" = valve-exp-bleeding ]]; then
+    cp "$_where"/wine-tkg-patches/hotfixes/valve/fixes/0001-revert-atiadlxx-ADL2-2.myrevert "$_where"/
     cp "$_where"/wine-tkg-patches/hotfixes/valve/fixes/0001-revert-atiadlxx-ADL2.myrevert "$_where"/
   fi
 
