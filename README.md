@@ -28,53 +28,15 @@ sudo aptitude remove -y '?narrow(?installed,?version(deb.sury.org))'
 sudo apt install libxkbregistry0 libxkbregistry-dev
 ```
 
-After you've set up your build environment, simply clone the repo, cd into the directory, and run the following command to see your options:
+After you've set up your build environment, simply clone the repo, cd into the directory, and run one of the following command to see your options:
 ```
 git clone https://github.com/rankynbass/unofficial-wine-xiv-git
 cd unofficial-wine-xiv-git/wine-tkg
-./xiv-setup.sh -h
+./xiv-staging.sh -h    ### For wine-staging 10.20 and later
+./xiv-valve.sh -h      ### For valve wine
 ```
 
-That will give you the following output:
-```
-usage: xiv-setup.sh [OPTION...]
-
-Main flags:
-  -c      clean up the repo and set it to a default state.
-  -n      disable staging
-  -v <#>  0: Use Valve wine with latest patches
-          10: Valve wine v10 patches, pre-GE-Proton10-9 (may not work for everything)
-          9: Valve wine v9 patches
-  -p      disable protonify patchset (non-valve wine only)
-  -s      enable ntsync
-
-Extra patches and fixes:
-  -d <#>  Debug patch for Dalamud. For wine 9.0 to 10.7. Not needed for 10.8+
-          0: Disable debug patch (default for mainline, staging)
-          1: Enable debug patch (default for valve wine)
-  -e      disable esync fix (for wine >= 10.14)
-  -C      Proton-cpu-topology override patches for Protonify Staging non-ntsync wine 10.0
-          Only use for 10.0 builds, not for 10.1 and later.
-  -t      use thread priorities patch with staging. Useful for pre-10.1 wine-staging.
-  -T <#>  0: Disable lsteamclient patches and binaries
-          1: Use lsteamclients patches for wine <= 10.4
-          2: Use lsteamclients patches for wine = 10.5
-          3: Use lsteamclients patches for wine <= 10.10
-          4: use lsteamclients patches for 10.12 <= wine <= 10.13
-          5: (default) use lsteamclient patches for wine >= 10.14
-
-Version flags:
-  -W <version>        set wine version. Must be a valid tag or commit hash (wine-10.1)
-  -S <version>        set staging version. Must be a valid tag or commit hash (v10.1)
-  -V <hash> or <tag>  set the valve bleeding edge commit hash or tag
-
-Some combinations of flags will be ignored. For example, setting -t or -C when using -s
- (enable ntsync) does nothing.
-```
-Then run it again with the appropriate flags to set up the patches and configuration files.
-* If you do not set a version flag, it will use whatever is already in the customization.cfg or wine-tkg-exp-bleeding.cfg files.
-* If you set the version flag to `""` it will use the latest commit instead of a specific version.
-* `-t` should only be used on non-ntsync wine-staging builds prior to 10.1. I've tested it as far back as 8.21, but it may work on earlier versions as well.
+For the most part, you will want to run something like `./xiv-staging.sh -S v11.3` or `./xiv-valve.sh -V 986bda11d3e569813ec0f86e56ef94d7c384da04`. `./xiv-setup.sh` is provided for older verions, but is no longer being kept up-to-date, and many of the options no longer work as a result of changes to wine-tkg-git.
 
 Run `yes | ./non-makepkg-build.sh` to build. I usually use `yes | ./non-makepkg-build.sh 2>&1 | tee buildfile.log` so that the output is piped to the console and to a file.
 
