@@ -24,7 +24,16 @@ _no_steampath="false"
 
 # true disables building in valve SDK container to build against current system libs
 # this might lead to issues with some games and anticheats
-_no_container="true"
+# !!! "false" requires a working Docker or Podman setup !!!
+_no_container="false"
+
+# If user passes "nocontainer", let's bypass default
+if [ "$1" = "nocontainer" ]; then
+  _no_container="true"
+fi
+if [ "$_no_container" = "true" ]; then
+  echo -e "\n###############################################\n#####   NOT using Valve SDK Container !   #####\n###############################################"
+fi
 
 function resources_cleanup {
   # The symlinks switch doesn't need the recursive flag, but we'll use it temporarily
@@ -847,7 +856,11 @@ function build_in_valve_container {
   sed -i "s|STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud.*|STEAMRT_IMAGE ?= ghcr.io/open-wine-components/umu-sdk:latest|g" Makefile.in
 
   mkdir build && cd build
-  ../configure.sh --enable-ccache --build-name=TKG
+  _configure_flags="--enable-ccache --build-name=TKG"
+  if command -v selinuxenabled > /dev/null && selinuxenabled; then
+    _configure_flags+=" --relabel-volumes"
+  fi
+  ../configure.sh $_configure_flags
   make redist
   echo "_proton_pkgdest='$_nowhere/external-resources/Proton/build/redist'" >> "$_nowhere"/proton_tkg_token
 }
@@ -870,7 +883,7 @@ elif [ "$1" = "build_in_valve_container" ]; then
   build_in_valve_container
 else
   # If $1 contains a path, and it exists, use it as default for config
-  if [ -n "$1" ]; then
+  if [ -n "$1" ] && [ "$1" != "nocontainer" ]; then
     _EXT_CONFIG_PATH="$(readlink -m $1)"
     if [ ! -f "$_EXT_CONFIG_PATH" ]; then
       echo "User-supplied external config file '${_EXT_CONFIG_PATH}' not found! Please fix your passed path!"

@@ -12,7 +12,13 @@ It can create Steamplay compatible wine builds based on wine-tkg-git + additiona
 
 # Quick how-to :
 
-(for dependencies, see the [wiki page](https://github.com/Tk-Glitch/PKGBUILDS/wiki/wine-tkg-git) )
+The recommended way to build Valve-based Proton builds is to use Valve SDK Container, which requires a working Docker or Podman setup. Arch [Podman](https://wiki.archlinux.org/title/Podman) /
+[Docker](https://wiki.archlinux.org/title/Docker), Debian [Podman](https://wiki.debian.org/Podman) /
+[Docker](https://wiki.debian.org/Docker).
+
+However be aware that path have known issues with Wine upstream based builds. For more info, see [Building](https://github.com/Frogging-Family/wine-tkg-git/blob/master/proton-tkg/README.md#building-wiki-page-if-needed-)
+
+(for other dependencies, see the [wiki page](https://github.com/Tk-Glitch/PKGBUILDS/wiki/wine-tkg-git) )
 
 
 ## Download the source :
@@ -39,6 +45,8 @@ cd proton-tkg
 ```
 ./proton-tkg.sh
 ```
+
+**NOTE: In the case of upstream-based builds (which are discouraged), you'll want to either run `./proton-tkg.sh nocontainer` or edit [proton-tkg.sh](https://github.com/Frogging-Family/wine-tkg-git/blob/master/proton-tkg/proton-tkg.sh) prior to running the script**
 
 ### How to uninstall superfluous builds the easy way when not using a pacman package :
 ```

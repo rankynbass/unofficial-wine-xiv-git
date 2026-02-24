@@ -1336,9 +1336,9 @@ index a4a10bc8e93..551ef146cd7 100644
  
 -EXTRADLLFLAGS = -Wb,--prefer-native
 -
- VER_FILEDESCRIPTION_STR = "Wine Vulkan Loader"
- # Set to 1.0.0 so the official Vulkan runtime installer will replace this file
- VER_PRODUCTVERSION      = 1,0,0,0
+ SOURCES = \
+ 	version.rc \
+ 	vulkan.c
 From 07461415f4399934a3c03c8dd6e146167bd67dfd Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Thu, 25 Mar 2021 17:53:37 +0300

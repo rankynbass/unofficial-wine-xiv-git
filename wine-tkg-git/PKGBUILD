@@ -254,9 +254,6 @@ else
     "wine-esync=$pkgver"
   )
   conflicts=('wine' 'wine-wow64' 'wine-staging' 'wine-esync')
-  if [[ "$pkgname" == *-git ]]; then
-    replaces=("${pkgname/%-git/-faudio-git}")
-  fi
 fi
 
 if [ -n "$_localbuild" ]; then

@@ -37,6 +37,7 @@ jobs:
             sed -i 's/_use_ntsync=\"false\"/_use_ntsync=\"true\"/' proton-tkg.cfg
             sed -i 's/_use_esync=\"true\"/_use_esync=\"false\"/' proton-tkg.cfg
             sed -i 's/_use_fsync=\"true\"/_use_fsync=\"false\"/' proton-tkg.cfg
+            sed -i 's/_no_container=\"false\"/_no_container=\"true\"/' proton-tkg.sh
             touch tarplz
             yes | ./proton-tkg.sh
           "

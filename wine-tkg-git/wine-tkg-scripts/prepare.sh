@@ -271,6 +271,10 @@ _init() {
         _LOCAL_PRESET="valve"
       elif [ "$CONDITION" = "4" ]; then
         _LOCAL_PRESET=""
+        if [ "$_no_container" = "false" ]; then
+          warning "Wine upstream based Proton compilation is likely to fail unless you run \"./proton-tkg.sh nocontainer\""
+          read -rp "Press enter to continue anyway"
+        fi
       elif [ "$CONDITION" = "5" ]; then
         i=0
         for _profiles in "$_where/wine-tkg-profiles"/legacy/wine-tkg-*.cfg; do
