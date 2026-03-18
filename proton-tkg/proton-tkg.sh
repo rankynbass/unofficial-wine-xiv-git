@@ -836,6 +836,11 @@ function build_in_valve_container {
   git submodule update --init --recursive
   make clean
 
+  # userpatches
+  _user_patches_no_confirm="true" _userpatch_target="proton" _userpatch_ext="myproton" proton_patcher
+  ( cd dxvk && _user_patches_no_confirm="true" _userpatch_target="dxvk" _userpatch_ext="mydxvk" proton_patcher )
+  ( cd vkd3d-proton && _user_patches_no_confirm="true" _userpatch_target="vkd3d-proton" _userpatch_ext="myvkd3d" proton_patcher )
+
   ## The variable eventually ends empty here
   ## Needs some more checks
   ##
