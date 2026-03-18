@@ -25,7 +25,7 @@ while getopts ":hcplefiS:" flag; do
             echo "  -l              disable lsteamclient patches"
             echo "  -f              build with esync & fsync instead of ntsync"
             echo "  -e              build with esync instead of ntsync"
-            echo "  -i              disable icu to fix dalamud (10.20 thru 11.0-rc1 only)"
+            echo "  -i              disable broken icu patches to fix dalamud (10.20 thru 11.0-rc1 only)"
 
             exit 0;;
         c)
@@ -78,6 +78,7 @@ fi
 
 for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
 if [ "$xiv_disableicu" == "1" ]; then
+    echo "Disabling broken icu patches (for wine 10.20-11.0-rc1)"
     cp "wine-tkg-userpatches/staging/disable-icu-10.20.disabled" "wine-tkg-userpatches/disable-icu.mypatch"
 fi
 if [ "$xiv_lsteamclient" == "0" ]; then

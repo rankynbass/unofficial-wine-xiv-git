@@ -49,6 +49,7 @@ As of FFXIV 7.2, Dalamud requires an additional patch to function with wine vers
 If you are using arch with cachyos repos (and not cachyos from its own installer), the above command *will* fail and get stuck in a loop due to having multiple repos. The first time you will have to
 babysit the install. Just run `./non-makepkg-build.sh` and be prepared to hit enter a bunch of times until it starts compiling.
 
+### Old examples. Use xiv-staging.sh and xiv-valve.sh for 10.20 and recent valve-wine
 **Example 1: Do a basic staging build**
 
 This will build staging 10.1 and output the build info to the console and the staging-10.1.log file.
