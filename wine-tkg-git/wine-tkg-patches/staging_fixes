@@ -1,5 +1,11 @@
 #!/bin/bash
 
+	# dcomp-DCompositionCreateDevice2 staging patchset breaks on some tests, disable until fixed
+	if [ "$_use_staging" = "true" ] && ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor b70caa17726c3532b210a5ddf53af8024bc35b34 HEAD ); then
+		_staging_args+=(-W dcomp-DCompositionCreateDevice2)
+		echo "Revert staging patchset dcomp-DCompositionCreateDevice2 due to breakage" >> "$_where"/last_build_config.log
+	fi
+
 	# vkd3d-latest patchset has issues applying since e2390e2
 	if [ "$_use_staging" = "true" ] && ( cd "${srcdir}"/"${_stgsrcdir}" && git merge-base --is-ancestor 999c6a11d688ace3957cd3fa4afcff7057bf5375 HEAD && ! git merge-base --is-ancestor a877872a9a095930aed054ee50ed20abae87d04c HEAD); then
 		( cd "${srcdir}"/"${_stgsrcdir}" && _committorevert=e2390e2637df90c73b6e318d1fcf00b98e1ef380 nonuser_reverter && _committorevert=999c6a11d688ace3957cd3fa4afcff7057bf5375 nonuser_reverter )
