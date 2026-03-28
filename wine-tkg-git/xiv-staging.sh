@@ -4,7 +4,7 @@ xiv_lsteamclient=1
 xiv_stagingversion=""
 xiv_esync=0
 xiv_fsync=0
-xiv_disableicu=0
+xiv_disableicu=1
 
 while getopts ":hcplefiS:" flag; do
     case "${flag}" in
@@ -13,7 +13,7 @@ while getopts ":hcplefiS:" flag; do
         l) xiv_lsteamclient=0;;
         e) xiv_esync=1;;
         f) xiv_fsync=1;;
-        i) xiv_disableicu=1;;
+        i) xiv_disableicu=0;;
         h)
             echo "usage: xiv-staging.sh [OPTION...]"
             echo "For wine-staging 10.16 and later. Use xiv-setup.sh for earlier versions or valve wine"
@@ -25,7 +25,7 @@ while getopts ":hcplefiS:" flag; do
             echo "  -l              disable lsteamclient patches"
             echo "  -f              build with esync & fsync instead of ntsync"
             echo "  -e              build with esync instead of ntsync"
-            echo "  -i              disable broken icu patches to fix dalamud (10.20 thru 11.0-rc1 only)"
+            echo "  -i              enable icu patches (off by default)"
 
             exit 0;;
         c)
@@ -78,8 +78,12 @@ fi
 
 for f in wine-tkg-userpatches/staging/*.patch; do cp "$f" "wine-tkg-userpatches/$(basename ${f%.patch}).mypatch"; done
 if [ "$xiv_disableicu" == "1" ]; then
-    echo "Disabling broken icu patches (for wine 10.20-11.0-rc1)"
-    cp "wine-tkg-userpatches/staging/disable-icu-10.20.disabled" "wine-tkg-userpatches/disable-icu.mypatch"
+    echo "Disabling icu patches (for wine 10.20-11.0-rc1, 11.5+)"
+    sed -i "s/_configure_userargs64=\"\(.*\)\"/_configure_userargs64=\"--disable-icu --disable-icuin --disable-icuuc --disable-icucommon --disable-icui18n\"/" wine-tkg-profiles/advanced-customization.cfg
+    sed -i "s/_configure_userargs32=\"\(.*\)\"/_configure_userargs32=\"--disable-icu --disable-icuin --disable-icuuc --disable-icucommon --disable-icui18n\"/" wine-tkg-profiles/advanced-customization.cfg
+else
+    sed -i "s/_configure_userargs64=\"\(.*\)\"/_configure_userargs64=\"\"/" wine-tkg-profiles/advanced-customization.cfg
+    sed -i "s/_configure_userargs32=\"\(.*\)\"/_configure_userargs32=\"\"/" wine-tkg-profiles/advanced-customization.cfg
 fi
 if [ "$xiv_lsteamclient" == "0" ]; then
     echo "Disabling lsteamclient patches and binaries"
