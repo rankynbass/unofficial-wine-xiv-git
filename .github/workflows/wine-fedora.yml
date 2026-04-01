@@ -1,4 +1,4 @@
-name: Wine Fedora CI
+name: Wine Fedora lsteamclient CI
 
 on:
   workflow_dispatch:
@@ -6,18 +6,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: fedora:42
-    steps:
+    container: fedora:latest
 
+    steps:
       - uses: actions/checkout@v4
       - name: Compilation
         run: |
           sudo dnf -y -q upgrade --refresh
           cd wine-tkg-git
-          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv/' non-makepkg-build.sh
+          sed -i 's/pkgname=wine-tkg/pkgname=wine-xiv-lsc/' non-makepkg-build.sh
           sed -i 's/_wayland_driver="false"/_wayland_driver="true"/' customization.cfg
           sed -i 's/_NOLIB32="false"/_NOLIB32="wow64"/' wine-tkg-profiles/advanced-customization.cfg
           echo '_ci_build="true"' >> customization.cfg
+          echo '_lsteamclient_patches="true"' >> customization.cfg
+          for f in wine-tkg-userpatches/*.lsc; do mv "$f" "wine-tkg-userpatches/$(basename ${f%.lsc}).mypatch"; done
           touch tarplz
           yes|./non-makepkg-build.sh
       - name: Archive the artifacts
