@@ -5,8 +5,9 @@ xiv_stagingversion=""
 xiv_esync=0
 xiv_fsync=0
 xiv_disableicu=1
+xiv_disabledynexes=0
 
-while getopts ":hcplefiS:" flag; do
+while getopts ":hcplefidS:" flag; do
     case "${flag}" in
         p) xiv_protonify=0;;
         S) xiv_stagingversion=${OPTARG};;
@@ -14,6 +15,7 @@ while getopts ":hcplefiS:" flag; do
         e) xiv_esync=1;;
         f) xiv_fsync=1;;
         i) xiv_disableicu=0;;
+        d) xiv_disabledynexes=1;;
         h)
             echo "usage: xiv-staging.sh [OPTION...]"
             echo "For wine-staging 10.16 and later. Use xiv-setup.sh for earlier versions or valve wine"
@@ -26,6 +28,7 @@ while getopts ":hcplefiS:" flag; do
             echo "  -f              build with esync & fsync instead of ntsync"
             echo "  -e              build with esync instead of ntsync"
             echo "  -i              enable icu patches (off by default)"
+            echo "  -d              disable dynamic relocation of exes (on by default)"
 
             exit 0;;
         c)
@@ -84,6 +87,10 @@ if [ "$xiv_disableicu" == "1" ]; then
 else
     sed -i "s/_configure_userargs64=\"\(.*\)\"/_configure_userargs64=\"\"/" wine-tkg-profiles/advanced-customization.cfg
     sed -i "s/_configure_userargs32=\"\(.*\)\"/_configure_userargs32=\"\"/" wine-tkg-profiles/advanced-customization.cfg
+fi
+if [ "$xiv_disabledynexes" == "1" ]; then
+    echo "Disabling dynamic exes patch"
+    rm -f wine-tkg-userpatches/server-Dynamically-relocate-.exes-by-default-too.mypatch
 fi
 if [ "$xiv_lsteamclient" == "0" ]; then
     echo "Disabling lsteamclient patches and binaries"
