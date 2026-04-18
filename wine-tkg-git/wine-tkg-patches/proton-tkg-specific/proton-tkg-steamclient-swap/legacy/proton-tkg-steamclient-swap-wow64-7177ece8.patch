@@ -1286,8 +1286,8 @@ index f754078acf7..a2c93cb6c1b 100644
      if (mapping->image.alignment & page_mask)
          mapping->image.image_flags |= IMAGE_FLAGS_ImageMappedFlat;
      else if ((mapping->image.dll_charact & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) &&
--             (has_relocs || mapping->image.contains_code) && !clr_dir)
-+             (has_relocs || mapping->image.contains_code) && !clr_dir &&
+-             (has_relocs || mapping->image.contains_code) && !(clr_va && clr_size))
++             (has_relocs || mapping->image.contains_code) && !(clr_va && clr_size) &&
 +             memcmp( mz.buffer, valve_signature, sizeof(valve_signature) ))
          mapping->image.image_flags |= IMAGE_FLAGS_ImageDynamicallyRelocated;
  

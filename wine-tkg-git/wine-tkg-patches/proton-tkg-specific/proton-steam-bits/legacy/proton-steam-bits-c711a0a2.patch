@@ -439,9 +439,9 @@ index b676bc8d955..e4e40bb487f 100644
 --- a/programs/winedbg/debugger.h
 +++ b/programs/winedbg/debugger.h
 @@ -283,6 +283,7 @@ extern	DWORD	                dbg_curr_tid;
+ extern  dbg_ctx_t               dbg_context;
  extern  BOOL                    dbg_interactiveP;
  extern  HANDLE                  dbg_houtput;
- extern  struct list             dbg_process_list;
 +extern  HANDLE                  dbg_crash_report_file;
 
  struct dbg_internal_var
@@ -525,9 +525,9 @@ index dab5fbd85a3..21391bcdcec 100644
  BOOL    	        dbg_interactiveP = FALSE;
  HANDLE                  dbg_houtput = 0;
 +HANDLE                  dbg_crash_report_file = INVALID_HANDLE_VALUE;
- struct list             dbg_process_list = LIST_INIT(dbg_process_list);
 
- struct dbg_internal_var         dbg_internal_vars[DBG_IV_LAST];
+ static struct list      dbg_process_list = LIST_INIT(dbg_process_list);
+
 @@ -108,6 +109,8 @@ static void dbg_outputA(const char* buffer, int len)
              else break;
          }
