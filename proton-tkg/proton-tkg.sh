@@ -857,8 +857,11 @@ function build_in_valve_container {
   # We *will* face warnings
   sed -i "/--enable-werror.*/d" Makefile.in
 
-  # Use latest container image
-  sed -i "s|STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud.*|STEAMRT_IMAGE ?= ghcr.io/open-wine-components/umu-sdk:latest|g" Makefile.in
+  # Use latest container image from UMU
+  # note regarding Proton (bleeding edge) 11: using steamrt4 instead for a little while due to missing deps in UMU image
+  if [ -z "$_bleeding_tag" ] && [ "$_unfrog" = "true" ]; then
+    sed -i "s|STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud.*|STEAMRT_IMAGE ?= ghcr.io/open-wine-components/umu-sdk:latest|g" Makefile.in
+  fi
 
   mkdir build && cd build
   _configure_flags="--enable-ccache --build-name=TKG"

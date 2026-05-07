@@ -305,7 +305,7 @@ build_wine_tkg() {
     local _prefix="${_nomakepkg_prefix_path}/${_nomakepkg_pkgname}"
   fi
 
-  if [ "$_NOLIB32" = "true" ]; then
+  if [ "$_NOLIB32" = "true" ] || ( [[ "$_custom_wine_source" = *"ValveSoftware"* ]] && [[ "$_plain_version" = *_11.0 ]] ); then # Valve: Maybe switch globally for wine 11+?
     local _lib32name="lib"
     local _lib64name="lib"
   elif [ -e /lib ] && [ -e /lib64 ] && [ -d /usr/lib ] && [ -d /usr/lib32 ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then

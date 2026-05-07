@@ -12,8 +12,10 @@ _apply_GE_patch() {
 }
 
 _GE() {
-    msg2 "GE patches..."
-    if [[ "$_plain_version" = *_10.0 ]]; then
+    msg2 "GE patches... If available"
+    if [[ "$_plain_version" = *_11.0 ]]; then
+      _patchname=""
+    elif [[ "$_plain_version" = *_10.0 ]]; then
       if [[ "$_LOCAL_PRESET" = valve-exp-bleeding* ]]; then
         _patchname="01-game-patch.patch" _patchpath="$_where/wine-tkg-patches/hotfixes/GE/GE-for-proton10" _apply_GE_patch
         _patchname="02-wine-pending-patch-exp.patch" _patchpath="$_where/wine-tkg-patches/hotfixes/GE/GE-for-proton10/exp" _apply_GE_patch
@@ -66,7 +68,9 @@ _GE() {
       elif [[ "$_LOCAL_PRESET" = valve-exp* ]]; then
         _ge_subpath="/exp"
       fi
-      if [[ "$_plain_version" = *_10.0 ]]; then
+      if [[ "$_plain_version" = *_11.0 ]]; then
+        _patchname=""
+      elif [[ "$_plain_version" = *_10.0 ]]; then
         _patchname="06-proton-ge-fshack-FSR-patch.patch" _patchpath="$_where/wine-tkg-patches/hotfixes/GE/GE-for-proton10" _apply_GE_patch
       elif [[ "$_plain_version" = *_9.0 ]]; then
         if [[ "$_LOCAL_PRESET" = valve-ex* ]]; then
