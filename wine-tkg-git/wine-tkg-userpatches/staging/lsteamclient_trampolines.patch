@@ -232,7 +232,7 @@ index 751b0081534..d1b2fb66563 100644
          }
          break;
      case TRAP_x86_PAGEFLT:  /* Page fault */
-+        if ((steamclient_addr = steamclient_handle_fault( siginfo->si_addr, (ERROR_sig(ucontext) >> 1) & 0x09 )))
++        if ((steamclient_addr = steamclient_handle_fault( siginfo->si_addr, (ERROR_sig(sigcontext) >> 1) & 0x09 )))
 +        {
 +            EIP_sig(sigcontext) = (intptr_t)steamclient_addr;
 +            return;
@@ -257,7 +257,7 @@ index ab544908883..ae100e05e63 100644
          }
          break;
      case TRAP_x86_PAGEFLT:  /* Page fault */
-+        if ((steamclient_addr = steamclient_handle_fault( siginfo->si_addr, (ERROR_sig(ucontext) >> 1) & 0x09 )))
++        if ((steamclient_addr = steamclient_handle_fault( siginfo->si_addr, (ERROR_sig(sigcontext) >> 1) & 0x09 )))
 +        {
 +            RIP_sig(sigcontext) = (intptr_t)steamclient_addr;
 +            return;
