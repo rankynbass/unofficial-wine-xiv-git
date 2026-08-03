@@ -1173,22 +1173,9 @@ index af2094a96f0..9c98209d43d 100644
  BOOL use_system_cursors = TRUE;
 -BOOL grab_fullscreen = FALSE;
 +BOOL grab_fullscreen = TRUE;
- int keyboard_layout = -1;
- BOOL keyboard_scancode_detect = FALSE;
  BOOL managed_mode = TRUE;
-diff --git a/programs/winecfg/input.c b/programs/winecfg/input.c
-index fbc6716e94e..1ca8c3ed0fd 100644
---- a/programs/winecfg/input.c
-+++ b/programs/winecfg/input.c
-@@ -90,7 +90,7 @@ static void init_dialog(HWND dialog)
-
-     updating_ui = TRUE;
-
--    buffer = get_reg_key( config_key, keypath( L"X11 Driver" ), L"GrabFullscreen", L"N" );
-+    buffer = get_reg_key( config_key, keypath( L"X11 Driver" ), L"GrabFullscreen", L"Y" );
-     if (IS_OPTION_TRUE( *buffer )) CheckDlgButton( dialog, IDC_FULLSCREEN_GRAB, BST_CHECKED );
-     else CheckDlgButton( dialog, IDC_FULLSCREEN_GRAB, BST_UNCHECKED );
-     free( buffer );
+ BOOL private_color_map = FALSE;
+ int primary_monitor = 0;
 From 2452b57e7fed9ac5036df9bcace5c28366a8eb41 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Fri, 8 Jan 2021 13:47:39 -0600
@@ -1212,29 +1199,6 @@ index a33440107b6..397aa64dce2 100644
          };
  
          WCHAR cur_exe[MAX_PATH];
-From e6c7aa8bc42fea042c3d504009ad8a0fb70a6c0c Mon Sep 17 00:00:00 2001
-From: Andrew Eikum <aeikum@codeweavers.com>
-Date: Thu, 21 Jan 2021 11:54:10 -0600
-Subject: [PATCH] vulkan-1: Prefer builtin
-
-Games that ship their own vulkan-1 will be broken with your VR wrappers.
----
- dlls/vulkan-1/Makefile.in | 2 --
- 1 file changed, 2 deletions(-)
-
-diff --git a/dlls/vulkan-1/Makefile.in b/dlls/vulkan-1/Makefile.in
-index a4a10bc8e93..551ef146cd7 100644
---- a/dlls/vulkan-1/Makefile.in
-+++ b/dlls/vulkan-1/Makefile.in
-@@ -2,6 +2,4 @@ MODULE    = vulkan-1.dll
- IMPORTS   = winevulkan
- IMPORTLIB = vulkan-1
- 
--EXTRADLLFLAGS = -Wb,--prefer-native
--
- VER_FILEDESCRIPTION_STR = "Wine Vulkan Loader"
- # Set to 1.0.0 so the official Vulkan runtime installer will replace this file
- VER_PRODUCTVERSION      = 1,0,0,0
 From 07461415f4399934a3c03c8dd6e146167bd67dfd Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Thu, 25 Mar 2021 17:53:37 +0300
