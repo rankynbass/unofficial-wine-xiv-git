@@ -219,14 +219,15 @@ diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
 index 751b0081534..d1b2fb66563 100644
 --- a/dlls/ntdll/unix/signal_i386.c
 +++ b/dlls/ntdll/unix/signal_i386.c
-@@ -1906,6 +1906,7 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+@@ -1906,7 +1906,8 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     ucontext_t *sigcontext = _sigcontext;
+     struct thread_data *data = init_handler( sigcontext );
+     void *stack = get_exception_stack( data, sigcontext );
      struct xcontext xcontext;
-     ucontext_t *ucontext = sigcontext;
-     void *stack = setup_exception_record( sigcontext, &rec, &xcontext );
 +    void *steamclient_addr = NULL;
-
-     switch (TRAP_sig(ucontext))
-     {
+     EXCEPTION_RECORD rec = { .ExceptionAddress = (void *)EIP_sig( sigcontext ) };
+ 
+     save_context( data, &xcontext.c, sigcontext );
 @@ -1940,6 +1941,12 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
          }
          break;
@@ -245,13 +246,13 @@ index ab544908883..ae100e05e63 100644
 --- a/dlls/ntdll/unix/signal_x86_64.c
 +++ b/dlls/ntdll/unix/signal_x86_64.c
 @@ -1929,6 +1929,7 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
-     ucontext_t *ucontext = init_handler( sigcontext );
-     EXCEPTION_RECORD rec = { 0 };
+     ucontext_t *sigcontext = _sigcontext;
+     struct thread_data *data = init_handler( sigcontext );
      struct xcontext context;
 +    void *steamclient_addr = NULL;
-
-     rec.ExceptionAddress = (void *)RIP_sig(ucontext);
-     save_context( &context, ucontext );
+     EXCEPTION_RECORD rec = { .ExceptionAddress = (void *)RIP_sig(sigcontext) };
+ 
+     save_context( data, &context, sigcontext );
 @@ -1960,6 +1961,12 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
          }
          break;
