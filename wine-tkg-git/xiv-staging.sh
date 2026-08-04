@@ -5,7 +5,7 @@ xiv_stagingversion=""
 xiv_esync=0
 xiv_fsync=0
 xiv_disableicu=1
-xiv_disabledynexes=0
+xiv_disabledynexes=1
 
 while getopts ":hcplefidS:" flag; do
     case "${flag}" in
@@ -15,7 +15,7 @@ while getopts ":hcplefidS:" flag; do
         e) xiv_esync=1;;
         f) xiv_fsync=1;;
         i) xiv_disableicu=0;;
-        d) xiv_disabledynexes=1;;
+        d) xiv_disabledynexes=0;;
         h)
             echo "usage: xiv-staging.sh [OPTION...]"
             echo "For wine-staging 10.16 and later. Use xiv-setup.sh for earlier versions or valve wine"
@@ -28,7 +28,7 @@ while getopts ":hcplefidS:" flag; do
             echo "  -f              build with esync & fsync instead of ntsync"
             echo "  -e              build with esync instead of ntsync"
             echo "  -i              enable icu patches (off by default)"
-            echo "  -d              disable dynamic relocation of exes (on by default)"
+            echo "  -d              enable dynamic relocation of exes (for 11.4 and earlier, off by default)"
 
             exit 0;;
         c)
