@@ -1469,14 +1469,125 @@ diff --git a/include/appmodel.h b/include/appmodel.h
 index e4288bbfbb0..27a0d0a8646 100644
 --- a/include/appmodel.h
 +++ b/include/appmodel.h
-@@ -129,6 +129,9 @@ LONG WINAPI AppPolicyGetProcessTerminationMethod(HANDLE token, AppPolicyProcessT
+@@ -82,6 +82,8 @@ LONG WINAPI AppPolicyGetProcessTerminationMethod(HANDLE token, AppPolicyProcessT
  LONG WINAPI AppPolicyGetShowDeveloperDiagnostic(HANDLE token, AppPolicyShowDeveloperDiagnostic *policy);
  LONG WINAPI AppPolicyGetThreadInitializationType(HANDLE token, AppPolicyThreadInitializationType *policy);
  LONG WINAPI AppPolicyGetWindowingModel(HANDLE processToken, AppPolicyWindowingModel *policy);
-+LONG WINAPI GetPackagePath(const PACKAGE_ID *package_id, const UINT32 reserved, UINT32 *length, WCHAR *path);
 +LONG WINAPI GetPackagesByPackageFamily(const WCHAR *family_name, UINT32 *count, WCHAR **full_names,
 +        UINT32 *buffer_length, WCHAR *buffer);
- LONG WINAPI PackageFullNameFromId(const PACKAGE_ID *id, UINT32 *name_length, WCHAR *name);
+ LONG WINAPI PackageIdFromFullName(const WCHAR *full_name, UINT32 flags, UINT32 *buffer_length, BYTE *buffer);
+ 
+ #if defined(__cplusplus)
+-- 
+2.30.2
+
+From 1bf233880b472769e5b560a3d50adbbecfeb5736 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 26 Mar 2021 01:10:08 +0300
+Subject: [PATCH 09/16] kernel32: Implement PackageFullNameFromId().
+
+---
+ dlls/kernel32/kernel32.spec                   |  1 +
+ dlls/kernelbase/kernelbase.spec               |  2 +-
+ dlls/kernelbase/version.c                     | 43 +++++++++++++++++++
+ include/appmodel.h                            |  1 +
+ 5 files changed, 67 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 59785a6de24..491f5ca0402 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -1152,6 +1152,7 @@
+ @ stdcall -import PeekConsoleInputW(ptr ptr long ptr)
+ @ stdcall -import PeekNamedPipe(long ptr long ptr ptr ptr)
+ @ stdcall -import PostQueuedCompletionStatus(long long ptr ptr)
++@ stdcall -import PackageFullNameFromId(ptr ptr ptr)
+ @ stdcall -import PackageIdFromFullName(wstr long ptr ptr)
+ @ stdcall PowerClearRequest(long long)
+ @ stdcall PowerCreateRequest(ptr)
+diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
+index 5d21680f512..81d88b1a33a 100644
+--- a/dlls/kernelbase/kernelbase.spec
++++ b/dlls/kernelbase/kernelbase.spec
+@@ -1012,7 +1012,7 @@
+ # @ stub PackageFamilyNameFromFullName
+ # @ stub PackageFamilyNameFromId
+ # @ stub PackageFamilyNameFromProductId
+-# @ stub PackageFullNameFromId
++@ stdcall PackageFullNameFromId(ptr ptr ptr)
+ # @ stub PackageFullNameFromProductId
+ @ stdcall PackageIdFromFullName(wstr long ptr ptr)
+ # @ stub PackageIdFromProductId
+diff --git a/dlls/kernelbase/version.c b/dlls/kernelbase/version.c
+index dca4ffb8647..560e45e965a 100644
+--- a/dlls/kernelbase/version.c
++++ b/dlls/kernelbase/version.c
+@@ -1597,6 +1597,16 @@ static UINT32 processor_arch_from_string(const WCHAR *str, unsigned int len)
+     return ~0u;
+ }
+ 
++const WCHAR *string_from_processor_arch(UINT32 code)
++{
++    unsigned int i;
++
++    for (i = 0; i < ARRAY_SIZE(arch_names); ++i)
++        if (code == arch_names[i].code)
++            return arch_names[i].name;
++    return NULL;
++}
++
+ /***********************************************************************
+  *         PackageIdFromFullName   (kernelbase.@)
+  */
+@@ -1687,6 +1697,39 @@ LONG WINAPI PackageIdFromFullName(const WCHAR *full_name, UINT32 flags, UINT32 *
+ }
+ 
+ 
++/***********************************************************************
++ *         PackageFullNameFromId   (kernelbase.@)
++ */
++LONG WINAPI PackageFullNameFromId(const PACKAGE_ID *package_id, UINT32 *length, WCHAR *full_name)
++{
++    WCHAR ver_str[5 * 4 + 3 + 1];
++    const WCHAR *arch_str;
++    UINT32 have_length;
++
++    TRACE("package_id %p, length %p, full_name %p.\n", package_id, length, full_name);
++
++    if (!package_id || !length)
++        return ERROR_INVALID_PARAMETER;
++    if (!full_name && *length)
++        return ERROR_INVALID_PARAMETER;
++    if (!package_id->name || !package_id->resourceId || !package_id->publisherId
++            || !(arch_str = string_from_processor_arch(package_id->processorArchitecture)))
++        return ERROR_INVALID_PARAMETER;
++
++    swprintf(ver_str, ARRAY_SIZE(ver_str), L"%u.%u.%u.%u", package_id->version.Major,
++            package_id->version.Minor, package_id->version.Build, package_id->version.Revision);
++    have_length = *length;
++    *length = lstrlenW(package_id->name) + 1 + lstrlenW(ver_str) + 1 + lstrlenW(arch_str) + 1
++            + lstrlenW(package_id->resourceId) + 1 + lstrlenW(package_id->publisherId) + 1;
++
++    if (have_length < *length)
++        return ERROR_INSUFFICIENT_BUFFER;
++
++    swprintf(full_name, *length, L"%s_%s_%s_%s_%s", package_id->name, ver_str, arch_str, package_id->resourceId, package_id->publisherId);
++    return ERROR_SUCCESS;
++}
++
++
+ /***********************************************************************
+  *         GetPackagesByPackageFamily   (kernelbase.@)
+  */
+diff --git a/include/appmodel.h b/include/appmodel.h
+index 27a0d0a8646..be59bc70f5f 100644
+--- a/include/appmodel.h
++++ b/include/appmodel.h
+@@ -84,6 +84,7 @@ LONG WINAPI AppPolicyGetThreadInitializationType(HANDLE token, AppPolicyThreadIn
+ LONG WINAPI AppPolicyGetWindowingModel(HANDLE processToken, AppPolicyWindowingModel *policy);
+ LONG WINAPI GetPackagesByPackageFamily(const WCHAR *family_name, UINT32 *count, WCHAR **full_names,
+         UINT32 *buffer_length, WCHAR *buffer);
++LONG WINAPI PackageFullNameFromId(const PACKAGE_ID *package_id, UINT32 *length, WCHAR *full_name);
  LONG WINAPI PackageIdFromFullName(const WCHAR *full_name, UINT32 flags, UINT32 *buffer_length, BYTE *buffer);
  
  #if defined(__cplusplus)
@@ -1610,6 +1721,18 @@ index 560e45e965a..1f16194a565 100644
 +    heap_free(key_name);
 +    return ret;
 +}
+diff --git a/include/appmodel.h b/include/appmodel.h
+index be59bc70f5f..c73cb8d26ef 100644
+--- a/include/appmodel.h
++++ b/include/appmodel.h
+@@ -82,6 +82,7 @@ LONG WINAPI AppPolicyGetProcessTerminationMethod(HANDLE token, AppPolicyProcessT
+ LONG WINAPI AppPolicyGetShowDeveloperDiagnostic(HANDLE token, AppPolicyShowDeveloperDiagnostic *policy);
+ LONG WINAPI AppPolicyGetThreadInitializationType(HANDLE token, AppPolicyThreadInitializationType *policy);
+ LONG WINAPI AppPolicyGetWindowingModel(HANDLE processToken, AppPolicyWindowingModel *policy);
++LONG WINAPI GetPackagePath(const PACKAGE_ID *package_id, const UINT32 reserved, UINT32 *length, WCHAR *path);
+ LONG WINAPI GetPackagesByPackageFamily(const WCHAR *family_name, UINT32 *count, WCHAR **full_names,
+         UINT32 *buffer_length, WCHAR *buffer);
+ LONG WINAPI PackageFullNameFromId(const PACKAGE_ID *package_id, UINT32 *length, WCHAR *full_name);
 -- 
 2.30.2
 
@@ -1653,8 +1776,8 @@ diff --git a/dlls/kernelbase/version.c b/dlls/kernelbase/version.c
 index d8db79b1263a..4631ac8d0bcf 100644
 --- a/dlls/kernelbase/version.c
 +++ b/dlls/kernelbase/version.c
-@@ -1622,7 +1622,20 @@ LONG WINAPI GetPackageFamilyName(HANDLE process, UINT32 *length, WCHAR *name)
-     return APPMODEL_ERROR_NO_PACKAGE;
+@@ -1618,6 +1618,19 @@ LONG WINAPI DECLSPEC_HOTPATCH GetPackagesByPackageFamily(const WCHAR *family_nam
+     return ERROR_SUCCESS;
  }
 
 +/***********************************************************************
@@ -1670,7 +1793,6 @@ index d8db79b1263a..4631ac8d0bcf 100644
 +    return APPMODEL_ERROR_NO_PACKAGE;
 +}
 +
- 
  static const struct
  {
      UINT32 code;

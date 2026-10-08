@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [ "$_EXTERNAL_INSTALL" = "proton" ] && [ "$_unfrog" != "true" ]; then
+	if git merge-base --is-ancestor b7db0b52cee65a008f503ce727befcad3ba8d28a HEAD; then
+		_patchname='proton-makedep-fixes.patch' && _patchmsg="Enable Proton's makedep fixes for upstream base" && nonuser_patcher
+	fi
+fi

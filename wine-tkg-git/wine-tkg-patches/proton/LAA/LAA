@@ -3,11 +3,23 @@
 	# IMAGE_FILE_LARGE_ADDRESS_AWARE override - Enable with WINE_LARGE_ADDRESS_AWARE=1
 	if [ "$_large_address_aware" = "true" ]; then
 		if [ "$_NOLIB32" != "wow64" ]; then
-			if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8cba5b8e0f58b529de71db529882aa358ee8fbb4 HEAD ); then
+			if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 5fec717c4e806109c21b6227510f28f2e4d52333 HEAD ); then
 				if [ "$_use_staging" = "true" ]; then
 					_patchname='LAA-unix-staging-wow64.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
 				else
 					_patchname='LAA-unix-wow64.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
+				fi
+			elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor f4c5b04148db5fc4e5265beec461d3b7d9f4a789 HEAD ); then
+				if [ "$_use_staging" = "true" ]; then
+					_patchname='LAA-unix-staging-wow64-5fec717c.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
+				else
+					_patchname='LAA-unix-wow64-5fec717c.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
+				fi
+			elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8cba5b8e0f58b529de71db529882aa358ee8fbb4 HEAD ); then
+				if [ "$_use_staging" = "true" ]; then
+					_patchname='LAA-unix-staging-wow64-f4c5b041.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
+				else
+					_patchname='LAA-unix-wow64-f4c5b041.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
 				fi
 			elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor e377b7406859213adda6ccf912a4b64753fe88b3 HEAD ); then
 				if [ "$_use_staging" = "true" ]; then
@@ -101,11 +113,17 @@
 				fi
 			fi
 		elif [ "$_NOLIB32" = "wow64" ]; then
-			if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8cba5b8e0f58b529de71db529882aa358ee8fbb4 HEAD ); then
+			if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor f4c5b04148db5fc4e5265beec461d3b7d9f4a789 HEAD ); then
 				if [ "$_use_staging" = "true" ]; then
 					_patchname='LAA-unix-staging-wow64.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
 				else
 					_patchname='LAA-unix-wow64.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
+				fi
+			elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor 8cba5b8e0f58b529de71db529882aa358ee8fbb4 HEAD ); then
+				if [ "$_use_staging" = "true" ]; then
+					_patchname='LAA-unix-staging-wow64-f4c5b041.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
+				else
+					_patchname='LAA-unix-wow64-f4c5b041.patch' && _patchmsg="Applied large address aware override support" && nonuser_patcher
 				fi
 			elif ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor e377b7406859213adda6ccf912a4b64753fe88b3 HEAD ); then
 				if [ "$_use_staging" = "true" ]; then

@@ -1,0 +1,93 @@
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -217,7 +217,9 @@
+     const char     *importlib;
+     const char     *unixlib;
+     bool            data_only;
+-    bool            external;
++    bool            external;
++    int             is_external; /* subdir listed by absolute path (external module, e.g. Proton) */
++    int             has_cxx;     /* module contains C++ sources: link unixlib with $(CXX) */
+     bool            is_win16;
+     bool            is_exe;
+     bool            disabled[MAX_ARCHS];
+@@ -2363,7 +2365,7 @@
+     struct strarray ret = empty_strarray;
+     struct strarray all_libs = empty_strarray;
+ 
+-    if (strcmp( make->unixlib, "ntdll.so" )) strarray_add( &all_libs, "-lntdll" );
++    if (strcmp( make->unixlib, "ntdll.so" ) && !make->is_external) strarray_add( &all_libs, "-lntdll" );
+     strarray_addall( &all_libs, get_expanded_make_var_array( make, "UNIX_LIBS" ));
+ 
+     STRARRAY_FOR_EACH( file, &all_libs )
+@@ -3672,6 +3674,7 @@
+     else if (source->file->flags & FLAG_C_UNIX)
+     {
+         if (!unix_lib_supported) return;
++        if (source->file->flags & FLAG_C_CXX) make->has_cxx = 1; /* link unixlib with $(CXX) */
+     }
+     else if (source->file->flags & (FLAG_C_CXX | FLAG_C_ASM))
+     {
+@@ -4070,7 +4073,8 @@
+     output_filenames_obj_dir( make, make->unixobj_files );
+     output_filenames( unix_deps );
+     output( "\n" );
+-    output( "\t%s$(CC) -o $@", cmd_prefix( "CCLD" ));
++    if (make->has_cxx) output( "\t%s$(CXX) -o $@", cmd_prefix( "CCLD" ));
++    else output( "\t%s$(CC) -o $@", cmd_prefix( "CCLD" ));
+     output_filenames( get_expanded_make_var_array( make, "UNIXLDFLAGS" ));
+     output_filenames_obj_dir( make, make->unixobj_files );
+     output_filenames( unix_libs );
+@@ -5191,7 +5195,11 @@
+     subdirs = get_expanded_make_var_array( top_makefile, "SUBDIRS" );
+     submakes = xmalloc( subdirs.count * sizeof(*submakes) );
+ 
+-    for (i = 0; i < subdirs.count; i++) submakes[i] = parse_makefile( subdirs.str[i] );
++for (i = 0; i < subdirs.count; i++)
++{
++    submakes[i] = parse_makefile( subdirs.str[i] );
++    if (subdirs.str[i][0] == '/') submakes[i]->is_external = 1; /* external module: skip -lntdll */
++}
+ 
+     load_sources( top_makefile );
+     load_sources( include_makefile );
+
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -1702,6 +1702,9 @@
+     /* ignore missing files in external libs */
+     if (make->external) return NULL;
+     if (source->included_by && is_external_header( source->included_by )) return NULL;
+ 
++    /* importlibs of modules not listed in SUBDIRS cannot be resolved; ignore them */
++    if (source->type == INCL_IMPORTLIB) return NULL;
++
+     fprintf( stderr, "%s:%d: error: ", source->included_by->file->name, source->included_line );
+     perror( source->name );
+
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -5193,6 +5193,8 @@
+ 
+     for (i = 0; i < subdirs.count; i++) submakes[i] = parse_makefile( subdirs.str[i] );
+ 
++    if (!include_makefile) include_makefile = parse_makefile( root_src_dir_path( "include" ) );
++
+     load_sources( top_makefile );
+     load_sources( include_makefile );
+     for (i = 0; i < subdirs.count; i++)
+
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -2523,8 +2523,9 @@
+             continue;
+         }
+         if (submake) continue;  /* ignore disabled lib */
+-        input_file_name = src_dir_path( make, "Makefile.in" );
+-        fatal_error( "library %s not found\n", basename );
++        /* module not listed in SUBDIRS (prebuilt wine import lib): pass -l<builtin> to the linker */
++        strarray_add( &ret, strmake( "-l%s", basename ) );
++        continue;
+ 
+      found:
+         strarray_add_uniq( deps, lib );

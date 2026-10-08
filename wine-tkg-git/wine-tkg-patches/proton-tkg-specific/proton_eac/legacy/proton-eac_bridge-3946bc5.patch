@@ -82,8 +82,8 @@ index aa987a80186..3d9575d83f2 100644
      enum loadorder ret = LO_INVALID;
      const WCHAR *path = nt_name->Buffer;
 @@ -391,6 +395,41 @@ enum loadorder get_load_order( const UNICODE_STRING *nt_name )
-         len -= 4;
-     }
+
+     TRACE("looking for %s\n", debugstr_w(path));
 
 +    /* HACK: special logic for easyanticheat bridge: only load the bridge (builtin) if there exists a native version of the library next to the windows version */
 +    basename = get_basename((WCHAR *)path);
@@ -120,9 +120,9 @@ index aa987a80186..3d9575d83f2 100644
 +        }
 +    }
 +
-     if (!(module = malloc( (len + 2) * sizeof(WCHAR) ))) return ret;
-     memcpy( module + 1, path, len * sizeof(WCHAR) );  /* reserve module[0] for the wildcard char */
-     module[len + 1] = 0;
+     /* Strip path information if the module resides in the system directory
+      */
+     if (!wcsnicmp( system_dir + 4, path, wcslen(system_dir) - 4 ))
 From 3671dc59a189a81cafaf4c645f115db9603780cd Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Wed, 16 Feb 2022 14:24:41 -0500

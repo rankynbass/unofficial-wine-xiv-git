@@ -271,10 +271,6 @@ _init() {
         _LOCAL_PRESET="valve"
       elif [ "$CONDITION" = "4" ]; then
         _LOCAL_PRESET=""
-        if [ "$_no_container" = "false" ]; then
-          warning "Wine upstream based Proton compilation is likely to fail unless you run \"./proton-tkg.sh nocontainer\""
-          read -rp "Press enter to continue anyway"
-        fi
       elif [ "$CONDITION" = "5" ]; then
         i=0
         for _profiles in "$_where/wine-tkg-profiles"/legacy/wine-tkg-*.cfg; do
@@ -1069,7 +1065,8 @@ _prepare() {
                    "$_where/wine-tkg-patches/misc/josh-flat-theme/josh-flat-theme"
                    "$_where/wine-tkg-patches/proton/proton-win10-default/proton-win10-default"
                    "$_where/wine-tkg-patches/proton-tkg-specific/proton_battleye/proton_battleye"
-                   "$_where/wine-tkg-patches/proton-tkg-specific/proton_eac/proton_eac" ) && _patchpathloader
+                   "$_where/wine-tkg-patches/proton-tkg-specific/proton_eac/proton_eac"
+                   "$_where/wine-tkg-patches/proton-tkg-specific/proton-makedep-fixes/proton-makedep-fixes") && _patchpathloader
 
 	# Proton-tkg needs to know if standard dlopen() is in use
 	if ( cd "${srcdir}"/"${_winesrcdir}" && git merge-base --is-ancestor b87256cd1db21a59484248a193b6ad12ca2853ca HEAD ); then
@@ -1128,7 +1125,9 @@ _polish() {
 	if [ -e tools/make_specfiles ]; then
 	  tools/make_specfiles
 	fi
-	autoreconf -fiv
+	if [ "$_NOCOMPILE" != "true" ]; then
+	  autoreconf -fiv
+	fi
 
 	# wine late user patches - Applied after make_vulkan/make_requests/autoreconf
 	_userpatch_target="plain-wine"

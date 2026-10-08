@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e  # fail-fast (rule 5): any unguarded error in this script or the sourced prepare.sh/build.sh aborts the build
 
 # ===========================================================================================================================================================================
 # non-makepkg-build.sh - A non-makepkg build script for wine-tkg-git
@@ -109,7 +110,7 @@ _src_init() {
     #   - copy .conf files inside the PKGBUILD's dir to preserve makepkg sourcing and md5sum checking
     #   - copy userpatches inside the PKGBUILD's dir
     find "$_where"/wine-tkg-patches -type f '(' -iname '*.conf' ')' -not -path "*hotfixes*" -exec cp -n {} "$_where" \;
-    find "$_where"/wine-tkg-userpatches -type f -name "*.my*" -exec cp -n {} "$_where" \;
+    find "$_where"/wine-tkg-userpatches -type f,l -name "*.my*" -exec cp -n {} "$_where" \;
 
     ## Handle git repos similarly to makepkg to preserve repositories when building both with and without makepkg on Arch
     # Wine source
@@ -305,7 +306,7 @@ build_wine_tkg() {
     local _prefix="${_nomakepkg_prefix_path}/${_nomakepkg_pkgname}"
   fi
 
-  if [ "$_NOLIB32" = "true" ]; then
+  if [ "$_NOLIB32" = "true" ] || ( [[ "$_custom_wine_source" = *"ValveSoftware"* ]] && [[ "$_plain_version" = *_11.0 ]] ); then # Valve: Maybe switch globally for wine 11+?
     local _lib32name="lib"
     local _lib64name="lib"
   elif [ -e /lib ] && [ -e /lib64 ] && [ -d /usr/lib ] && [ -d /usr/lib32 ] && [ "$_EXTERNAL_INSTALL" != "proton" ]; then

@@ -29,7 +29,9 @@ if [ -d "${srcdir}"/"${_stgsrcdir}" ]; then
       fi
 
       # Fix for binutils 2.41
-      cp "$_where"/wine-tkg-patches/hotfixes/binutils/*.mypatch "$_where"/
+      if [[ "$_plain_version" = *_7.0 ]] || [[ "$_plain_version" = *_8.0 ]] || [[ "$_plain_version" = *_9.0 ]] || [[ "$_plain_version" = *_10.0 ]]; then
+        cp "$_where"/wine-tkg-patches/hotfixes/binutils/*.mypatch "$_where"/
+      fi
 
       if [[ ${_community_patches[*]} =~ "amd_fsr_fshack-alternative.mypatch" ]]; then
         _community_patches=$(echo $_community_patches | sed "s/amd_fsr_fshack.mypatch//g" | tr -s " ")

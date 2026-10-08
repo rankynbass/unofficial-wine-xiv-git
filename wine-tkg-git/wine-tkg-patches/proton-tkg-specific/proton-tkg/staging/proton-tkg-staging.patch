@@ -3136,3 +3136,179 @@ index 59c0e6d..9a7af20 100644
          }
          else status = STATUS_NOT_COMMITTED;
      }
+From 5d76e39fe96e47071ba6792dc5e20e8c9c94479d Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 17 Dec 2025 18:06:38 -0600
+Subject: [PATCH] ntdll: Add local copy of linux/ntsync.h.
+
+To be dropped once Steam Linux dev runtime has recent enough kernel headers.
+---
+ dlls/ntdll/unix/ntsync_tmp.h | 59 ++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/sync.c       |  5 ++-
+ server/inproc_sync.c         |  4 +--
+ server/ntsync_tmp.h          | 59 ++++++++++++++++++++++++++++++++++++
+ 4 files changed, 121 insertions(+), 6 deletions(-)
+ create mode 100644 dlls/ntdll/unix/ntsync_tmp.h
+ create mode 100644 server/ntsync_tmp.h
+
+diff --git a/dlls/ntdll/unix/ntsync_tmp.h b/dlls/ntdll/unix/ntsync_tmp.h
+new file mode 100644
+index 000000000000..6d06793512b1
+--- /dev/null
++++ b/dlls/ntdll/unix/ntsync_tmp.h
+@@ -0,0 +1,59 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++/*
++ * Kernel support for NT synchronization primitive emulation
++ *
++ * Copyright (C) 2021-2022 Elizabeth Figura <zfigura@codeweavers.com>
++ */
++
++#ifndef __LINUX_NTSYNC_H
++#define __LINUX_NTSYNC_H
++
++#include <linux/types.h>
++
++struct ntsync_sem_args {
++	__u32 count;
++	__u32 max;
++};
++
++struct ntsync_mutex_args {
++	__u32 owner;
++	__u32 count;
++};
++
++struct ntsync_event_args {
++	__u32 manual;
++	__u32 signaled;
++};
++
++#define NTSYNC_WAIT_REALTIME	0x1
++
++struct ntsync_wait_args {
++	__u64 timeout;
++	__u64 objs;
++	__u32 count;
++	__u32 index;
++	__u32 flags;
++	__u32 owner;
++	__u32 alert;
++	__u32 pad;
++};
++
++#define NTSYNC_MAX_WAIT_COUNT 64
++
++#define NTSYNC_IOC_CREATE_SEM		_IOW ('N', 0x80, struct ntsync_sem_args)
++#define NTSYNC_IOC_WAIT_ANY		_IOWR('N', 0x82, struct ntsync_wait_args)
++#define NTSYNC_IOC_WAIT_ALL		_IOWR('N', 0x83, struct ntsync_wait_args)
++#define NTSYNC_IOC_CREATE_MUTEX		_IOW ('N', 0x84, struct ntsync_mutex_args)
++#define NTSYNC_IOC_CREATE_EVENT		_IOW ('N', 0x87, struct ntsync_event_args)
++
++#define NTSYNC_IOC_SEM_RELEASE		_IOWR('N', 0x81, __u32)
++#define NTSYNC_IOC_MUTEX_UNLOCK		_IOWR('N', 0x85, struct ntsync_mutex_args)
++#define NTSYNC_IOC_MUTEX_KILL		_IOW ('N', 0x86, __u32)
++#define NTSYNC_IOC_EVENT_SET		_IOR ('N', 0x88, __u32)
++#define NTSYNC_IOC_EVENT_RESET		_IOR ('N', 0x89, __u32)
++#define NTSYNC_IOC_EVENT_PULSE		_IOR ('N', 0x8a, __u32)
++#define NTSYNC_IOC_SEM_READ		_IOR ('N', 0x8b, struct ntsync_sem_args)
++#define NTSYNC_IOC_MUTEX_READ		_IOR ('N', 0x8c, struct ntsync_mutex_args)
++#define NTSYNC_IOC_EVENT_READ		_IOR ('N', 0x8d, struct ntsync_event_args)
++
++#endif
+diff --git a/dlls/ntdll/unix/sync.c b/dlls/ntdll/unix/sync.c
+index 26bc125ce46d..06155c10e630 100644
+--- a/dlls/ntdll/unix/sync.c
++++ b/dlls/ntdll/unix/sync.c
+@@ -60,9 +60,8 @@
+ #ifdef HAVE_KQUEUE
+ # include <sys/event.h>
+ #endif
+-#ifdef HAVE_LINUX_NTSYNC_H
+-# include <linux/ntsync.h>
+-#endif
++
++# include "ntsync_tmp.h"
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+diff --git a/server/inproc_sync.c b/server/inproc_sync.c
+index a291d10aa2a2..70821624af01 100644
+--- a/server/inproc_sync.c
++++ b/server/inproc_sync.c
+@@ -34,9 +34,7 @@
+ #include "thread.h"
+ #include "user.h"
+ 
+-#ifdef HAVE_LINUX_NTSYNC_H
+-# include <linux/ntsync.h>
+-#endif
++#include "ntsync_tmp.h"
+ 
+ #ifdef NTSYNC_IOC_EVENT_READ
+ 
+diff --git a/server/ntsync_tmp.h b/server/ntsync_tmp.h
+new file mode 100644
+index 000000000000..6d06793512b1
+--- /dev/null
++++ b/server/ntsync_tmp.h
+@@ -0,0 +1,59 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++/*
++ * Kernel support for NT synchronization primitive emulation
++ *
++ * Copyright (C) 2021-2022 Elizabeth Figura <zfigura@codeweavers.com>
++ */
++
++#ifndef __LINUX_NTSYNC_H
++#define __LINUX_NTSYNC_H
++
++#include <linux/types.h>
++
++struct ntsync_sem_args {
++	__u32 count;
++	__u32 max;
++};
++
++struct ntsync_mutex_args {
++	__u32 owner;
++	__u32 count;
++};
++
++struct ntsync_event_args {
++	__u32 manual;
++	__u32 signaled;
++};
++
++#define NTSYNC_WAIT_REALTIME	0x1
++
++struct ntsync_wait_args {
++	__u64 timeout;
++	__u64 objs;
++	__u32 count;
++	__u32 index;
++	__u32 flags;
++	__u32 owner;
++	__u32 alert;
++	__u32 pad;
++};
++
++#define NTSYNC_MAX_WAIT_COUNT 64
++
++#define NTSYNC_IOC_CREATE_SEM		_IOW ('N', 0x80, struct ntsync_sem_args)
++#define NTSYNC_IOC_WAIT_ANY		_IOWR('N', 0x82, struct ntsync_wait_args)
++#define NTSYNC_IOC_WAIT_ALL		_IOWR('N', 0x83, struct ntsync_wait_args)
++#define NTSYNC_IOC_CREATE_MUTEX		_IOW ('N', 0x84, struct ntsync_mutex_args)
++#define NTSYNC_IOC_CREATE_EVENT		_IOW ('N', 0x87, struct ntsync_event_args)
++
++#define NTSYNC_IOC_SEM_RELEASE		_IOWR('N', 0x81, __u32)
++#define NTSYNC_IOC_MUTEX_UNLOCK		_IOWR('N', 0x85, struct ntsync_mutex_args)
++#define NTSYNC_IOC_MUTEX_KILL		_IOW ('N', 0x86, __u32)
++#define NTSYNC_IOC_EVENT_SET		_IOR ('N', 0x88, __u32)
++#define NTSYNC_IOC_EVENT_RESET		_IOR ('N', 0x89, __u32)
++#define NTSYNC_IOC_EVENT_PULSE		_IOR ('N', 0x8a, __u32)
++#define NTSYNC_IOC_SEM_READ		_IOR ('N', 0x8b, struct ntsync_sem_args)
++#define NTSYNC_IOC_MUTEX_READ		_IOR ('N', 0x8c, struct ntsync_mutex_args)
++#define NTSYNC_IOC_EVENT_READ		_IOR ('N', 0x8d, struct ntsync_event_args)
++
++#endif

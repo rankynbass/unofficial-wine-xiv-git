@@ -1,4 +1,29 @@
 From f9e06b0806c5b0b94171083afa2df8025c205215 Mon Sep 17 00:00:00 2001
+From: Tk-Glitch <ti3nou@gmail.com>
+Date: Thu, 27 Nov 2025 12:29:10 +0200
+Subject: [PATCH] Revert "wine.inf: Substitute Times New Roman for Segoe UI Semibold."
+
+This reverts commit 808bf3fd8e59741a3dfa9216bf9012969dd9430f.
+---
+ loader/wine.inf.in | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 30751cc1510..b01b224ea50 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -629,7 +629,6 @@ HKLM,%FontsNT%,"Webdings (TrueType)",,"webdings.ttf"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ HKCU,Software\Wine\Fonts\Replacements,"Verdana",,"Times New Roman"
+ HKCU,Software\Wine\Fonts\Replacements,"Segoe UI",,"Times New Roman"
+-HKCU,Software\Wine\Fonts\Replacements,"Segoe UI Semibold",,"Times New Roman"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"
+-- 
+2.49.0
+
+From f9e06b0806c5b0b94171083afa2df8025c205215 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Fri, 9 May 2025 22:52:17 +0300
 Subject: [PATCH 02/12] Revert "wine.inf: Add a font replacement for Segoe UI."
@@ -322,9 +347,9 @@ index 11d4719e706..783312f68e8 100644
 -    { "FF00-FFEF",              L"MS Gothic" },
 +    { "FF00-FFEF",              L"Noto Sans CJK KR", L"ko" },
 +    { "FF00-FFEF",              L"Noto Sans CJK JP" },
+
+     { "1F800-1F8FF",            L"Noto Sans Symbols 2" },
  };
- 
- struct text_source_context
 -- 
 2.49.0
 
@@ -3716,8 +3741,7 @@ index 75669e95b72..2e3297a4ec3 100644
 -    {
 -        struct steamclient_setup_trampolines_params params = {.src_mod = *module, .tgt_mod = lsteamclient};
 -        WINE_UNIX_CALL( unix_steamclient_setup_trampolines, &params );
--        wm->ldr.Flags |= LDR_DONT_RESOLVE_REFS;
--        flags |= DONT_RESOLVE_DLL_REFERENCES;
+-        NtFlushInstructionCache( NtCurrentProcess(), *module, map_size );
 -        if (is_steamclient32)
 -        {
 -            OBJECT_ATTRIBUTES attr;
@@ -3727,6 +3751,9 @@ index 75669e95b72..2e3297a4ec3 100644
 -            IO_STATUS_BLOCK io;
 -            DWORD protect_old;
 -            HANDLE file;
+-
+-            wm->ldr.Flags |= LDR_DONT_RESOLVE_REFS;
+-            flags |= LDR_DONT_RESOLVE_REFS;
 -
 -            NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size, PAGE_READWRITE, &protect_old );
 -            memset( &attr, 0, sizeof(attr) );
@@ -3745,32 +3772,17 @@ index 75669e95b72..2e3297a4ec3 100644
 -        }
 -        else
 -        {
--            fixup_imports( wm, load_path );
--            wm->ldr.Flags |= LDR_DONT_RESOLVE_REFS;
+-            wm->ldr.Flags |= LDR_DONT_CALL_DLLMAIN;
 -        }
 -    }
--
+
      /* fixup imports */
  
-     if (!(flags & DONT_RESOLVE_DLL_REFERENCES) &&
-diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
-index 3c18484f417..e32d550436d 100644
---- a/dlls/ntdll/unix/env.c
-+++ b/dlls/ntdll/unix/env.c
-@@ -2523,7 +2523,6 @@ void WINAPI RtlSetLastWin32Error( DWORD err )
-  */
- NTSTATUS WINAPI __wine_set_unix_env( const char *var, const char *val )
- {
--    if (!val) unsetenv(var);
--    else setenv(var, val, 1);
-+    setenv(var, val, 1);
-     return 0;
- }
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
 index 80b17e17b16..9f11301b83f 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -625,47 +625,11 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const struct pe_image_info
+@@ -625,48 +625,11 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const struct pe_image_info
      WORD machine = pe_info->machine;
      ULONGLONG res_start = pe_info->base;
      ULONGLONG res_end = pe_info->base + pe_info->map_size;
@@ -3791,6 +3803,7 @@ index 80b17e17b16..9f11301b83f 100644
 -        int len = strlen( ld_preload );
 -        char *next, *tmp, *env = malloc( sizeof("LD_PRELOAD=") + len );
 -
+-        setenv( "EXPLORER_LD_PRELOAD", ld_preload, 1 );
 -        if (!env) return STATUS_NO_MEMORY;
 -        strcpy( env, "LD_PRELOAD=" );
 -        strcat( env, ld_preload );
@@ -3818,161 +3831,18 @@ index 80b17e17b16..9f11301b83f 100644
      signal( SIGPIPE, SIG_DFL );
  
      snprintf( socket_env, sizeof(socket_env), "WINESERVERSOCKET=%u", socketfd );
-@@ -1085,122 +1049,6 @@ static NTSTATUS load_so_dll( void *args )
-     return status;
- }
- 
--static void *steamclient_srcs[128];
--static void *steamclient_tgts[128];
--static int steamclient_count;
--
--void *steamclient_handle_fault( LPCVOID addr, DWORD err )
--{
--    int i;
--
--    if (!(err & EXCEPTION_EXECUTE_FAULT)) return NULL;
--
--    for (i = 0; i < steamclient_count; ++i)
--    {
--        if (addr == steamclient_srcs[i])
--            return steamclient_tgts[i];
--    }
--
--    return NULL;
--}
--
--static void steamclient_write_jump_x64(void *src_addr, ULONGLONG tgt_addr)
--{
--    static const char mov[] = {0x48, 0xb8};
--    static const char jmp[] = {0xff, 0xe0};
--    memcpy(src_addr, mov, sizeof(mov));
--    memcpy((char *)src_addr + sizeof(mov), &tgt_addr, sizeof(tgt_addr));
--    memcpy((char *)src_addr + sizeof(mov) + sizeof(tgt_addr), jmp, sizeof(jmp));
--}
--
--static void steamclient_write_jump_x86(void *src_addr, ULONG tgt_addr)
--{
--    static const char mov[] = {0xb8};
--    static const char jmp[] = {0xff, 0xe0};
--    memcpy(src_addr, mov, sizeof(mov));
--    memcpy((char *)src_addr + sizeof(mov), &tgt_addr, sizeof(tgt_addr));
--    memcpy((char *)src_addr + sizeof(mov) + sizeof(tgt_addr), jmp, sizeof(jmp));
--}
--
--static NTSTATUS steamclient_setup_trampolines( void *args )
--{
--    static int noexec_cached = -1;
--
--    struct steamclient_setup_trampolines_params *params = args;
--    HMODULE src_mod = params->src_mod, tgt_mod = params->tgt_mod;
--    SYSTEM_BASIC_INFORMATION info;
--    IMAGE_NT_HEADERS *src_nt = get_rva( src_mod, ((IMAGE_DOS_HEADER *)src_mod)->e_lfanew );
--    IMAGE_NT_HEADERS *tgt_nt = get_rva( tgt_mod, ((IMAGE_DOS_HEADER *)tgt_mod)->e_lfanew );
--    IMAGE_SECTION_HEADER *src_sec = IMAGE_FIRST_SECTION( src_nt );
--    BOOL x64 = src_nt->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC;
--    const IMAGE_EXPORT_DIRECTORY *src_exp, *tgt_exp;
--    const DWORD *names;
--    SIZE_T size;
--    void *addr, *src_addr, *tgt_addr;
--    char *name, *wsne;
--    UINT_PTR page_mask;
--    int i;
--
--    if (noexec_cached == -1)
--        noexec_cached = (wsne = getenv("WINESTEAMNOEXEC")) && atoi(wsne);
--
--    virtual_get_system_info( &info, !!NtCurrentTeb()->WowTebOffset );
--    page_mask = info.PageSize - 1;
--
--    for (i = 0; i < src_nt->FileHeader.NumberOfSections; ++i)
--    {
--        if (memcmp(src_sec[i].Name, ".text", 5)) continue;
--        addr = (void *)(((UINT_PTR)src_mod + src_sec[i].VirtualAddress) & ~page_mask);
--        size = (src_sec[i].Misc.VirtualSize + page_mask) & ~page_mask;
--        if (noexec_cached) mprotect(addr, size, PROT_READ);
--        else mprotect(addr, size, PROT_READ|PROT_WRITE|PROT_EXEC);
--    }
--
--    src_exp = get_module_data_dir( src_mod, IMAGE_FILE_EXPORT_DIRECTORY, NULL );
--    tgt_exp = get_module_data_dir( tgt_mod, IMAGE_FILE_EXPORT_DIRECTORY, NULL );
--    names = (const DWORD *)((UINT_PTR)src_mod + src_exp->AddressOfNames);
--    for (i = 0; i < src_exp->NumberOfNames; ++i)
--    {
--        if (!names[i] || !(name = (char *)((UINT_PTR)src_mod + names[i]))) continue;
--        if (!(src_addr = (void *)find_named_export(src_mod, src_exp, name))) continue;
--        if (!(tgt_addr = (void *)find_named_export(tgt_mod, tgt_exp, name))) continue;
--        assert(steamclient_count < ARRAY_SIZE(steamclient_srcs));
--        steamclient_srcs[steamclient_count] = src_addr;
--        steamclient_tgts[steamclient_count] = tgt_addr;
--        if (!noexec_cached)
--        {
--            if (x64) steamclient_write_jump_x64( src_addr, (ULONG_PTR)tgt_addr );
--            else steamclient_write_jump_x86( src_addr, PtrToUlong(tgt_addr) );
--        }
--        else steamclient_count++;
--    }
--
--    if (x64)
--    {
--        IMAGE_NT_HEADERS64 *src_nt64 = (IMAGE_NT_HEADERS64 *)src_nt, *tgt_nt64 = (IMAGE_NT_HEADERS64 *)tgt_nt;
--        src_addr = (void *)((UINT_PTR)src_mod + src_nt64->OptionalHeader.AddressOfEntryPoint);
--        tgt_addr = (void *)((UINT_PTR)tgt_mod + tgt_nt64->OptionalHeader.AddressOfEntryPoint);
--    }
--    else
--    {
--        IMAGE_NT_HEADERS32 *src_nt32 = (IMAGE_NT_HEADERS32 *)src_nt, *tgt_nt32 = (IMAGE_NT_HEADERS32 *)tgt_nt;
--        src_addr = (void *)((UINT_PTR)src_mod + src_nt32->OptionalHeader.AddressOfEntryPoint);
--        tgt_addr = (void *)((UINT_PTR)tgt_mod + tgt_nt32->OptionalHeader.AddressOfEntryPoint);
--    }
--
--    assert(steamclient_count < ARRAY_SIZE(steamclient_srcs));
--    steamclient_srcs[steamclient_count] = src_addr;
--    steamclient_tgts[steamclient_count] = tgt_addr;
--    if (!noexec_cached)
--    {
--        if (x64) steamclient_write_jump_x64( src_addr, (ULONG_PTR)tgt_addr );
--        else steamclient_write_jump_x86( src_addr, PtrToUlong(tgt_addr) );
--    }
--    else steamclient_count++;
--
--    return STATUS_SUCCESS;
--}
--
- static BOOL debugstr_pc_impl( void *pc, char *buffer, unsigned int size )
- {
-     unsigned int len;
 @@ -1262,7 +1110,6 @@ static const unixlib_entry_t unix_call_funcs[] =
-     unixcall_wine_server_handle_to_fd,
-     unixcall_wine_spawnvp,
-     system_time_precise,
+     wine_get_unix_env,
+     wine_set_unix_env,
+     unix__wine_dbg_ftrace,
 -    steamclient_setup_trampolines,
      is_pc_in_native_so,
      debugstr_pc,
  };
-@@ -1273,19 +1120,6 @@ static const unixlib_entry_t unix_call_funcs[] =
- static NTSTATUS wow64_load_so_dll( void *args ) { return STATUS_INVALID_IMAGE_FORMAT; }
- static NTSTATUS wow64_unwind_builtin_dll( void *args ) { return STATUS_UNSUCCESSFUL; }
- 
--static NTSTATUS wow64_steamclient_setup_trampolines( void *args )
--{
--    struct
--    {
--        ULONG src_mod;
--        ULONG tgt_mod;
--    } const *params32 = args;
--    struct steamclient_setup_trampolines_params params;
--    params.src_mod = (HMODULE)(UINT_PTR)params32->src_mod;
--    params.tgt_mod = (HMODULE)(UINT_PTR)params32->tgt_mod;
--    return steamclient_setup_trampolines( &params );
--}
--
- static NTSTATUS wow64_debugstr_pc( void *args )
- {
-     struct
 @@ -1308,7 +1142,6 @@ const unixlib_entry_t unix_call_wow64_funcs[] =
-     wow64_wine_server_handle_to_fd,
-     wow64_wine_spawnvp,
-     system_time_precise,
+     wow64___wine_get_unix_env,
+     wow64___wine_set_unix_env,
+     wow64___wine_dbg_ftrace,
 -    wow64_steamclient_setup_trampolines,
      is_pc_in_native_so,
      wow64_debugstr_pc,
@@ -4043,23 +3913,10 @@ diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
 index e0870584a68..94abe3450b8 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
-@@ -66,12 +66,6 @@ struct unwind_builtin_dll_params
-     CONTEXT                    *context;
- };
- 
--struct steamclient_setup_trampolines_params
--{
--    HMODULE src_mod;
--    HMODULE tgt_mod;
--};
--
- struct debugstr_pc_args
- {
-     void *pc;
 @@ -89,7 +83,6 @@ enum ntdll_unix_funcs
-     unix_wine_server_handle_to_fd,
-     unix_wine_spawnvp,
-     unix_system_time_precise,
+     unix___wine_get_unix_env,
+     unix___wine_set_unix_env,
+     unix_wine_dbg_ftrace,
 -    unix_steamclient_setup_trampolines,
      unix_is_pc_in_native_so,
      unix_debugstr_pc,
@@ -4449,7 +4306,7 @@ index 7195dd992f8..98b27ac2e50 100644
  HKLM,"System\CurrentControlSet\Services\Eventlog\Application",,16
  HKLM,"System\CurrentControlSet\Services\Eventlog\System","Sources",0x10000,""
  HKLM,"System\CurrentControlSet\Services\Tcpip\Parameters","DataBasePath",,"%12%\etc"
-@@ -2864,65 +2856,9 @@ InfFiles  = 17
+@@ -2864,73 +2856,9 @@ InfFiles  = 17
  NlsFiles  = 11
  SortFiles = 10,globalization\sorting
  
@@ -4480,8 +4337,10 @@ index 7195dd992f8..98b27ac2e50 100644
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3,"LengthScale",,"1.4"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3,"ModelPath",,"en_US-libritts_r-medium.onnx"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3,"SpeakerID",,"3"
+-HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Name",,"Proton Voice - libritts-r 3"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Language",,"409"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Gender",,"Male"
+-HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Age",,"Adult"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Vendor",,"Wine"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14,,,"Proton Voice - English (United States) - libritts-r 14"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14,"409",,"Proton Voice - English (United States) - libritts-r 14"
@@ -4489,8 +4348,10 @@ index 7195dd992f8..98b27ac2e50 100644
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14,"LengthScale",,"1.4"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14,"ModelPath",,"en_US-libritts_r-medium.onnx"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14,"SpeakerID",,"14"
+-HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Name",,"Proton Voice - libritts-r 14"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Language",,"409"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Gender",,"Female"
+-HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Age",,"Adult"
 -HKLM,Software\Microsoft\Speech\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Vendor",,"Wine"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices,"DefaultDefaultTokenId",,"HKEY_LOCAL_MACHINE\Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3,,,"Proton Voice - English (United States) - libritts-r 3"
@@ -4499,8 +4360,10 @@ index 7195dd992f8..98b27ac2e50 100644
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3,"LengthScale",,"1.4"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3,"ModelPath",,"en_US-libritts_r-medium.onnx"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3,"SpeakerID",,"3"
+-HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Name",,"Proton Voice - libritts-r 3"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Language",,"409"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Gender",,"Male"
+-HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Age",,"Adult"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_3\Attributes,"Vendor",,"Wine"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14,,,"Proton Voice - English (United States) - libritts-r 14"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14,"409",,"Proton Voice - English (United States) - libritts-r 14"
@@ -4508,8 +4371,10 @@ index 7195dd992f8..98b27ac2e50 100644
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14,"LengthScale",,"1.4"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14,"ModelPath",,"en_US-libritts_r-medium.onnx"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14,"SpeakerID",,"14"
+-HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Name",,"Proton Voice - libritts-r 14"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Language",,"409"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Gender",,"Female"
+-HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Age",,"Adult"
 -HKLM,Software\Microsoft\Speech_OneCore\Voices\Tokens\ProtonTTS_libritts-r_14\Attributes,"Vendor",,"Wine"
 -
  [ProtonOverrides]

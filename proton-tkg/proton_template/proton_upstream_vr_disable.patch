@@ -1,0 +1,222 @@
+From 97fcb845a5b7fbf21d57be72662376d15d72fe84 Mon Sep 17 00:00:00 2001
+From: Tk-Glitch <ti3nou@gmail.com>
+Date: Sun, 19 Oct 2025 21:08:59 +0200
+Subject: HAX
+
+--- a/vrclient_x64/jsoncpp.cpp
++++ b/vrclient_x64/jsoncpp.cpp
+@@ -193,7 +193,7 @@
+ #include <json/assertions.h>
+ #include <json/reader.h>
+ #include <json/value.h>
+-#include "json_tool.h"
++#include <json_tool.h>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ #include <utility>
+ #include <cstdio>
+@@ -2584,7 +2584,7 @@
+ // //////////////////////////////////////////////////////////////////
+ #if !defined(JSON_IS_AMALGAMATION)
+ 
+-#include "json_valueiterator.inl"
++#include <json_valueiterator.inl>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ 
+ namespace Json {
+@@ -4047,7 +4047,7 @@
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+ #include <json/writer.h>
+-#include "json_tool.h"
++#include <json_tool.h>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ #include <iomanip>
+ #include <memory>
+--- a/vrclient_x64/unix_private.h
++++ b/vrclient_x64/unix_private.h
+@@ -10,9 +10,9 @@
+ #include "unixlib.h"
+ 
+ #include "wine/debug.h"
+-#include "wine/list.h"
+-#include "wine/vulkan.h"
+-#include "wine/vulkan_driver.h"
++#include <wine/list.h>
++#include <wine/vulkan.h>
++#include <wine/vulkan_driver.h>
+ 
+ #ifdef __cplusplus
+ extern "C" {
+--- a/vrclient_x64/json/json.h
++++ b/vrclient_x64/json/json.h
+@@ -270,7 +270,6 @@
+ #define JSON_FORWARDS_H_INCLUDED
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+-#include "config.h"
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ 
+ namespace Json {
+@@ -321,7 +320,7 @@
+ #define CPPTL_JSON_FEATURES_H_INCLUDED
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+-#include "forwards.h"
++#include <forwards.h>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ 
+ namespace Json {
+@@ -392,7 +391,7 @@
+ #define CPPTL_JSON_H_INCLUDED
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+-#include "forwards.h"
++#include <forwards.h>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ #include <string>
+ #include <vector>
+@@ -1256,8 +1255,8 @@
+ #define CPPTL_JSON_READER_H_INCLUDED
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+-#include "features.h"
+-#include "value.h"
++#include <features.h>
++#include <value.h>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ #include <deque>
+ #include <iosfwd>
+@@ -1675,7 +1674,7 @@
+ #define JSON_WRITER_H_INCLUDED
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+-#include "value.h"
++#include <value.h>
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ #include <vector>
+ #include <string>
+@@ -2023,7 +2022,6 @@
+ #include <sstream>
+ 
+ #if !defined(JSON_IS_AMALGAMATION)
+-#include "config.h"
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+ 
+ /** It should not be possible for a maliciously designed file to
+
+Index: a/proton
+===================================================================
+@@ -1119,21 +1073,6 @@
+                         os.makedirs(os.path.dirname(dstvdf), exist_ok=True)
+                         shutil.copyfile(srcvdf, dstvdf)
+ 
+-                #copy openvr files into place
+-                makedirs(self.prefix_dir + "/drive_c/vrclient/bin")
+-                try_copy(g_proton.arch_pe_dir("wine", True) + "vrclient.dll", "drive_c/vrclient/bin",
+-                        prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+-                try_copy(g_proton.arch_pe_dir("wine", False) + "vrclient_x64.dll", "drive_c/vrclient/bin",
+-                        prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+-
+-                try_copy(g_proton.arch_pe_dir("wine/dxvk", True) + "openvr_api_dxvk.dll", "drive_c/windows/syswow64",
+-                        prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+-                try_copy(g_proton.arch_pe_dir("wine/dxvk", False) + "openvr_api_dxvk.dll", "drive_c/windows/system32",
+-                        prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+-
+-                makedirs(self.prefix_dir + "/drive_c/openxr")
+-                try_copy(g_proton.dist_dir + "share/openxr/wineopenxr64.json", "drive_c/openxr",
+-                        prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+ 
+                 #copy contrib dlls
+                 try_copy(g_proton.contrib_dir + "amdxcffx64.dll", "drive_c/windows/system32",
+@@ -1233,7 +1172,6 @@
+ 
+             setup_game_dir_drive()
+             setup_steam_dir_drive()
+-            setup_openvr_paths()
+ 
+             # add Steam ffmpeg libraries to path
+             prepend_to_env_str(g_session.env, ld_path_var, steamdir + "/ubuntu12_64/video/:" + steamdir + "/ubuntu12_32/video/:" + steamdir + "/steamrtarm64/video/", ":")
+Index: a/steam_helper/steam.c
+===================================================================
+@@ -981,9 +959,6 @@
+     {
+         BOOL should_await;
+ 
+-        if (game_process)
+-            setup_vr_registry();
+-
+         child = run_process(&should_await, game_process);
+ 
+         if (should_await)
+
+Index: a/Makefile.in
+===================================================================
+--- a/Makefile.in	2026-08-30 14:57:59.275564770 +0200
++++ b/Makefile.in	2026-08-30 14:57:59.275564770 +0200
+@@ -424,40 +424,6 @@
+ $(eval $(call rules-makedep,lsteamclient,aarch64))
+ 
+ 
+-##
+-## openxr
+-## Note 32-bit is not supported by SteamVR, so we don't build it.
+-##
+-
+-OPENXR_CMAKE_ARGS = -DHAVE_FILESYSTEM_WITHOUT_LIB=0
+-
+-$(eval $(call rules-source,openxr,$(SRCDIR)/OpenXR-SDK))
+-# $(eval $(call rules-cmake,openxr,i386,unix))
+-$(eval $(call rules-cmake,openxr,x86_64,unix))
+-$(eval $(call rules-cmake,openxr,aarch64,unix))
+-
+-
+-##
+-## wineopenxr
+-## Note 32-bit is not supported by SteamVR, so we don't build it.
+-##
+-
+-WINEOPENXR_LDFLAGS = -lopenxr_loader
+-WINEOPENXR_DEPENDS = wine openxr
+-
+-WINEOPENXR_aarch64_PE_ARCHS = arm64ec x86_64
+-
+-$(eval $(call rules-source,wineopenxr,$(SRCDIR)/wineopenxr))
+-$(eval $(call rules-makedep,wineopenxr,x86_64))
+-$(eval $(call rules-makedep,wineopenxr,aarch64))
+-
+-WINEOPENXR64_JSON := $(DST_DIR)/share/openxr/wineopenxr64.json
+-$(WINEOPENXR_SRC)/wineopenxr64.json: wineopenxr
+-$(WINEOPENXR64_JSON): $(WINEOPENXR_SRC)/wineopenxr64.json
+-	mkdir -p $(dir $@)
+-	cp -a $< $@
+-
+-
+ ##
+ ## steam.exe
+ ##
+@@ -679,17 +679,6 @@
+ endif
+ 	touch $@
+ 
+-##
+-## vrclient
+-##
+-
+-VRCLIENT_DEPENDS = vulkan-headers wine
+-
+-$(eval $(call rules-source,vrclient,$(SRCDIR)/vrclient_x64))
+-$(eval $(call rules-makedep,vrclient,i386))
+-$(eval $(call rules-makedep,vrclient,x86_64))
+-$(eval $(call rules-makedep,vrclient,aarch64))
+-
+ 
+ ##
+ ## dxvk
+@@ -1348,6 +1348,6 @@
+ ## default_pfx
+ ##
+ 
+-default_pfx: wine gst_good gst_bad gst_libav gst_plugins_rs lsteamclient steamexe vrclient wineopenxr $(WINEOPENXR64_JSON) dxvk dxvk-nvapi dxvk-igdext vkd3d-proton
++default_pfx: wine gst_good gst_bad gst_libav gst_plugins_rs lsteamclient steamexe dxvk dxvk-nvapi dxvk-igdext vkd3d-proton
+ 	find $(DST_LIBDIR)/wine -type f -execdir chmod a-w '{}' '+'
+ 	rm -rf $(abspath $(DIST_PREFIX))

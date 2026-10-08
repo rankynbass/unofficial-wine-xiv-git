@@ -23,7 +23,8 @@ _nomakepkg="true"
 _no_steampath="false"
 
 # true disables building in valve SDK container to build against current system libs
-# this might lead to issues with some games and anticheats
+# this will currently lead to issues with some games and anticheats and possibly break compilation
+# You might want to set _nomakepkg_dependency_autoresolver="true" in your config when using _no_container="true"
 # !!! "false" requires a working Docker or Podman setup !!!
 _no_container="false"
 
@@ -820,6 +821,8 @@ function build_in_valve_container {
   cd "$_nowhere"
   git clone --recurse-submodules https://github.com/ValveSoftware/Proton.git || true # It'll complain the path already exists on subsequent builds
   cd Proton
+  rm -rf ./build
+  rm -rf ./wine # required for subsequent compilations of mainline-based and force-pushed proton experimental bleeding edge builds
   git reset --hard
   git fetch --all -pP
   git submodule sync --recursive
@@ -841,15 +844,11 @@ function build_in_valve_container {
   ( cd dxvk && _user_patches_no_confirm="true" _userpatch_target="dxvk" _userpatch_ext="mydxvk" proton_patcher )
   ( cd vkd3d-proton && _user_patches_no_confirm="true" _userpatch_target="vkd3d-proton" _userpatch_ext="myvkd3d" proton_patcher )
 
-  ## The variable eventually ends empty here
-  ## Needs some more checks
-  ##
-  # On mainline-based proton, we depend on newer vkd3d and vkd3d-utils
-  #if [[ "$_custom_wine_source" != *"ValveSoftware"* ]]; then
-  #  ( cd vkd3d && git pull origin master )
-  #  patch -Np1 < "$_nowhere"/proton_template/vkd3d-utils.patch
-  #  patch -Np1 < "$_nowhere"/proton_template/cpwine64-mainline.patch
-  #fi
+  # Upstream bases require some targeted fixes and - at least for now - disabling vr support
+  if [ "$_unfrog" != "true" ]; then
+    patch -Np1 < "$_nowhere"/proton_template/proton_upstream_fixes.patch
+    patch -Np1 < "$_nowhere"/proton_template/proton_upstream_vr_disable.patch
+  fi
 
   rm -rf wine
   cp -r "$_wine_tkg_git_path/src/$_winesrcdir" wine
@@ -857,8 +856,11 @@ function build_in_valve_container {
   # We *will* face warnings
   sed -i "/--enable-werror.*/d" Makefile.in
 
-  # Use latest container image
-  sed -i "s|STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud.*|STEAMRT_IMAGE ?= ghcr.io/open-wine-components/umu-sdk:latest|g" Makefile.in
+  # Use latest container image from UMU
+  # note regarding Proton (bleeding edge) 11: using steamrt4 instead for a little while due to missing deps in UMU image
+  if [ -z "$_bleeding_tag" ] && [ "$_unfrog" = "true" ]; then
+    sed -i "s|STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud.*|STEAMRT_IMAGE ?= ghcr.io/open-wine-components/umu-sdk:latest|g" Makefile.in
+  fi
 
   mkdir build && cd build
   _configure_flags="--enable-ccache --build-name=TKG"
